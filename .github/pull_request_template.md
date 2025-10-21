@@ -3,8 +3,6 @@
 Please include a clear and concise summary of the change.  
 Explain **what** your PR does and **why** it’s needed.
 
-> Example:  
-> This PR adds JWT authentication middleware to the Recipe Service and updates the gateway route configuration.
 
 ---
 
@@ -64,13 +62,15 @@ If your change affects UI or API output, include screenshots or curl/postman log
 ---
 
 ## 🧠 Affected Modules / Services
-List all modules, microservices, or components affected by this PR:
+Select all that apply:
 
-> Example:  
-> - gateway-service  
-> - user-service  
-> - recipe-service  
-> - nutrition-service  
+- [ ] gateway-service 
+- [ ] user-service 
+- [ ] recipe-service  
+- [ ] nutrition-service  
+- [ ] meal-planner-service  
+- [ ] audio-service
+- [ ] frontend  
 
 ---
 
@@ -84,3 +84,8 @@ Thank you for contributing to this project! Please ensure your PR title follows 
 > Example:  
 > - `feat(gateway): add JWT middleware`  
 > - `fix(recipe): resolve null pointer in recipe validation`
+> -  docs: update API usage in README`
+> -  refactor(nutrition): simplify calculation logic
+> -  chore: update dependencies
+> -  test(user): add unit tests for login API
+> -  ci: update GitHub Actions workflow
