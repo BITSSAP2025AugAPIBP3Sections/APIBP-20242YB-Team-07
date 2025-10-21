@@ -84,8 +84,8 @@ Thank you for contributing to this project! Please ensure your PR title follows 
 > Example:  
 > - `feat(gateway): add JWT middleware`  
 > - `fix(recipe): resolve null pointer in recipe validation`
-> -  docs: update API usage in README`
-> -  refactor(nutrition): simplify calculation logic
-> -  chore: update dependencies
-> -  test(user): add unit tests for login API
-> -  ci: update GitHub Actions workflow
+> - `docs: update API usage in README`
+> - `refactor(nutrition): simplify calculation logic`
+> - `chore: update dependencies`
+> - `test(user): add unit tests for login API`
+> - `ci: update GitHub Actions workflow`
