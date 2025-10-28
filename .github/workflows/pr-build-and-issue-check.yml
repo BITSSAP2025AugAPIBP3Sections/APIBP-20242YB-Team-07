@@ -1,0 +1,26 @@
+name: PR Issue Link Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  check-issue-link:
+    name: Verify Issue Link in PR Description
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for issue link in PR description
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "🔍 Checking PR description for linked issue..."
+          echo "$PR_BODY"
+
+          if echo "$PR_BODY" | grep -E -q '#[0-9]+'; then
+            echo "✅ Found an issue reference."
+          else
+            echo "❌ No issue link found in PR description."
+            echo "Please include something like: '#123' to link the related issue."
+            exit 1
+          fi
