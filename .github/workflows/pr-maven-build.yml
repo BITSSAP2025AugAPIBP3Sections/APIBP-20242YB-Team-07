@@ -1,0 +1,35 @@
+name: PR Maven Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: Build All Spring Boot Microservices
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build all backend services
+        run: |
+          echo "🚀 Building all Spring Boot microservices inside backend/"
+          cd backend
+
+          for dir in */ ; do
+            if [ -f "$dir/pom.xml" ]; then
+              echo "🛠️ Building $dir"
+              mvn -f "$dir/pom.xml" clean package -DskipTests
+            else
+              echo "⚠️ Skipping $dir (no pom.xml found)"
+            fi
+          done
