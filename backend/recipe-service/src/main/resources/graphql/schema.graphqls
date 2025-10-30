@@ -1,0 +1,53 @@
+type Ingredient {
+    name: String
+    quantity: String
+}
+
+type Comment {
+    id: ID
+    author: String
+    text: String
+}
+
+enum Cuisine {
+    INDIAN
+    ITALIAN
+    CHINESE
+    MEXICAN
+    OTHER
+}
+
+type Recipe {
+    id: ID
+    title: String
+    description: String
+    ingredients: [Ingredient]
+    cuisine: Cuisine
+    language: String
+    likes: Int
+    createdBy: String
+    comments: [Comment]
+}
+
+type Query {
+    recipes: [Recipe]
+    recipeById(id: ID!): Recipe
+    recipesByCuisine(cuisine: Cuisine!): [Recipe]
+    recipesByIngredient(name: String!): [Recipe]
+    searchRecipes(title: String!): [Recipe]
+    externalRecipes(query: String!): [ExternalRecipe]
+}
+
+type ExternalRecipe {
+    id: ID
+    title: String
+    image: String
+}
+
+type Mutation {
+    addRecipe(title: String!, description: String, cuisine: Cuisine, createdBy: String): Recipe
+    updateRecipe(id: ID!, title: String, description: String, cuisine: Cuisine): Recipe
+    deleteRecipe(id: ID!): Boolean
+    likeRecipe(id: ID!): Recipe
+    addComment(recipeId: ID!, author: String!, text: String!): Recipe
+}
