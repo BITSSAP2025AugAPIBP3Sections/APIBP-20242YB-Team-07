@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.cooknect</groupId>
-	<artifactId>audio-service</artifactId>
+	<artifactId>challenge-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>audio-service</name>
 	<description>Audio service for Cooknect</description>
