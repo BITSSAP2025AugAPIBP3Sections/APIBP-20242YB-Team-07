@@ -11,8 +11,8 @@
 	<groupId>com.cooknect</groupId>
 	<artifactId>challenge-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>audio-service</name>
-	<description>Audio service for Cooknect</description>
+	<name>challenge-service</name>
+	<description>Challenge service for Cooknect</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -60,7 +60,11 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-graphql</artifactId>
+        </dependency>
+    </dependencies>
 
 	<build>
 		<plugins>
