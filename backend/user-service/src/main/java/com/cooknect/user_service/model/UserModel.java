@@ -21,6 +21,11 @@ public class UserModel {
     @Column(name="email",unique = true)
     String email;
 
+    @Column(name="username",unique = true)
+    String username;
+
+    @Column(name="full_name")
+    String fullName;
 
     @Column(name="password")
     String password;
