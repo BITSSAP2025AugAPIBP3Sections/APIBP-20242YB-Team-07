@@ -1,4 +1,4 @@
-package com.cooknect.audio_service;
+package com.cooknect.challenge_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

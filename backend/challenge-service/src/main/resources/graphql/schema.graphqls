@@ -1,0 +1,38 @@
+enum ChallengeType {
+    MOST_RECIPES
+    MOST_LIKES
+    CUSTOM
+}
+
+enum ChallengeStatus {
+    UPCOMING
+    ONGOING
+    COMPLETED
+    CANCELLED
+}
+
+type Challenge {
+    id: ID!
+    name: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    type: ChallengeType!
+    status: ChallengeStatus!
+}
+
+input CreateChallengeInput {
+    name: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    type: ChallengeType!
+}
+
+type Mutation {
+    createChallenge(request: CreateChallengeInput!): Challenge!
+}
+
+type Query {
+    challenges: [Challenge!]!
+}
