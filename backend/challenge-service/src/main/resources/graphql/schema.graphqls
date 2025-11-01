@@ -29,10 +29,36 @@ input CreateChallengeInput {
     type: ChallengeType!
 }
 
+input UpdateChallengeInput {
+    name: String
+    description: String
+    startDate: String
+    endDate: String
+    type: ChallengeType
+}
+
+input ChallengeParticipationInput {
+    username: String!
+    email: String!
+    role: String!
+}
+
+type ChallengeParticipant {
+    username: String!
+    email: String!
+    role: String!
+}
+
 type Mutation {
     createChallenge(request: CreateChallengeInput!): Challenge!
+    updateChallenge(id: ID!, request: UpdateChallengeInput!): Challenge!
+    deleteChallenge(id: ID!): Boolean!
+    joinChallenge(challengeId: ID!, request: ChallengeParticipationInput!): Boolean!
+    leaveChallenge(challengeId: ID!, request: ChallengeParticipationInput!): Boolean!
 }
 
 type Query {
     challenges: [Challenge!]!
+    challenge(id: ID!): Challenge
+    challengeParticipants(challengeId: ID!): [ChallengeParticipant!]!
 }

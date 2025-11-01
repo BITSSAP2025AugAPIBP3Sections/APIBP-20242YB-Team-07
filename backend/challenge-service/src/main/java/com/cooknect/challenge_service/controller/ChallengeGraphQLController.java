@@ -2,6 +2,7 @@ package com.cooknect.challenge_service.controller;
 
 import com.cooknect.challenge_service.dto.CreateChallengeRequest;
 import com.cooknect.challenge_service.dto.ChallengeResponse;
+import com.cooknect.challenge_service.dto.UpdateChallengeRequest;
 import com.cooknect.challenge_service.service.ChallengeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -28,5 +29,20 @@ public class ChallengeGraphQLController {
     @QueryMapping
     public List<ChallengeResponse> challenges() {
         return challengeService.getAllChallenges();
+    }
+
+    @QueryMapping
+    public ChallengeResponse challenge(@Argument Long id) {
+        return challengeService.getChallengeById(id);
+    }
+
+    @MutationMapping
+    public ChallengeResponse updateChallenge(@Argument Long id, @Argument UpdateChallengeRequest request) {
+        return challengeService.updateChallenge(id, request);
+    }
+
+    @MutationMapping
+    public Boolean deleteChallenge(@Argument Long id) {
+        return challengeService.deleteChallenge(id);
     }
 }

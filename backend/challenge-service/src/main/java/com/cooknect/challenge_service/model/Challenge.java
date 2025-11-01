@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Setter
 @Getter
@@ -34,6 +36,10 @@ public class Challenge {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ChallengeStatus status;
+    
+    @ElementCollection
+    @CollectionTable(name = "challenge_participants", joinColumns = @JoinColumn(name = "challenge_id"))
+    private Set<ChallengeParticipant> participants = new HashSet<>();
     
     public ChallengeStatus getCurrentStatus() {
         LocalDateTime now = LocalDateTime.now();
