@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -37,4 +40,21 @@ public class UserModel {
     public enum Role {
         USER, ADMIN
     }
+
+    @ManyToOne
+    @JoinColumn(name = "dietary_preference_id")
+    private DietaryPreference dietaryPreference;
+
+    @ManyToOne
+    @JoinColumn(name = "health_goal_id")
+    private HealthGoal healthGoal;
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_cuisine_preferences",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "cuisine_id")
+    )
+    private Set<CuisinePreference> cuisinePreferences = new HashSet<>();
+
 }

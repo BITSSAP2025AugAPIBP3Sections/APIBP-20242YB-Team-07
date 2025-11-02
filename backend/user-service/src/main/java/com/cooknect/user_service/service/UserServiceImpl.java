@@ -1,23 +1,44 @@
 package com.cooknect.user_service.service;
 
 import com.cooknect.user_service.dto.UsersDTO;
+import com.cooknect.user_service.model.CuisinePreference;
+import com.cooknect.user_service.model.DietaryPreference;
+import com.cooknect.user_service.model.HealthGoal;
 import com.cooknect.user_service.model.UserModel;
+import com.cooknect.user_service.repository.CuisinePreferenceRepository;
+import com.cooknect.user_service.repository.DietaryPreferenceRepository;
+import com.cooknect.user_service.repository.HealthGoalRepository;
 import com.cooknect.user_service.repository.UserRepository;
-import org.apache.catalina.User;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService{
 
     @Autowired
     UserRepository repository;
+
+    @Autowired
+    DietaryPreferenceRepository dietaryPreferenceRepository;
+
+    @Autowired
+    HealthGoalRepository healthGoalRepository;
+
+    @Autowired
+    CuisinePreferenceRepository cuisinePreferenceRepository;
 
     @Autowired
     AuthenticationManager authManager;
@@ -49,32 +70,58 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public String verify(UserModel user) {
-        Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(),user.getPassword()));
+        try{
+            Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(),user.getPassword()));
 
-        if(authentication.isAuthenticated()){
-            UserModel authenticatedUser = repository.findByEmail(user.getEmail());
-            return jwtService.generateToken(user.getEmail(),authenticatedUser.getRole().name(),authenticatedUser.getUsername());
+            if(authentication.isAuthenticated()){
+                UserModel authenticatedUser = repository.findByEmail(user.getEmail());
+                return jwtService.generateToken(user.getEmail(),authenticatedUser.getRole().name(),authenticatedUser.getUsername());
+            }
+            else {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+            }
+        } catch (BadCredentialsException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Login failed due to server error");
         }
-        return "Fail";
+
+
     }
 
     @Override
     public List<UsersDTO> getAllUsers() {
         List<UserModel> users = repository.findAll();
-        return users.stream().map(u -> new UsersDTO(u.getId(), u.getEmail(), u.getRole().name(), u.getUsername(),u.getFullName())).toList();
+        return users.stream().map(
+                u -> new UsersDTO(
+                        u.getId(),
+                        u.getEmail(),
+                        u.getRole().name(),
+                        u.getUsername(),
+                        u.getFullName(),
+                        u.getDietaryPreference() != null ? u.getDietaryPreference().getName() : null,
+                        u.getHealthGoal() != null ? u.getHealthGoal().getName() : null,
+                        u.getCuisinePreferences() == null ? List.of() : u.getCuisinePreferences().stream().map(CuisinePreference::getName).toList())).toList();
     }
 
     @Override
     public UsersDTO getUserById(Long id) {
         UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        return new UsersDTO(user.getId(), user.getEmail(), user.getRole().name(), user.getUsername(),user.getFullName());
+        return new UsersDTO(user.getId(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getDietaryPreference() != null ? user.getDietaryPreference().getName() : null,
+                user.getHealthGoal() != null ? user.getHealthGoal().getName() : null,
+                user.getCuisinePreferences() == null ? List.of() : user.getCuisinePreferences().stream().map(CuisinePreference::getName).toList());
     }
 
     @Override
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader) {
         UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         if(!user.getEmail().equals(userEmailHeader)){
-            throw new RuntimeException("Unauthorized to update this user");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to update this user");
         }
         if(!userDTO.getEmail().matches(EMAIL_REGEX)){
             throw new RuntimeException("Invalid email format");
@@ -91,15 +138,157 @@ public class UserServiceImpl implements UserService{
         user.setUsername(userDTO.getUsername());
         user.setFullName(userDTO.getFullName());
         UserModel updatedUser = repository.save(user);
-        return new UsersDTO(updatedUser.getId(), updatedUser.getEmail(), updatedUser.getRole().name(), updatedUser.getUsername(),updatedUser.getFullName());
+        return new UsersDTO(updatedUser.getId(),
+                updatedUser.getEmail(),
+                updatedUser.getRole().name(),
+                updatedUser.getUsername(),
+                updatedUser.getFullName(),
+                updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
+                updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
+                updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
+        );
     }
 
     @Override
     public void deleteUser(Long id, String userEmailHeader) {
         UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         if(!user.getEmail().equals(userEmailHeader)){
-            throw new RuntimeException("Unauthorized to delete this user");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to delete this user");
         }
         repository.deleteById(id);
+    }
+
+    @Override
+    public UsersDTO updatePreferences(Long id, UsersDTO usersDTO, String userEmailHeader) {
+        UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (!user.getEmail().equals(userEmailHeader)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to update this user");
+        }
+
+        DietaryPreference diet = dietaryPreferenceRepository.findByName(usersDTO.getDietaryPreference()).orElseThrow(() -> new RuntimeException("Enter a valid Dietary preference"));
+        HealthGoal goal = healthGoalRepository.findByName(usersDTO.getHealthGoal()).orElseThrow(() -> new RuntimeException("Enter a valid Health goal"));
+        Set<CuisinePreference> cuisines = usersDTO.getCuisinePreferences().stream()
+                .map(name -> cuisinePreferenceRepository.findByName(name)
+                        .orElseThrow(() -> new RuntimeException("Invalid cuisine: " + name)))
+                .collect(Collectors.toSet());
+
+        user.setDietaryPreference(diet);
+        user.setHealthGoal(goal);
+        user.setCuisinePreferences(cuisines);
+
+        UserModel updatedUser = repository.save(user);
+        return new UsersDTO(updatedUser.getId(),
+                updatedUser.getEmail(),
+                updatedUser.getRole().name(),
+                updatedUser.getUsername(),
+                updatedUser.getFullName(),
+                updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
+                updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
+                updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
+        );
+    }
+
+    @Override
+    public UsersDTO updateHealthGoalPreference(Long id, UsersDTO usersDTO, String userEmailHeader) {
+        UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (!user.getEmail().equals(userEmailHeader)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to update this user");
+        }
+        HealthGoal goal = healthGoalRepository.findByName(usersDTO.getHealthGoal()).orElseThrow(() -> new RuntimeException("Enter a valid Health goal"));
+        user.setHealthGoal(goal);
+
+        UserModel updatedUser = repository.save(user);
+        return new UsersDTO(updatedUser.getId(),
+                updatedUser.getEmail(),
+                updatedUser.getRole().name(),
+                updatedUser.getUsername(),
+                updatedUser.getFullName(),
+                updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
+                updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
+                updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
+        );
+    }
+
+    @Override
+    public UsersDTO updateDietaryPreference(Long id, UsersDTO usersDTO, String userEmailHeader) {
+        UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (!user.getEmail().equals(userEmailHeader)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to update this user");
+        }
+        DietaryPreference diet = dietaryPreferenceRepository.findByName(usersDTO.getHealthGoal()).orElseThrow(() -> new RuntimeException("Enter a valid Health goal"));
+        user.setDietaryPreference(diet);
+
+        UserModel updatedUser = repository.save(user);
+        return new UsersDTO(updatedUser.getId(),
+                updatedUser.getEmail(),
+                updatedUser.getRole().name(),
+                updatedUser.getUsername(),
+                updatedUser.getFullName(),
+                updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
+                updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
+                updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
+        );
+    }
+
+    @Override
+    public UsersDTO updateCuisinePreference(Long id, UsersDTO usersDTO, String userEmailHeader) {
+        UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (!user.getEmail().equals(userEmailHeader)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized to update this user");
+        }
+        Set<CuisinePreference> cuisines = usersDTO.getCuisinePreferences().stream()
+                .map(name -> cuisinePreferenceRepository.findByName(name)
+                        .orElseThrow(() -> new RuntimeException("Invalid cuisine: " + name)))
+                .collect(Collectors.toSet());
+        user.setCuisinePreferences(cuisines);
+
+        UserModel updatedUser = repository.save(user);
+        return new UsersDTO(updatedUser.getId(),
+                updatedUser.getEmail(),
+                updatedUser.getRole().name(),
+                updatedUser.getUsername(),
+                updatedUser.getFullName(),
+                updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
+                updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
+                updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
+        );
+    }
+
+    @Override
+    public Map<String, String> getDietaryPreference(Long id){
+        UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getDietaryPreference() == null) {
+            return Map.of("message", "User has not updated their dietary preference.");
+        }
+        return Map.of("diet", user.getDietaryPreference().getName());
+    }
+
+    @Override
+    public Map<String, String> getHealthGoal(Long id){
+        UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getHealthGoal() == null) {
+            return Map.of("message", "User has not updated their health goal.");
+        }
+        return Map.of("goal", user.getDietaryPreference().getName());
+    }
+
+    @Override
+    public Map<String, Object> getUserCuisinePreferences(Long id){
+        UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+
+        Set<CuisinePreference> cuisineSet = user.getCuisinePreferences();
+        List<String> cuisines = (cuisineSet != null)
+                ? cuisineSet.stream()
+                .map(CuisinePreference::getName)
+                .toList()
+                : List.of();
+        if (cuisines.isEmpty()) {
+            return Map.of(
+                    "message", "User has not added any cuisine preferences.",
+                    "cuisinePreferences", cuisines
+            );
+        }
+
+        return Map.of("cuisinePreferences", cuisines);
     }
 }
