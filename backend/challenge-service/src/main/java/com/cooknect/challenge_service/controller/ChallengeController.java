@@ -1,9 +1,6 @@
 package com.cooknect.challenge_service.controller;
 
-import com.cooknect.challenge_service.dto.CreateChallengeRequest;
-import com.cooknect.challenge_service.dto.ChallengeResponse;
-import com.cooknect.challenge_service.dto.UpdateChallengeRequest;
-import com.cooknect.challenge_service.dto.ChallengeParticipationRequest;
+import com.cooknect.challenge_service.dto.*;
 import com.cooknect.challenge_service.model.ChallengeParticipant;
 import com.cooknect.challenge_service.service.ChallengeService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,5 +85,29 @@ public class ChallengeController {
     public ResponseEntity<List<ChallengeParticipant>> getChallengeParticipants(@PathVariable Long challengeId) {
         List<ChallengeParticipant> participants = challengeService.getChallengeParticipants(challengeId);
         return ResponseEntity.ok(participants);
+    }
+    
+    @PostMapping("/{challengeId}/submit-recipe")
+    public ResponseEntity<Map<String, String>> submitRecipeToChallenge(@PathVariable Long challengeId, @RequestBody RecipeSubmissionRequest request) {
+        Map<String, String> response = new HashMap<>();
+        try {
+            boolean success = challengeService.submitRecipeToChallenge(challengeId, request);
+            if (success) {
+                response.put("message", "Recipe submitted successfully.");
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("error", "Recipe submission failed.");
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (RuntimeException e) {
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/{challengeId}/leaderboard")
+    public ResponseEntity<List<LeaderboardEntry>> getChallengeLeaderboard(@PathVariable Long challengeId) {
+        List<LeaderboardEntry> leaderboard = challengeService.getChallengeLeaderboard(challengeId);
+        return ResponseEntity.ok(leaderboard);
     }
 }

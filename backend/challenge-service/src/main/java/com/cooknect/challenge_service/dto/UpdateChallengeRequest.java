@@ -14,4 +14,3 @@ public class UpdateChallengeRequest {
     private LocalDateTime endDate;
     private ChallengeType type;
 }
-

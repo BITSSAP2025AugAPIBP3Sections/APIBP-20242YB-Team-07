@@ -3,10 +3,11 @@ package com.cooknect.challenge_service.dto;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
 @Getter
-public class ChallengeParticipationRequest {
+@Setter
+public class LeaderboardEntry {
+    private String userId;
     private String username;
-    private String email;
-    private String role;
+    private int recipeCount;
+    private int totalLikes;
 }
