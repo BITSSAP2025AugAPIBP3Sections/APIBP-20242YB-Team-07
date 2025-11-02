@@ -5,6 +5,7 @@ import com.cooknect.user_service.model.UserModel;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public interface UserService {
@@ -19,4 +20,18 @@ public interface UserService {
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader);
 
     public void deleteUser(Long id,String userEmailHeader);
+
+    public UsersDTO updatePreferences(Long id, UsersDTO usersDTO, String userEmailHeader);
+
+    public UsersDTO updateHealthGoalPreference(Long id, UsersDTO usersDTO, String userEmailHeader);
+
+    public UsersDTO updateDietaryPreference(Long id, UsersDTO usersDTO, String userEmailHeader);
+
+    public UsersDTO updateCuisinePreference(Long id, UsersDTO usersDTO, String userEmailHeader);
+
+    public Map<String, String> getDietaryPreference(Long id);
+
+    public Map<String, String> getHealthGoal(Long id);
+
+    public Map<String, Object> getUserCuisinePreferences(Long id);
 }

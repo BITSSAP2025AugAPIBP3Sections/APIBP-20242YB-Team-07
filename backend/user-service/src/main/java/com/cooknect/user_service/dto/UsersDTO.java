@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Setter
 @Getter
 @NoArgsConstructor
@@ -15,4 +17,7 @@ public class UsersDTO {
     private String role;
     private String username;
     private String fullName;
+    private String dietaryPreference;
+    private String healthGoal;
+    private List<String> cuisinePreferences;
 }
