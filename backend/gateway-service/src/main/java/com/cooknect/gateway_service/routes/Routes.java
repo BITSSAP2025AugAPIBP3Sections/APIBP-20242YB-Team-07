@@ -3,6 +3,7 @@ package com.cooknect.gateway_service.routes;
 import com.cooknect.gateway_service.service.JWTService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.function.RequestPredicates;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -11,6 +12,8 @@ import org.springframework.web.servlet.function.ServerResponse;
 import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
 import org.springframework.context.annotation.Bean;
+
+import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunctions.setPath;
 
 @Configuration
 public class Routes {
@@ -48,6 +51,14 @@ public class Routes {
                                     .build();
                             return HandlerFunctions.http("http://localhost:8081").handle(newRequest);
                         })
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> recipeServiceSwaggerRoute() {
+        return GatewayRouterFunctions.route("recipe-service")
+                .route(RequestPredicates.path("/aggregate/recipe-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8081"))
+                .filter(setPath("/api-docs"))
                 .build();
     }
 }
