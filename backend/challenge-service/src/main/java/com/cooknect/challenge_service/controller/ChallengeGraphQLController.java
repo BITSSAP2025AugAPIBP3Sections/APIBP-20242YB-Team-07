@@ -1,8 +1,7 @@
 package com.cooknect.challenge_service.controller;
 
-import com.cooknect.challenge_service.dto.CreateChallengeRequest;
-import com.cooknect.challenge_service.dto.ChallengeResponse;
-import com.cooknect.challenge_service.dto.UpdateChallengeRequest;
+import com.cooknect.challenge_service.dto.*;
+import com.cooknect.challenge_service.model.ChallengeParticipant;
 import com.cooknect.challenge_service.service.ChallengeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -44,5 +43,28 @@ public class ChallengeGraphQLController {
     @MutationMapping
     public Boolean deleteChallenge(@Argument Long id) {
         return challengeService.deleteChallenge(id);
+    }
+
+    @MutationMapping
+    public Boolean joinChallenge(@Argument Long challengeId, @Argument ChallengeParticipationRequest request) {
+        return challengeService.joinChallenge(challengeId, request);
+    }
+
+    @MutationMapping
+    public Boolean leaveChallenge(@Argument Long challengeId, @Argument ChallengeParticipationRequest request) {
+        return challengeService.leaveChallenge(challengeId, request);
+    }
+
+    @QueryMapping
+    public List<ChallengeParticipant> challengeParticipants(@Argument Long challengeId) {
+        return challengeService.getChallengeParticipants(challengeId);
+    }
+    @MutationMapping
+    public Boolean submitRecipeToChallenge(@Argument Long challengeId, @Argument RecipeSubmissionRequest request) {
+        return challengeService.submitRecipeToChallenge(challengeId, request);
+    }
+    @QueryMapping
+    public List<LeaderboardEntry> challengeLeaderboard(@Argument Long challengeId) {
+        return challengeService.getChallengeLeaderboard(challengeId);
     }
 }

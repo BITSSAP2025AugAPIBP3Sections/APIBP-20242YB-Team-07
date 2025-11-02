@@ -36,11 +36,11 @@ public class Challenge {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ChallengeStatus status;
-    
+
     @ElementCollection
     @CollectionTable(name = "challenge_participants", joinColumns = @JoinColumn(name = "challenge_id"))
     private Set<ChallengeParticipant> participants = new HashSet<>();
-    
+
     public ChallengeStatus getCurrentStatus() {
         LocalDateTime now = LocalDateTime.now();
         if (status == ChallengeStatus.CANCELLED) {

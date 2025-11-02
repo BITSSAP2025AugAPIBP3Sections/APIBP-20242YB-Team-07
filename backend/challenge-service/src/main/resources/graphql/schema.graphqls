@@ -43,10 +43,22 @@ input ChallengeParticipationInput {
     role: String!
 }
 
+input RecipeSubmissionInput {
+  userId: String!
+  recipeId: ID!
+}
+
 type ChallengeParticipant {
     username: String!
     email: String!
     role: String!
+}
+
+type LeaderboardEntry {
+  userId: String!
+  username: String
+  recipeCount: Int!
+  totalLikes: Int!
 }
 
 type Mutation {
@@ -55,10 +67,12 @@ type Mutation {
     deleteChallenge(id: ID!): Boolean!
     joinChallenge(challengeId: ID!, request: ChallengeParticipationInput!): Boolean!
     leaveChallenge(challengeId: ID!, request: ChallengeParticipationInput!): Boolean!
+    submitRecipeToChallenge(challengeId: ID!, request: RecipeSubmissionInput!): Boolean!
 }
 
 type Query {
     challenges: [Challenge!]!
     challenge(id: ID!): Challenge
     challengeParticipants(challengeId: ID!): [ChallengeParticipant!]!
+    challengeLeaderboard(challengeId: ID!): [LeaderboardEntry!]!
 }
