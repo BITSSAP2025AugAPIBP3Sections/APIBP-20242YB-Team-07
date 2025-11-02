@@ -75,9 +75,4 @@ public class RecipeController {
     public List<Recipe> byIngredient(@RequestParam String q) {
         return svc.findByIngredient(q);
     }
-
-    @GetMapping("/external")
-    public String getExternalRecipes(@RequestParam String query) {
-        return svc.fetchExternalRecipes(query);
-    }
 }
