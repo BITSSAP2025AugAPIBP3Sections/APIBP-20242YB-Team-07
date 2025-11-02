@@ -2,7 +2,6 @@ package com.cooknect.recipe_service.service;
 
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.repository.RecipeRepository;
-import com.cooknect.recipe_service.integration.SpoonacularClient;
 import com.cooknect.recipe_service.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -12,12 +11,10 @@ import java.util.List;
 public class RecipeService {
 
     private final RecipeRepository repo;
-    private final SpoonacularClient spoonacularClient;
 
     // Constructor Injection for both dependencies
-    public RecipeService(RecipeRepository repo, SpoonacularClient spoonacularClient) {
+    public RecipeService(RecipeRepository repo) {
         this.repo = repo;
-        this.spoonacularClient = spoonacularClient;
     }
 
     //  CRUD Operations
@@ -97,10 +94,5 @@ public class RecipeService {
                                 .anyMatch(i -> i.getName() != null &&
                                         i.getName().toLowerCase().contains(ingredient.toLowerCase())))
                 .toList();
-    }
-
-    //  Integration with Spoonacular
-    public String fetchExternalRecipes(String query) {
-        return spoonacularClient.searchRecipes(query);
     }
 }
