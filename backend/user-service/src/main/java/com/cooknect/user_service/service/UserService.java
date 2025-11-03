@@ -19,7 +19,7 @@ public interface UserService {
 
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader);
 
-    public UserModel updateUserGraphql(Long id, UserModel userModel);
+    public UsersDTO updateUserGraphql(Long id, UsersDTO userDto);
 
     public void deleteUser(Long id,String userEmailHeader);
 

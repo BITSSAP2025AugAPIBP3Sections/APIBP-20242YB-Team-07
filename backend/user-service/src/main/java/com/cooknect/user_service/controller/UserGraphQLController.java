@@ -49,7 +49,7 @@ public class UserGraphQLController {
     }
 
     @MutationMapping
-    public UserModel updateUser(@Argument Long id, @Argument UserModel user) {
-        return userService.updateUserGraphql(id, user);
+    public UsersDTO updateUser(@Argument Long userId, @Argument("user") UsersDTO userDto) {
+        return userService.updateUserGraphql(userId, userDto);
     }
 }

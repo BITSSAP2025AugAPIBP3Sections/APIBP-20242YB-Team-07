@@ -150,43 +150,61 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public UserModel updateUserGraphql(Long id, UserModel userUpdates) {
-        UserModel existingUser = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id " + id));
+    public UsersDTO updateUserGraphql(Long id, UsersDTO userDto) {
+        UserModel existingUser = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id " + id));
 
-        if (userUpdates.getEmail() != null) {
-            if(!userUpdates.getEmail().matches(EMAIL_REGEX)) throw new RuntimeException("Invalid email format");
-            UserModel existingUserEmail = repository.findByEmail(userUpdates.getEmail());
-            if(existingUserEmail != null && !existingUserEmail.getId().equals(id)){
-                throw new RuntimeException("Email already in use by another user");
-            }
-            existingUser.setEmail(userUpdates.getEmail());
+        if (userDto.getEmail() != null) {
+            if (!userDto.getEmail().matches(EMAIL_REGEX))
+                throw new RuntimeException("Invalid email format");
+            UserModel existingEmail = repository.findByEmail(userDto.getEmail());
+            if (existingEmail != null && !existingEmail.getId().equals(id))
+                throw new RuntimeException("Email already in use");
+            existingUser.setEmail(userDto.getEmail());
         }
-        if (userUpdates.getUsername() != null) {
-            UserModel existingUsername = repository.findByUsername(userUpdates.getUsername());
-            if(existingUsername != null && !existingUsername.getId().equals(id)){
-                throw new RuntimeException("Username already in use by another user");
-            }
-            existingUser.setUsername(userUpdates.getUsername());
+
+        if (userDto.getUsername() != null) {
+            UserModel existingUsername = repository.findByUsername(userDto.getUsername());
+            if (existingUsername != null && !existingUsername.getId().equals(id))
+                throw new RuntimeException("Username already in use");
+            existingUser.setUsername(userDto.getUsername());
         }
-        if (userUpdates.getFullName() != null) existingUser.setFullName(userUpdates.getFullName());
-        if (userUpdates.getDietaryPreference() != null){
-            DietaryPreference diet = dietaryPreferenceRepository.findByName(userUpdates.getDietaryPreference().getName()).orElseThrow(() -> new RuntimeException("Enter a valid Dietary preference"));
+
+        if (userDto.getFullName() != null)
+            existingUser.setFullName(userDto.getFullName());
+
+        if (userDto.getDietaryPreference() != null) {
+            DietaryPreference diet = dietaryPreferenceRepository.findByName(userDto.getDietaryPreference())
+                    .orElseThrow(() -> new RuntimeException("Enter a valid Dietary preference"));
             existingUser.setDietaryPreference(diet);
         }
-        if (userUpdates.getHealthGoal() != null){
-            HealthGoal goal = healthGoalRepository.findByName(userUpdates.getHealthGoal().getName()).orElseThrow(() -> new RuntimeException("Enter a valid Health goal"));
+
+        if (userDto.getHealthGoal() != null) {
+            HealthGoal goal = healthGoalRepository.findByName(userDto.getHealthGoal())
+                    .orElseThrow(() -> new RuntimeException("Enter a valid Health goal"));
             existingUser.setHealthGoal(goal);
         }
 
-        if (userUpdates.getCuisinePreferences() != null){
-            Set<CuisinePreference> cuisines = userUpdates.getCuisinePreferences().stream()
-                    .map(name -> cuisinePreferenceRepository.findByName(name.getName())
+        if (userDto.getCuisinePreferences() != null && !userDto.getCuisinePreferences().isEmpty()) {
+            Set<CuisinePreference> cuisines = userDto.getCuisinePreferences().stream()
+                    .map(name -> cuisinePreferenceRepository.findByName(name)
                             .orElseThrow(() -> new RuntimeException("Invalid cuisine: " + name)))
                     .collect(Collectors.toSet());
             existingUser.setCuisinePreferences(cuisines);
         }
-        return repository.save(existingUser);
+
+        UserModel updatedUser = repository.save(existingUser);
+        return new UsersDTO(updatedUser.getId(),
+                updatedUser.getEmail(),
+                updatedUser.getRole().name(),
+                updatedUser.getUsername(),
+                updatedUser.getFullName(),
+                updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
+                updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
+                updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
+        );
     }
+
 
 
     @Override
