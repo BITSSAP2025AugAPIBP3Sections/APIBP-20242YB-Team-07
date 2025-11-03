@@ -150,6 +150,46 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
+    public UserModel updateUserGraphql(Long id, UserModel userUpdates) {
+        UserModel existingUser = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id " + id));
+
+        if (userUpdates.getEmail() != null) {
+            if(!userUpdates.getEmail().matches(EMAIL_REGEX)) throw new RuntimeException("Invalid email format");
+            UserModel existingUserEmail = repository.findByEmail(userUpdates.getEmail());
+            if(existingUserEmail != null && !existingUserEmail.getId().equals(id)){
+                throw new RuntimeException("Email already in use by another user");
+            }
+            existingUser.setEmail(userUpdates.getEmail());
+        }
+        if (userUpdates.getUsername() != null) {
+            UserModel existingUsername = repository.findByUsername(userUpdates.getUsername());
+            if(existingUsername != null && !existingUsername.getId().equals(id)){
+                throw new RuntimeException("Username already in use by another user");
+            }
+            existingUser.setUsername(userUpdates.getUsername());
+        }
+        if (userUpdates.getFullName() != null) existingUser.setFullName(userUpdates.getFullName());
+        if (userUpdates.getDietaryPreference() != null){
+            DietaryPreference diet = dietaryPreferenceRepository.findByName(userUpdates.getDietaryPreference().getName()).orElseThrow(() -> new RuntimeException("Enter a valid Dietary preference"));
+            existingUser.setDietaryPreference(diet);
+        }
+        if (userUpdates.getHealthGoal() != null){
+            HealthGoal goal = healthGoalRepository.findByName(userUpdates.getHealthGoal().getName()).orElseThrow(() -> new RuntimeException("Enter a valid Health goal"));
+            existingUser.setHealthGoal(goal);
+        }
+
+        if (userUpdates.getCuisinePreferences() != null){
+            Set<CuisinePreference> cuisines = userUpdates.getCuisinePreferences().stream()
+                    .map(name -> cuisinePreferenceRepository.findByName(name.getName())
+                            .orElseThrow(() -> new RuntimeException("Invalid cuisine: " + name)))
+                    .collect(Collectors.toSet());
+            existingUser.setCuisinePreferences(cuisines);
+        }
+        return repository.save(existingUser);
+    }
+
+
+    @Override
     public void deleteUser(Long id, String userEmailHeader) {
         UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         if(!user.getEmail().equals(userEmailHeader)){
