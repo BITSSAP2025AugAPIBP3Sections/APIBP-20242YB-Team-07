@@ -19,6 +19,8 @@ public interface UserService {
 
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader);
 
+    public UserModel updateUserGraphql(Long id, UserModel userModel);
+
     public void deleteUser(Long id,String userEmailHeader);
 
     public UsersDTO updatePreferences(Long id, UsersDTO usersDTO, String userEmailHeader);
