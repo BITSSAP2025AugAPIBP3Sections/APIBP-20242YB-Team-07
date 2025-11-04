@@ -2,6 +2,7 @@ package com.cooknect.recipe_service.service;
 
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.repository.RecipeRepository;
+//import com.cooknect.recipe_service.integration.SpoonacularClient;
 import com.cooknect.recipe_service.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -11,22 +12,71 @@ import java.util.List;
 public class RecipeService {
 
     private final RecipeRepository repo;
-
     // Constructor Injection for both dependencies
     public RecipeService(RecipeRepository repo) {
         this.repo = repo;
-    }
 
+    }
     //  CRUD Operations
 
     public Recipe create(Recipe recipe) {
         return repo.save(recipe);
     }
 
-    public Recipe getById(Long id) {
-        return repo.findById(id)
-                .orElseThrow(() -> new NotFoundException("Recipe not found: " + id));
+    public Recipe getById(Long recipeId) {
+        return repo.findById(recipeId)
+                .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
     }
+    //Fetching all the recipes based on username
+    public List<Recipe> getByUsername(String username) {
+        return repo.findByUsername(username);
+    }
+    //Getting a particular recipe of a particular user
+    // ✅ Fetch a single recipe by username and ID
+    public Recipe getByUsernameAndId(String username, Long recipeId) {
+        return repo.findByUsernameAndId(username, recipeId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Recipe not found for user: " + username + " and id: " + recipeId));
+    }
+    //Deleting a recipe of a user
+    public void deleteRecipeByUser(String username, Long recipeId) {
+        Recipe recipe = repo.findById(recipeId)
+                .orElseThrow(() -> new NotFoundException("Recipe not found with id: " + recipeId));
+
+        // ensure the recipe belongs to the user
+        if (!recipe.getUsername().equals(username)) {
+            throw new RuntimeException("User not authorized to delete this recipe");
+        }
+
+        repo.delete(recipe);
+    }
+
+    //Deleting all the recipes of a user
+
+    public void deleteAllByUser(String username) {
+        List<Recipe> userRecipes = repo.findByUsername(username);
+        if (userRecipes.isEmpty()) {
+            throw new NotFoundException("No recipes found for user: " + username);
+        }
+
+        repo.deleteAll(userRecipes);
+    }
+
+    //update username and assign all the recipes to that username
+    public void updateUsername(String oldUsername, String newUsername) {
+        List<Recipe> recipes = repo.findByUsername(oldUsername);
+
+        if (recipes.isEmpty()) {
+            throw new NotFoundException("No recipes found for user: " + oldUsername);
+        }
+
+        for (Recipe recipe : recipes) {
+            recipe.setUsername(newUsername);
+        }
+
+        repo.saveAll(recipes);
+    }
+
 
     public List<Recipe> listAll() {
         return repo.findAll();
@@ -95,4 +145,7 @@ public class RecipeService {
                                         i.getName().toLowerCase().contains(ingredient.toLowerCase())))
                 .toList();
     }
+
+
+
 }
