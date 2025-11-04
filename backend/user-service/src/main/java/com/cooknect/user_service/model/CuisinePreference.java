@@ -19,4 +19,8 @@ public class CuisinePreference {
 
     @Column(name="name",unique = true)
     private String name;
+
+    public CuisinePreference(String name) {
+        this.name = name;
+    }
 }
