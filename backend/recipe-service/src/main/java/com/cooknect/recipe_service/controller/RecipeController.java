@@ -26,12 +26,12 @@ public class RecipeController {
     public Recipe get(@PathVariable Long recipeId) { return svc.getById(recipeId); }
     //Fetch recipes of a particular user
 
-    @GetMapping("/{username}/allrecipes")
+    @GetMapping("/{username}")
     public List<Recipe> getByUsername(@PathVariable String username){
         return  svc.getByUsername(username);
     }
 
-    // ✅ Fetch a specific recipe by username and ID
+    // Fetch a specific recipe by username and ID
     @GetMapping("/{username}/recipes/{recipeId}")
     public Recipe getByUsernameAndId(@PathVariable String username, @PathVariable Long recipeId) {
         return svc.getByUsernameAndId(username, recipeId);
@@ -45,7 +45,7 @@ public class RecipeController {
         svc.deleteRecipeByUser(username, recipeId);
         return ResponseEntity.noContent().build();
     }
-    @DeleteMapping("/{username}/delete")
+    @DeleteMapping("/{username}")
     public ResponseEntity<Void> deleteAllRecipesByUser(@PathVariable String username) {
         svc.deleteAllByUser(username);
         return ResponseEntity.noContent().build();
