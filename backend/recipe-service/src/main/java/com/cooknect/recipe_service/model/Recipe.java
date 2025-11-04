@@ -26,7 +26,7 @@ public class Recipe {
     private String language = "en";
     private int likes = 0;
 
-    private String createdBy; // store creator id or email
+    private String username; // store creator id or email
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "recipe_id")
