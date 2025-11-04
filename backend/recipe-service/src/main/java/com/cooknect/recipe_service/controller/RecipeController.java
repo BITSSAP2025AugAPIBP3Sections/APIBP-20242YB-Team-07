@@ -4,7 +4,9 @@ import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.dto.CommentDto;
 import com.cooknect.recipe_service.service.RecipeService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.PatchMapping;
 import java.util.List;
@@ -131,6 +133,15 @@ public class RecipeController {
         return svc.findByIngredient(q);
     }
 
+    private static final String TOPIC = "recipe-topic";
 
+    @Autowired
+    private KafkaTemplate<String, String> kafkaTemplate;
 
+    @PostMapping("/publish")
+    public String publishRecipe(@RequestParam String recipeId) {
+        String message = "Recipe Published: " + recipeId;
+        kafkaTemplate.send(TOPIC, message);
+        return "Published: " + message;
+    }
 }
