@@ -1,0 +1,99 @@
+# Enums must be defined in the schema
+enum MealType {
+    BREAKFAST
+    LUNCH
+    DINNER
+    SNACK
+}
+
+# Represents a food item from your database
+type FoodItem {
+    id: ID!
+    foodItem: String
+    category: String
+    calories: Float
+    protein: Float
+    carbohydrates: Float
+    fat: Float
+    servingSize: String
+}
+
+# Represents a logged nutrition entry
+type NutritionLog {
+    id: ID!
+    userName: String
+    recipeId: ID
+    foodName: String
+    ingredients: String
+    calories: Float
+    protein: Float
+    carbohydrates: Float
+    fat: Float
+    mealType: MealType
+    analyzedAt: String
+}
+
+# Represents the summary of daily intake
+type DailyIntakeSummary {
+    totalCalories: Float
+    totalProtein: Float
+    totalCarbs: Float
+    totalFat: Float
+}
+
+# The response from an analysis or update mutation
+type NutritionResponse {
+    userName: String
+    recipeId: ID
+    recipeName: String
+    totalCalories: Float
+    totalProtein: Float
+    totalCarbs: Float
+    totalFat: Float
+    analyzedIngredients: [String]
+    mealType: MealType
+}
+
+# Input type for adding/editing a food item
+input FoodItemInput {
+    foodItem: String
+    category: String
+    calories: Float
+    protein: Float
+    carbohydrates: Float
+    fat: Float
+    servingSize: String
+}
+
+# Input type for analyzing ingredients
+input IngredientInput {
+    name: String
+    quantity: String
+    servingSize: String
+}
+
+input NutritionRequestInput {
+    userName: String!
+    recipeId: ID
+    recipeName: String
+    mealType: MealType
+    ingredients: [IngredientInput]!
+}
+
+
+# Defines all the queries (read operations)
+type Query {
+    allFoodItems: [FoodItem]
+    allNutritionLogs: [NutritionLog]
+    logsByUserName(userName: String!): [NutritionLog]
+    logsByMealType(userName: String!, mealType: MealType!): [NutritionLog]
+    todayIntakeSummary(userName: String!): DailyIntakeSummary
+}
+
+# Defines all the mutations (write operations)
+type Mutation {
+    addFoodItem(foodItem: FoodItemInput!): FoodItem
+    editFoodItem(id: ID!, foodItemDetails: FoodItemInput!): FoodItem
+    analyzeIngredients(request: NutritionRequestInput!): NutritionResponse
+    updateNutritionLog(logId: ID!, request: NutritionRequestInput!): NutritionResponse
+}

@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 @Entity
+@Table(uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"userName", "recipeId", "analyzedAt"})
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,9 +22,12 @@ public class NutritionLog {
     private Long id;
 
     private String userName;
+
     private Long recipeId;
+
     private String foodName;
     private String ingredients;
+
     private Double calories;
     private Double protein;
     private Double carbohydrates;

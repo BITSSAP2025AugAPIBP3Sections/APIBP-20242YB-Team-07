@@ -12,6 +12,7 @@ import com.cooknect.nutrition_service.dto.*;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
+import java.util.Collections;
 
 @Service
 public class NutritionService {
@@ -27,7 +28,9 @@ public class NutritionService {
     public NutritionResponse analyzeIngredients(NutritionRequest request) {
         double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
 
-        for (Map<String, String> ingredientMap : request.getIngredients()) {
+        List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
+
+        for (Map<String, String> ingredientMap : ingredients) {
             String name = ingredientMap.get("name");
             String quantityStr = ingredientMap.get("quantity");
             String servingSize = ingredientMap.get("servingSize");
@@ -61,13 +64,12 @@ public class NutritionService {
                 totalProtein,
                 totalCarbs,
                 totalFat,
-                request.getIngredients().stream()
+                ingredients.stream()
                         .map(i -> i.get("name"))
                         .toList(),
                 request.getMealType()
         );
-
-        // ✅ Save to nutrition_log table
+        
         NutritionLog log = NutritionLog.builder()
                 .userName(request.getUserName())
                 .recipeId(request.getRecipeId())
