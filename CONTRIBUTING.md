@@ -119,4 +119,4 @@ By contributing, you agree that your contributions will be licensed under the MI
 Your contributions make Cooknect better for everyone.
 Whether you’re fixing a typo or building a new feature, we’re grateful for your support!
 
-The Cooknect Team
+_The Cooknect Team_
