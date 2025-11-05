@@ -8,7 +8,7 @@ We welcome contributions of all kinds — from bug fixes and new features to doc
 
 ---
 
-## 🧭 Getting Started
+## 🧭 Getting Started 
 
 ### 1. Fork & Clone
 Fork this repository on GitHub and clone it locally:
