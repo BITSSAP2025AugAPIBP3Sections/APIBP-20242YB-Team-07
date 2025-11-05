@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.cooknect</groupId>
-	<artifactId>recipe-service</artifactId>
+	<artifactId>notification-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>recipe-service</name>
-	<description>Recipe service for Cooknect</description>
+	<name>notification-service</name>
+	<description>Notification service for Cooknect</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -39,8 +39,13 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
-        	<groupId>org.springframework.kafka</groupId>
-        	<artifactId>spring-kafka</artifactId>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-mail</artifactId>
+    		<version>4.0.0-RC1</version>
+		</dependency>
+    	<dependency>
+      		<groupId>org.springframework.kafka</groupId>
+      		<artifactId>spring-kafka</artifactId>
     	</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -49,8 +54,8 @@
 			<optional>true</optional>
 		</dependency>
 		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
@@ -63,22 +68,6 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- add for local dev/testing -->
-		<!-- <dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
-		</dependency> -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webflux</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-graphql</artifactId>
-		</dependency>
-		
-
 	</dependencies>
 
 	<build>

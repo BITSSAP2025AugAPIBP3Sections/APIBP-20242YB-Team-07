@@ -1,0 +1,78 @@
+enum ChallengeType {
+    MOST_RECIPES
+    MOST_LIKES
+    CUSTOM
+}
+
+enum ChallengeStatus {
+    UPCOMING
+    ONGOING
+    COMPLETED
+    CANCELLED
+}
+
+type Challenge {
+    id: ID!
+    name: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    type: ChallengeType!
+    status: ChallengeStatus!
+}
+
+input CreateChallengeInput {
+    name: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    type: ChallengeType!
+}
+
+input UpdateChallengeInput {
+    name: String
+    description: String
+    startDate: String
+    endDate: String
+    type: ChallengeType
+}
+
+input ChallengeParticipationInput {
+    username: String!
+    email: String!
+    role: String!
+}
+
+input RecipeSubmissionInput {
+  userId: String!
+  recipeId: ID!
+}
+
+type ChallengeParticipant {
+    username: String!
+    email: String!
+    role: String!
+}
+
+type LeaderboardEntry {
+  userId: String!
+  username: String
+  recipeCount: Int!
+  totalLikes: Int!
+}
+
+type Mutation {
+    createChallenge(request: CreateChallengeInput!): Challenge!
+    updateChallenge(id: ID!, request: UpdateChallengeInput!): Challenge!
+    deleteChallenge(id: ID!): Boolean!
+    joinChallenge(challengeId: ID!, request: ChallengeParticipationInput!): Boolean!
+    leaveChallenge(challengeId: ID!, request: ChallengeParticipationInput!): Boolean!
+    submitRecipeToChallenge(challengeId: ID!, request: RecipeSubmissionInput!): Boolean!
+}
+
+type Query {
+    challenges: [Challenge!]!
+    challenge(id: ID!): Challenge
+    challengeParticipants(challengeId: ID!): [ChallengeParticipant!]!
+    challengeLeaderboard(challengeId: ID!): [LeaderboardEntry!]!
+}
