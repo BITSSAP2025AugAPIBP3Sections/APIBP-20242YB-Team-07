@@ -48,14 +48,14 @@ public class NutritionController {
         return ResponseEntity.ok(nutritionService.getAllNutritionLogs());
     }
 
-    @GetMapping("/NutritionLogsByUserId/{userId}")
+    @GetMapping("/NutritionLogsByUserId/{userName}")
     public ResponseEntity<List<NutritionLog>> getNutritionLogsByUserName(@PathVariable String userName) {
         return ResponseEntity.ok(nutritionService.getNutritionLogsByUserName(userName));
     }
 
-    @GetMapping("/user/{userId}/MealTypes/{mealType}")
-    public ResponseEntity<List<NutritionLog>> getNutritionLogsByMealType(@PathVariable String userId, @PathVariable MealType mealType) {
-        return ResponseEntity.ok(nutritionService.getNutritionLogsByMealType(userId, mealType));
+    @GetMapping("/user/{userName}/MealTypes/{mealType}")
+    public ResponseEntity<List<NutritionLog>> getNutritionLogsByMealType(@PathVariable String userName, @PathVariable MealType mealType) {
+        return ResponseEntity.ok(nutritionService.getNutritionLogsByMealType(userName, mealType));
     }
 
     @PutMapping("/log/{logId}")
