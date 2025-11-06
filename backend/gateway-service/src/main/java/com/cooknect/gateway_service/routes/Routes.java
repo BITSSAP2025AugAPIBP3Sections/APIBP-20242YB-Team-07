@@ -304,10 +304,34 @@ public class Routes {
     }
 
     @Bean
+    public RouterFunction<ServerResponse> userServiceSwaggerRoute() {
+        return GatewayRouterFunctions.route("user-service-swagger")
+            .route(RequestPredicates.path("/aggregate/user-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8081"))
+            .filter(setPath("/api-docs"))
+            .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> recipeServiceSwaggerRoute() {
-        return GatewayRouterFunctions.route("recipe-service")
-                .route(RequestPredicates.path("/aggregate/recipe-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8081"))
-                .filter(setPath("/api-docs"))
-                .build();
+        return GatewayRouterFunctions.route("recipe-service-swagger")
+            .route(RequestPredicates.path("/aggregate/recipe-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8082"))
+            .filter(setPath("/api-docs"))
+            .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> challengeServiceSwaggerRoute() {
+        return GatewayRouterFunctions.route("challenge-service-swagger")
+            .route(RequestPredicates.path("/aggregate/challenge-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8083"))
+            .filter(setPath("/api-docs"))
+            .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> nutritionServiceSwaggerRoute() {
+        return GatewayRouterFunctions.route("nutrition-service-swagger")
+            .route(RequestPredicates.path("/aggregate/nutrition-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8085"))
+            .filter(setPath("/api-docs"))
+            .build();
     }
 }
