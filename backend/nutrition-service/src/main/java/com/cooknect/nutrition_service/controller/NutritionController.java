@@ -34,8 +34,9 @@ public class NutritionController {
     }
 
     @PostMapping("/analyze")
-    public ResponseEntity<NutritionResponse> analyze(@RequestBody NutritionRequest req) {
-        return ResponseEntity.ok(nutritionService.analyzeIngredients(req));
+    public ResponseEntity<NutritionResponse> analyze(@RequestBody NutritionRequest req, @RequestHeader("X-User-Name") String userName) {
+        req.setUserName(userName);
+        return ResponseEntity.ok(nutritionService.analyzeIngredients(req, userName));
     }
 
     @GetMapping("/health")
@@ -49,30 +50,34 @@ public class NutritionController {
     }
 
     @GetMapping("/NutritionLogsByUserId/{userName}")
-    public ResponseEntity<List<NutritionLog>> getNutritionLogsByUserName(@PathVariable String userName) {
+    public ResponseEntity<List<NutritionLog>> getNutritionLogsByUserName(@RequestHeader("X-User-Name") String userName) {
         return ResponseEntity.ok(nutritionService.getNutritionLogsByUserName(userName));
     }
 
     @GetMapping("/user/{userName}/MealTypes/{mealType}")
-    public ResponseEntity<List<NutritionLog>> getNutritionLogsByMealType(@PathVariable String userName, @PathVariable MealType mealType) {
+    public ResponseEntity<List<NutritionLog>> getNutritionLogsByMealType(@RequestHeader("X-User-Name") String userName, @PathVariable MealType mealType) {
         return ResponseEntity.ok(nutritionService.getNutritionLogsByMealType(userName, mealType));
     }
 
     @PutMapping("/log/{logId}")
     public ResponseEntity<NutritionResponse> updateNutritionLog(
             @PathVariable Long logId,
-            @RequestBody NutritionRequest request) {
-        return ResponseEntity.ok(nutritionService.updateNutritionLog(logId, request));
+            @RequestBody NutritionRequest request,
+            @RequestHeader("X-User-Name") String userName) {
+        return ResponseEntity.ok(nutritionService.updateNutritionLog(logId, request, userName));
     }
 
     @PatchMapping("/log/{logId}")
-    public ResponseEntity<NutritionLog> patchNutritionLog(@PathVariable Long logId, @RequestBody Map<String, Object> updates) {
-        return ResponseEntity.ok(nutritionService.patchNutritionLog(logId, updates));
+    public ResponseEntity<NutritionLog> patchNutritionLog(@PathVariable Long logId,
+            @RequestBody Map<String, Object> updates,
+            @RequestHeader("X-User-Name") String userName) {
+        return ResponseEntity.ok(nutritionService.patchNutritionLog(logId, updates, userName));
     }
 
     @DeleteMapping("/log/{logId}")
-    public ResponseEntity<Void> deleteNutritionLog(@PathVariable Long logId) {
-        nutritionService.deleteNutritionLog(logId);
+    public ResponseEntity<Void> deleteNutritionLog(@PathVariable Long logId,
+            @RequestHeader("X-User-Name") String userName) {
+        nutritionService.deleteNutritionLog(logId, userName);
         return ResponseEntity.noContent().build();  
     }
 }
