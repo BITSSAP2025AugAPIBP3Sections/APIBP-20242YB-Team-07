@@ -18,6 +18,17 @@ public class SecurityConfig {
     @Autowired
     private JWTFilter jwtAuthFilter;
 
+    private static final String[] freeResourceUrls = {
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/swagger-resources/**",
+            "/webjars/**",
+            "/api-docs/**",
+            "/aggregate/**",
+            "/api/v1/users/login",
+            "/api/v1/users/register"
+    };
     @Bean
     public AuthenticationManager authenticationManager() {
         return authentication -> {
@@ -33,7 +44,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/users/login","/api/v1/users/register").permitAll()
+                        .requestMatchers( freeResourceUrls).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
