@@ -25,7 +25,8 @@ public class NutritionService {
         this.logRepo = logRepo;
     }
 
-    public NutritionResponse analyzeIngredients(NutritionRequest request) {
+    public NutritionResponse analyzeIngredients(NutritionRequest request, String userName) {
+        request.setUserName(userName);
         double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
 
         List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
@@ -139,9 +140,13 @@ public class NutritionService {
         return new DailyIntakeSummary(totalCalories, totalProtein, totalCarbs, totalFat); 
     }
 
-    public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request) {
+    public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, String userName) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
+
+        if (!log.getUserName().equals(userName)) {
+            throw new RuntimeException("User not authorized to update this log");
+        }
 
         double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
 
@@ -202,9 +207,13 @@ public class NutritionService {
         );
     }
 
-    public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates) {
+    public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates, String userName) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
+
+        if (!log.getUserName().equals(userName)) {
+            throw new RuntimeException("User not authorized to update this log");
+        }
 
         if (updates.containsKey("mealType")) {
             log.setMealType(MealType.valueOf((String) updates.get("mealType")));
@@ -213,9 +222,12 @@ public class NutritionService {
         return logRepo.save(log);
     }
 
-    public void deleteNutritionLog(Long logId) {
-        if (!logRepo.existsById(logId)) {
-            throw new RuntimeException("Nutrition log not found with id: " + logId);
+    public void deleteNutritionLog(Long logId, String userName) {
+        NutritionLog log = logRepo.findById(logId)
+                .orElseThrow(() -> new RuntimeException("Nutrition log not found with id: " + logId));
+
+        if (!log.getUserName().equals(userName)) {
+            throw new RuntimeException("User not authorized to delete this log");
         }
         logRepo.deleteById(logId);
     }
