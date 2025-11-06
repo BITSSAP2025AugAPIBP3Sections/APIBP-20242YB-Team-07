@@ -65,4 +65,14 @@ public class NutritionController {
         return ResponseEntity.ok(nutritionService.updateNutritionLog(logId, request));
     }
 
+    @PatchMapping("/log/{logId}")
+    public ResponseEntity<NutritionLog> patchNutritionLog(@PathVariable Long logId, @RequestBody Map<String, Object> updates) {
+        return ResponseEntity.ok(nutritionService.patchNutritionLog(logId, updates));
+    }
+
+    @DeleteMapping("/log/{logId}")
+    public ResponseEntity<Void> deleteNutritionLog(@PathVariable Long logId) {
+        nutritionService.deleteNutritionLog(logId);
+        return ResponseEntity.noContent().build();  
+    }
 }

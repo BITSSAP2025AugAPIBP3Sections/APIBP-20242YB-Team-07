@@ -201,4 +201,22 @@ public class NutritionService {
                 log.getMealType()
         );
     }
+
+    public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates) {
+        NutritionLog log = logRepo.findById(logId)
+                .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
+
+        if (updates.containsKey("mealType")) {
+            log.setMealType(MealType.valueOf((String) updates.get("mealType")));
+        }
+
+        return logRepo.save(log);
+    }
+
+    public void deleteNutritionLog(Long logId) {
+        if (!logRepo.existsById(logId)) {
+            throw new RuntimeException("Nutrition log not found with id: " + logId);
+        }
+        logRepo.deleteById(logId);
+    }
 }
