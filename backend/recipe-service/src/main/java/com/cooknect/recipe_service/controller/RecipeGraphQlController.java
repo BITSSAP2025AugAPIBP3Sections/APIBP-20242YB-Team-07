@@ -65,14 +65,14 @@ public class RecipeGraphQlController {
             @Argument String description,
             @Argument Cuisine cuisine,
             @Argument List<Ingredient> ingredients,
-            @Argument String createdBy
+            @Argument String username
 
     ) {
         Recipe recipe = new Recipe();
         recipe.setTitle(title);
         recipe.setDescription(description);
         recipe.setCuisine(cuisine);
-        recipe.setCreatedBy(createdBy);
+        recipe.setUsername(username);
         recipe.setIngredients(ingredients);
         return svc.create(recipe);
 

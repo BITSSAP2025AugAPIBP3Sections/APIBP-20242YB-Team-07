@@ -1,0 +1,30 @@
+type User {
+    id: ID!
+    email: String!
+    username: String!
+    fullName: String
+    role: String
+    dietaryPreference: String
+    healthGoal: String
+    cuisinePreferences: [String]
+}
+
+input UserInput {
+    email: String
+    username: String
+    fullName: String
+    password: String
+    dietaryPreference: String
+    healthGoal: String
+    cuisinePreferences: [String]
+}
+
+type Query {
+    getAllUsers: [User]
+    getUserById(userId: ID!): User
+}
+
+type Mutation {
+    registerUser(user: UserInput!): User
+    updateUser(userId: ID!, user: UserInput!): User
+}
