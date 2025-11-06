@@ -58,13 +58,13 @@ Cooknect follows a modular, service-oriented backend architecture:
 
 ---
 
-## 📖 API Documentation
+## API Documentation
 
 Cooknect provides a detailed, interactive API documentation using **Swagger UI**.
 
 Once the backend is running locally, you can explore all available REST endpoints here:
 
-> 🌐 **Swagger UI:** [http://localhost:8089/swagger-ui/index.html](http://localhost:8089/swagger-ui/index.html)
+> **Swagger UI:** [http://localhost:8089/swagger-ui/index.html](http://localhost:8089/swagger-ui/index.html)
 
 The Swagger interface allows you to:
 - View and test endpoints interactively
@@ -86,3 +86,130 @@ Ensure you have the following installed:
 ```bash
 git clone https://github.com/BITSSAP2025AugAPIBP3Sections/APIBP-20242YB-Team-07.git
 cd cooknect
+```
+
+### 2. Configure Environment
+Edit your **application.yml** or **.env** file:
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cooknect
+    username: <db_user>
+    password: <db_password>
+```
+
+### 3. Build And Run
+```bash
+mvn clean install
+mvn spring-boot:run
+```
+
+---
+
+## API Endpoints Overview
+| Type | Endpoint | Description |
+|----------|--------------------|--------------------|
+| **REST** | **/api/v1/...** | **Standard CRUD and integrations** |
+| **GraphQL** | **/graphql** | **Query and mutate resources** |
+| **Swagger** | **/swagger-ui/index.html** | **Interactive API documentation** |
+
+---
+
+## Running Tests
+Run all tests locally:
+```bash
+mvn test
+```
+
+---
+
+## Contributing
+We welcome community contributions!
+See [COTRIBUTIN.md](https://github.com/BITSSAP2025AugAPIBP3Sections/APIBP-20242YB-Team-07/blob/main/CONTRIBUTING.md) for setup, coding, and pull request guidelines.
+
+---
+
+## License
+Licensed under the MIT License
+See [LICENSE](https://github.com/BITSSAP2025AugAPIBP3Sections/APIBP-20242YB-Team-07/blob/main/LICENSE) for details
+
+---
+
+## Contact
+Cooknect Team
+For issues or suggestion, open a GitHUB issue.
+```markdown
+Thank you for your interest in contributing to Cooknect!
+This project thrives on community-driven innovation and open collaboration.
+```
+How to contribute
+1. Fork this repository.
+2. Clone your fork:
+```bash
+git clone https://github.com/BITSSAP2025AugAPIBP3Sections/APIBP-20242YB-Team-07.git
+cd cooknect
+```
+3. Create a feature branch
+```bash
+git checkout -b feature/your-feature-name
+```
+4. Implement your changes.
+5. Test thoroughly before committing.
+6. Commit with a clear message:
+```bash
+git commit -m "feat: add challenge voting endpoint"
+```
+7. Push to your fork:
+```bash
+git push origin feature/your-feature-name
+```
+8. Open a **Pull Request (PR)**:
+- Explain the motivation and changes.
+- Link related issues (e.g., “Fixes #12”).
+- Attach screenshots or API examples if relevant.
+
+---
+
+## Code Standards
+- Use clean, modular code with clear naming conventions.
+- Follow Spring Boot best practices for controllers, services, and repositories.
+- Always include or update Swagger annotations for new endpoints.
+- Write unit tests and integration tests for new features.
+- Document new services or API routes in the [README.md](https://github.com/BITSSAP2025AugAPIBP3Sections/APIBP-20242YB-Team-07/blob/main/README.md) or [Swagger](http://localhost:8089/swagger-ui/index.html).
+
+---
+
+## Testing
+Befor Submitting:
+```bash
+mvn test
+```
+Ensure all tests pass and the application runs locally with:
+```bash
+mvn spring-boot:run
+```
+
+---
+
+## Commit Message Convention
+Follow Conventional Commits:
+| Type | Endpoint |
+|----------|--------------------|
+| **feat** | **New feature** |
+| **fix** | **Bug fix** |
+| **refactor** | **Code restructuring without behaviour change** |
+| **docs** | **Documentation update** |
+| **test** | **Adding or updating tests** |
+| **chore** | **Maintenance or dependency updates** |
+Examples:
+- **feat: add voting endpoint for challenges**
+- **fix: resolve null pointer in nutrition service**
+- **docs: update API usage instructions**
+- **refactor: optimize recipe search logic**
+
+---
+
+## Communication & Conduct
+- Be respectful, constructive, and inclusive.
+- Discuss large changes in an issue before starting.
+- Keep discussions professional and solution-focused.
