@@ -40,8 +40,9 @@ public class NutritionController {
 
     @PostMapping("/analyze")
     @Operation(summary = "Analyze food ingredients", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<NutritionResponse> analyze(@RequestBody NutritionRequest req) {
-        return ResponseEntity.ok(nutritionService.analyzeIngredients(req));
+    public ResponseEntity<NutritionResponse> analyze(@RequestBody NutritionRequest req, @RequestHeader("X-User-Name") String userName) {
+        req.setUserName(userName);
+        return ResponseEntity.ok(nutritionService.analyzeIngredients(req, userName));
     }
 
     @GetMapping("/health")
@@ -58,13 +59,13 @@ public class NutritionController {
 
     @GetMapping("/NutritionLogsByUserId/{userName}")
     @Operation(summary = "Get nutrition logs by user name", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<List<NutritionLog>> getNutritionLogsByUserName(@PathVariable String userName) {
+    public ResponseEntity<List<NutritionLog>> getNutritionLogsByUserName(@RequestHeader("X-User-Name") String userName) {
         return ResponseEntity.ok(nutritionService.getNutritionLogsByUserName(userName));
     }
 
     @GetMapping("/user/{userName}/MealTypes/{mealType}")
     @Operation(summary = "Get nutrition logs by meal type", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<List<NutritionLog>> getNutritionLogsByMealType(@PathVariable String userName, @PathVariable MealType mealType) {
+    public ResponseEntity<List<NutritionLog>> getNutritionLogsByMealType(@RequestHeader("X-User-Name") String userName, @PathVariable MealType mealType) {
         return ResponseEntity.ok(nutritionService.getNutritionLogsByMealType(userName, mealType));
     }
 
@@ -72,20 +73,24 @@ public class NutritionController {
     @Operation(summary = "Update nutrition log", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<NutritionResponse> updateNutritionLog(
             @PathVariable Long logId,
-            @RequestBody NutritionRequest request) {
-        return ResponseEntity.ok(nutritionService.updateNutritionLog(logId, request));
+            @RequestBody NutritionRequest request,
+            @RequestHeader("X-User-Name") String userName) {
+        return ResponseEntity.ok(nutritionService.updateNutritionLog(logId, request, userName));
     }
 
     @PatchMapping("/log/{logId}")
     @Operation(summary = "Patch nutrition log", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<NutritionLog> patchNutritionLog(@PathVariable Long logId, @RequestBody Map<String, Object> updates) {
-        return ResponseEntity.ok(nutritionService.patchNutritionLog(logId, updates));
+    public ResponseEntity<NutritionLog> patchNutritionLog(@PathVariable Long logId,
+                                                          @RequestBody Map<String, Object> updates,
+                                                          @RequestHeader("X-User-Name") String userName) {
+        return ResponseEntity.ok(nutritionService.patchNutritionLog(logId, updates, userName));
     }
 
     @DeleteMapping("/log/{logId}")
     @Operation(summary = "Delete nutrition log", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> deleteNutritionLog(@PathVariable Long logId) {
-        nutritionService.deleteNutritionLog(logId);
-        return ResponseEntity.noContent().build();  
+    public ResponseEntity<Void> deleteNutritionLog(@PathVariable Long logId,
+                                                   @RequestHeader("X-User-Name") String userName) {
+        nutritionService.deleteNutritionLog(logId, userName);
+        return ResponseEntity.noContent().build();
     }
 }

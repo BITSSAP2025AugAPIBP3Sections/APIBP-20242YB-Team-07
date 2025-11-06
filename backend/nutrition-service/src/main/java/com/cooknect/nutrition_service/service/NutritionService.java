@@ -25,7 +25,7 @@ public class NutritionService {
         this.logRepo = logRepo;
     }
 
-    public NutritionResponse analyzeIngredients(NutritionRequest request) {
+    public NutritionResponse analyzeIngredients(NutritionRequest request, String userName) {
         double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
 
         List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
@@ -139,7 +139,7 @@ public class NutritionService {
         return new DailyIntakeSummary(totalCalories, totalProtein, totalCarbs, totalFat); 
     }
 
-    public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request) {
+    public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, String userName) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
 
@@ -202,7 +202,7 @@ public class NutritionService {
         );
     }
 
-    public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates) {
+    public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates, String userName) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
 
@@ -213,7 +213,7 @@ public class NutritionService {
         return logRepo.save(log);
     }
 
-    public void deleteNutritionLog(Long logId) {
+    public void deleteNutritionLog(Long logId, String userName) {
         if (!logRepo.existsById(logId)) {
             throw new RuntimeException("Nutrition log not found with id: " + logId);
         }
