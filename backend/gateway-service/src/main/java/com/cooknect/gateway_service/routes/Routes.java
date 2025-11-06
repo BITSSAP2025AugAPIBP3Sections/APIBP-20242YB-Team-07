@@ -234,6 +234,76 @@ public class Routes {
     }
 
     @Bean
+    public RouterFunction<ServerResponse> nutritionServiceRoute() {
+        return GatewayRouterFunctions.route("nutrition-service")
+                .route(RequestPredicates.path("/api/v1/nutrition/**"),
+                        request -> {
+                            String authHeader = request.headers().firstHeader("Authorization");
+                            String userEmail;
+
+                            var authentication = SecurityContextHolder.getContext().getAuthentication();
+                            if (authentication != null && authentication.isAuthenticated()) {
+                                userEmail = (String) authentication.getPrincipal();
+                            } else {
+                                userEmail = null;
+                            }
+                            ServerRequest newRequest = ServerRequest.from(request)
+                                    .headers(headers -> {
+                                        if (authHeader != null) {
+                                            headers.set("Authorization", authHeader);
+                                            String role = jwtService.extractRole(authHeader.substring(7));
+                                            String username = jwtService.extractUsernameField(authHeader.substring(7));
+                                            headers.set("X-User-Role", role);
+                                            headers.set("X-User-Name", username);
+                                        }
+                                        if (userEmail != null) {
+                                            headers.set("X-User-Email", userEmail);
+                                        }
+                                    })
+                                    .build();
+                            return HandlerFunctions.http("http://localhost:8085").handle(newRequest);
+                        })
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> nutritionServiceGraphQLRoute() {
+        return GatewayRouterFunctions.route("nutrition-service-graphql")
+                .route(RequestPredicates.path("/api/nutrition/graphql"),
+                        request -> {
+                            String authHeader = request.headers().firstHeader("Authorization");
+                            String userEmail;
+
+                            var authentication = SecurityContextHolder.getContext().getAuthentication();
+                            if (authentication != null && authentication.isAuthenticated()) {
+                                userEmail = (String) authentication.getPrincipal();
+                            } else {
+                                userEmail = null;
+                            }
+
+                            ServerRequest newRequest = ServerRequest.from(request)
+                                    .headers(headers -> {
+                                        if (authHeader != null) {
+                                            headers.set("Authorization", authHeader);
+                                            String jwtToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+                                            String role = jwtService.extractRole(jwtToken);
+                                            String username = jwtService.extractUsernameField(jwtToken);
+                                            headers.set("X-User-Role", role);
+                                            headers.set("X-User-Name", username);
+                                        }
+                                        if (userEmail != null) {
+                                            headers.set("X-User-Email", userEmail);
+                                        }
+                                    })
+                                    .uri(URI.create("http://localhost:8085/graphql"))
+                                    .build();
+
+                            return HandlerFunctions.http("http://localhost:8085/graphql").handle(newRequest);
+                        })
+                .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> recipeServiceSwaggerRoute() {
         return GatewayRouterFunctions.route("recipe-service")
                 .route(RequestPredicates.path("/aggregate/recipe-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8081"))
