@@ -91,12 +91,23 @@ public class NutritionGraphqlController {
     @MutationMapping
     public NutritionResponse analyzeIngredients(@Argument("request") Map<String, Object> requestMap) {
         NutritionRequest request = buildRequestFromMap(requestMap);
-        return nutritionService.analyzeIngredients(request);
+        return nutritionService.analyzeIngredients(request, request.getUserName());
     }
 
     @MutationMapping
     public NutritionResponse updateNutritionLog(@Argument Long logId, @Argument("request") Map<String, Object> requestMap) {
         NutritionRequest request = buildRequestFromMap(requestMap);
-        return nutritionService.updateNutritionLog(logId, request);
+        return nutritionService.updateNutritionLog(logId, request, request.getUserName());
+    }
+
+    @MutationMapping
+    public NutritionLog patchNutritionLog(@Argument Long logId, @Argument("updates") Map<String, Object> updates, @Argument String userName) {
+        return nutritionService.patchNutritionLog(logId, updates, userName);
+    }
+
+    @MutationMapping
+    public String deleteNutritionLog(@Argument Long logId, @Argument String userName) {
+        nutritionService.deleteNutritionLog(logId, userName);
+        return "Nutrition log with ID " + logId + " deleted successfully.";
     }
 }

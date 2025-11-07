@@ -125,7 +125,7 @@ mvn test
 
 ## Contributing
 We welcome community contributions!
-See [COTRIBUTIN.md](https://github.com/BITSSAP2025AugAPIBP3Sections/APIBP-20242YB-Team-07/blob/main/CONTRIBUTING.md) for setup, coding, and pull request guidelines.
+See [COTRIBUTING.md](https://github.com/BITSSAP2025AugAPIBP3Sections/APIBP-20242YB-Team-07/blob/main/CONTRIBUTING.md) for setup, coding, and pull request guidelines.
 
 ---
 
