@@ -8,8 +8,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DailyIntakeSummary {
-    private double totalCalories;
-    private double totalProtein;
-    private double totalCarbs;
     private double totalFat;
+    private double totalSaturatedFat;
+    private double totalSodium;
+    private double totalPotassium;
+    private double totalCholestrol;
+    private double totalCarbohydrates;
+    private double totalFiber;
+    private double totalSugar;
 }

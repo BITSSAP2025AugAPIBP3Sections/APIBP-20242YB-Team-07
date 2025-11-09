@@ -88,9 +88,9 @@ public class NutritionController {
 
     @DeleteMapping("/log/{logId}")
     @Operation(summary = "Delete nutrition log", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> deleteNutritionLog(@PathVariable Long logId,
+    public ResponseEntity<Map<String, String>> deleteNutritionLog(@PathVariable Long logId,
                                                    @RequestHeader("X-User-Name") String userName) {
         nutritionService.deleteNutritionLog(logId, userName);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("message", "Nutrition log deleted successfully"));
     }
 }
