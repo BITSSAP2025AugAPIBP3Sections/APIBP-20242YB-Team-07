@@ -19,4 +19,8 @@ public class HealthGoal {
 
     @Column(name="name",unique = true)
     private String name;
+
+    public HealthGoal(String name) {
+        this.name = name;
+    }
 }
