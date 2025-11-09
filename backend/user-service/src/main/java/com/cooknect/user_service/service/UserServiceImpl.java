@@ -1,6 +1,7 @@
 package com.cooknect.user_service.service;
 
 import com.cooknect.user_service.dto.UsersDTO;
+import com.cooknect.user_service.events.UserCreatedEvent;
 import com.cooknect.user_service.model.CuisinePreference;
 import com.cooknect.user_service.model.DietaryPreference;
 import com.cooknect.user_service.model.HealthGoal;
@@ -12,6 +13,7 @@ import com.cooknect.user_service.repository.UserRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -348,5 +350,11 @@ public class UserServiceImpl implements UserService{
         }
 
         return Map.of("cuisinePreferences", cuisines);
+    }
+
+    @KafkaListener(topics = "user-created-topic", groupId = "notification-service-group")
+    public void onUserCreated(UserCreatedEvent event) {
+        System.out.println("📩 Received UserCreatedEvent: " + event);
+        // send email, log activity, etc.
     }
 }

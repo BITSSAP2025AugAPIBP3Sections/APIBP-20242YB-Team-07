@@ -1,6 +1,8 @@
 package com.cooknect.user_service.controller;
 
 import com.cooknect.user_service.dto.UsersDTO;
+import com.cooknect.user_service.events.UserCreatedEvent;
+import com.cooknect.user_service.kafka.UserEventProducer;
 import com.cooknect.user_service.model.UserModel;
 import com.cooknect.user_service.service.UserService;
 
@@ -21,6 +23,9 @@ public class UserController {
 
     @Autowired
     UserService service;
+
+    @Autowired
+    UserEventProducer userEventProducer;
 
     @GetMapping("/hello")
     public void greet(HttpServletRequest request) {
@@ -94,6 +99,14 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of("error", "Username cannot be empty"));
         }
         UserModel newuser = service.createUser(user);
+
+        UserCreatedEvent event = new UserCreatedEvent(
+                newuser.getId(),
+                newuser.getEmail(),
+                newuser.getFullName(),
+                newuser.getUsername()
+        );
+        userEventProducer.sendUserCreatedEvent(event);
         return ResponseEntity.ok(newuser);
     }
 
