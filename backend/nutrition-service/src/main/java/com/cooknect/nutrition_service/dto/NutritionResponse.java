@@ -9,10 +9,14 @@ public class NutritionResponse {
     private String userName;
     private Long recipeId;
     private String recipeName;
-    private double totalCalories;
-    private double totalProtein;
-    private double totalCarbs;
     private double totalFat;
+    private double totalSaturatedFat;
+    private double totalSodium;
+    private double totalPotassium;
+    private double totalCholestrol;
+    private double totalCarbohydrates;
+    private double totalFiber;
+    private double totalSugar;
     private List<String> analyzedIngredients;
     private MealType mealType;
 
@@ -20,15 +24,30 @@ public class NutritionResponse {
     public NutritionResponse() {}
 
     // Parameterized constructor
-    public NutritionResponse(String userName, Long recipeId, String recipeName, double totalCalories, double totalProtein,
-                             double totalCarbs, double totalFat, List<String> analyzedIngredients, MealType mealType) {
+    public NutritionResponse(String userName,
+                            Long recipeId, 
+                            String recipeName, 
+                            double totalFat,
+                            double totalSaturatedFat,
+                            double totalSodium,
+                            double totalPotassium,
+                            double totalCholestrol,
+                            double totalCarbohydrates,
+                            double totalFiber,
+                            double totalSugar,
+                            List<String> analyzedIngredients, 
+                            MealType mealType) {
         this.userName = userName;
         this.recipeId = recipeId;
         this.recipeName = recipeName;
-        this.totalCalories = totalCalories;
-        this.totalProtein = totalProtein;
-        this.totalCarbs = totalCarbs;
         this.totalFat = totalFat;
+        this.totalSaturatedFat = totalSaturatedFat;
+        this.totalSodium = totalSodium;
+        this.totalPotassium = totalPotassium;
+        this.totalCholestrol = totalCholestrol;
+        this.totalCarbohydrates = totalCarbohydrates;
+        this.totalFiber = totalFiber;
+        this.totalSugar = totalSugar;
         this.analyzedIngredients = analyzedIngredients;
         this.mealType = mealType;
     }
@@ -40,17 +59,29 @@ public class NutritionResponse {
     public String getRecipeName() { return recipeName; }
     public void setRecipeName(String recipeName) { this.recipeName = recipeName; }
 
-    public double getTotalCalories() { return totalCalories; }
-    public void setTotalCalories(double totalCalories) { this.totalCalories = totalCalories; }
-
-    public double getTotalProtein() { return totalProtein; }
-    public void setTotalProtein(double totalProtein) { this.totalProtein = totalProtein; }
-
-    public double getTotalCarbs() { return totalCarbs; }
-    public void setTotalCarbs(double totalCarbs) { this.totalCarbs = totalCarbs; }
-
     public double getTotalFat() { return totalFat; }
     public void setTotalFat(double totalFat) { this.totalFat = totalFat; }
+
+    public double getTotalSaturatedFat() { return totalSaturatedFat; }
+    public void setTotalSaturatedFat(double totalSaturatedFat) { this.totalSaturatedFat = totalSaturatedFat; }
+
+    public double getTotalSodium() { return totalSodium; }
+    public void setTotalSodium(double totalSodium) { this.totalSodium = totalSodium; }
+
+    public double getTotalPotassium() { return totalPotassium; }
+    public void setTotalPotassium(double totalPotassium) { this.totalPotassium = totalPotassium; }
+
+    public double getTotalCholestrol() { return totalCholestrol; }
+    public void setTotalCholestrol(double totalCholestrol) { this.totalCholestrol = totalCholestrol; }
+
+    public double getTotalCarbohydrates() { return totalCarbohydrates; }
+    public void setTotalCarbohydrates(double totalCarbohydrates) { this.totalCarbohydrates = totalCarbohydrates; }
+
+    public double getTotalFiber() { return totalFiber; }
+    public void setTotalFiber(double totalFiber) { this.totalFiber = totalFiber; }
+
+    public double getTotalSugar() { return totalSugar; }
+    public void setTotalSugar(double totalSugar) { this.totalSugar = totalSugar; }
 
     public List<String> getAnalyzedIngredients() { return analyzedIngredients; }
     public void setAnalyzedIngredients(List<String> analyzedIngredients) { this.analyzedIngredients = analyzedIngredients; }

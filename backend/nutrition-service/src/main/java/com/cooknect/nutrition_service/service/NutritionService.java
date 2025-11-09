@@ -5,7 +5,10 @@ import com.cooknect.nutrition_service.model.MealType;
 import com.cooknect.nutrition_service.model.NutritionLog;
 import com.cooknect.nutrition_service.repository.FoodItemRepository;
 import com.cooknect.nutrition_service.repository.NutritionLogRepository;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.cooknect.nutrition_service.dto.*;
 
@@ -13,87 +16,68 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
 import java.util.Collections;
+import java.util.Optional; // Add the missing import
 
 @Service
 public class NutritionService {
 
     private final FoodItemRepository foodRepo;
     private final NutritionLogRepository logRepo;
+    private final ExternalNutritionApiService externalApiService;
 
-    public NutritionService(FoodItemRepository foodRepo, NutritionLogRepository logRepo) {
+    private record NutritionTotals(double totalFat, double saturatedFat, double sodium, double potassium, double cholestrol, double carbohydrates, double fiber, double sugar) {}
+
+    public NutritionService(FoodItemRepository foodRepo, NutritionLogRepository logRepo, ExternalNutritionApiService externalApiService) {
         this.foodRepo = foodRepo;
         this.logRepo = logRepo;
+        this.externalApiService = externalApiService;
     }
 
     public NutritionResponse analyzeIngredients(NutritionRequest request, String userName) {
-        double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
-
         List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
+        
+        // Use the refactored helper method
+        NutritionTotals totals = calculateNutrition(ingredients);
 
-        for (Map<String, String> ingredientMap : ingredients) {
-            String name = ingredientMap.get("name");
-            String quantityStr = ingredientMap.get("quantity");
-            String servingSize = ingredientMap.get("servingSize");
-            double qty = extractNumericQuantity(quantityStr);
-
-            FoodItem food = foodRepo.findByFoodItemIgnoreCase(name).orElse(null);
-
-            if (food != null) {
-                if (servingSize != null && !servingSize.isEmpty()
-                        && (food.getServingSize() == null || !food.getServingSize().equalsIgnoreCase(servingSize))) {
-                    food.setServingSize(servingSize);
-                    foodRepo.save(food);
-                }
-
-                totalCalories += food.getCalories() * qty;
-                totalProtein += food.getProtein() * qty;
-                totalCarbs += food.getCarbohydrates() * qty;
-                totalFat += food.getFat() * qty;
-            } else {
-                totalCalories += 50 * qty;
-                totalProtein += 1 * qty;
-                totalCarbs += 10 * qty;
-                totalFat += 2 * qty;
-            }
-        }
         NutritionResponse response = new NutritionResponse(
-                request.getUserName(),
+                userName, // Use the secure userName from the header
                 request.getRecipeId(),
                 request.getRecipeName(),
-                totalCalories,
-                totalProtein,
-                totalCarbs,
-                totalFat,
-                ingredients.stream()
-                        .map(i -> i.get("name"))
-                        .toList(),
+                totals.totalFat(),
+                totals.saturatedFat(),
+                totals.sodium(),
+                totals.potassium(),
+                totals.cholestrol(),
+                totals.carbohydrates(),
+                totals.fiber(),
+                totals.sugar(),
+                ingredients.stream().map(i -> i.get("name")).toList(),
                 request.getMealType()
         );
         
         NutritionLog log = NutritionLog.builder()
-                .userName(request.getUserName())
+                .userName(userName) // Use the secure userName from the header
                 .recipeId(request.getRecipeId())
                 .foodName(request.getRecipeName())
-                .ingredients(String.join(", ",
-                        request.getIngredients().stream()
-                                .map(i -> i.get("name"))
-                                .toList()))
-                .calories(totalCalories)
-                .protein(totalProtein)
-                .carbohydrates(totalCarbs)
-                .fat(totalFat)
+                .ingredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()))
+                .totalFat(totals.totalFat())
+                .totalSaturatedFat(totals.saturatedFat())
+                .totalSodium(totals.sodium())
+                .totalPotassium(totals.potassium())
+                .totalCholestrol(totals.cholestrol())
+                .totalCarbohydrates(totals.carbohydrates())
+                .totalFiber(totals.fiber())
+                .totalSugar(totals.sugar())
                 .mealType(request.getMealType())
                 .analyzedAt(LocalDate.now())
                 .build();
 
         logRepo.save(log);
-
         return response;
     }
 
     private double extractNumericQuantity(String quantity) {
         if (quantity == null || quantity.isEmpty()) return 1.0;
-
         try {
             String[] parts = quantity.split(" ");
             String numeric = parts[0].replaceAll("[^0-9.]", "");
@@ -101,6 +85,67 @@ public class NutritionService {
         } catch (Exception e) {
             return 1.0;
         }
+    }
+
+    private NutritionTotals calculateNutrition(List<Map<String, String>> ingredients) {
+        double totalFat = 0.0, totalSaturatedFat = 0.0, totalSodium = 0.0,
+               totalPotassium = 0.0, totalCholestrol = 0.0, totalCarbohydrates = 0.0,
+               totalFiber = 0.0, totalSugar = 0.0;
+
+        for (Map<String, String> ingredientMap : ingredients) {
+            String name = ingredientMap.get("name");
+            String quantityStr = ingredientMap.get("quantity");
+            String servingSize = ingredientMap.getOrDefault("servingSize", quantityStr);
+            double qty = extractNumericQuantity(quantityStr);
+            
+            boolean isFromExternalApi = false;
+            Optional<FoodItem> foodOptional = foodRepo.findByFoodItemIgnoreCase(name);
+            FoodItem food;
+
+            if (foodOptional.isPresent()) {
+                food = foodOptional.get();
+            } else {
+                String apiQuery = (servingSize != null && !servingSize.isBlank())
+                        ? servingSize + " " + name
+                        : name;
+                food = externalApiService.fetchNutritionInfo(apiQuery)
+                    .map(foodRepo::save)
+                    .orElse(null);
+                isFromExternalApi = (food != null);
+            }
+
+            if (food != null) {
+                if (isFromExternalApi) {
+                    totalFat += safeNullableDouble(food.getTotalFat());
+                    totalSaturatedFat += safeNullableDouble(food.getSaturatedFat());
+                    totalSodium += safeNullableDouble(food.getSodium());
+                    totalPotassium += safeNullableDouble(food.getPotassium());
+                    totalCholestrol += safeNullableDouble(food.getCholestrol());
+                    totalCarbohydrates += safeNullableDouble(food.getCarbohydrates());
+                    totalFiber += safeNullableDouble(food.getFiber());
+                    totalSugar += safeNullableDouble(food.getSugar());
+                } else {
+                    totalFat += safeNullableDouble(food.getTotalFat()) * qty;
+                    totalSaturatedFat += safeNullableDouble(food.getSaturatedFat()) * qty;
+                    totalSodium += safeNullableDouble(food.getSodium()) * qty;
+                    totalPotassium += safeNullableDouble(food.getPotassium()) * qty;
+                    totalCholestrol += safeNullableDouble(food.getCholestrol()) * qty;
+                    totalCarbohydrates += safeNullableDouble(food.getCarbohydrates()) * qty;
+                    totalFiber += safeNullableDouble(food.getFiber()) * qty;
+                    totalSugar += safeNullableDouble(food.getSugar()) * qty;
+                }
+            } else {
+                totalFat += 2 * qty;
+                totalSaturatedFat += 0.5 * qty;
+                totalSodium += 150 * qty;
+                totalPotassium += 100 * qty;
+                totalCholestrol += 30 * qty;
+                totalCarbohydrates += 10 * qty;
+                totalFiber += 1 * qty;
+                totalSugar += 5 * qty;
+            }
+        }
+        return new NutritionTotals(totalFat, totalSaturatedFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar);
     }
 
     public List<NutritionLog> getAllNutritionLogs() {
@@ -119,10 +164,6 @@ public class NutritionService {
         return logRepo.findByUserName(userName);
     }
 
-    public FoodItemRepository getFoodRepo() {
-        return foodRepo;
-    }
-
     public List<NutritionLog> getNutritionLogsByMealType(String userName, MealType mealType) {
         return logRepo.findByUserNameAndMealType(userName, mealType);
     }
@@ -130,58 +171,40 @@ public class NutritionService {
     public DailyIntakeSummary getTodayIntakeSummary(String userName) {
         LocalDate today = LocalDate.now();
         List<NutritionLog> todayLogs = logRepo.findByUserNameAndAnalyzedAt(userName, today);
-
-        double totalCalories = todayLogs.stream().mapToDouble(NutritionLog::getCalories).sum();
-        double totalProtein = todayLogs.stream().mapToDouble(NutritionLog::getProtein).sum();
-        double totalCarbs = todayLogs.stream().mapToDouble(NutritionLog::getCarbohydrates).sum();
-        double totalFat = todayLogs.stream().mapToDouble(NutritionLog::getFat).sum();
-
-        return new DailyIntakeSummary(totalCalories, totalProtein, totalCarbs, totalFat); 
+        double totalFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalFat).sum();
+        double totalSaturatedFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalSaturatedFat).sum();
+        double totalSodium = todayLogs.stream().mapToDouble(NutritionLog::getTotalSodium).sum();
+        double totalPotassium = todayLogs.stream().mapToDouble(NutritionLog::getTotalPotassium).sum();
+        double totalCholestrol = todayLogs.stream().mapToDouble(NutritionLog::getTotalCholestrol).sum();
+        double totalCarbohydrates = todayLogs.stream().mapToDouble(NutritionLog::getTotalCarbohydrates).sum();
+        double totalFiber = todayLogs.stream().mapToDouble(NutritionLog::getTotalFiber).sum();
+        double totalSugar = todayLogs.stream().mapToDouble(NutritionLog::getTotalSugar).sum();
+        return new DailyIntakeSummary(totalFat, totalSaturatedFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar); 
     }
 
     public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, String userName) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
 
-        double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
-
-        for (Map<String, String> ingredientMap : request.getIngredients()) {
-            String name = ingredientMap.get("name");
-            String quantityStr = ingredientMap.get("quantity");
-            String servingSize = ingredientMap.get("servingSize");
-            double qty = extractNumericQuantity(quantityStr);
-
-            FoodItem food = foodRepo.findByFoodItemIgnoreCase(name).orElse(null);
-
-            if (food != null) {
-                if (servingSize != null && !servingSize.isEmpty()
-                        && (food.getServingSize() == null || !food.getServingSize().equalsIgnoreCase(servingSize))) {
-                    food.setServingSize(servingSize);
-                    foodRepo.save(food);
-                }
-
-                totalCalories += food.getCalories() * qty;
-                totalProtein += food.getProtein() * qty;
-                totalCarbs += food.getCarbohydrates() * qty;
-                totalFat += food.getFat() * qty;
-            } else {
-                totalCalories += 50 * qty;
-                totalProtein += 1 * qty;
-                totalCarbs += 10 * qty;
-                totalFat += 2 * qty;
-            }
+        // Add authorization check
+        if (!log.getUserName().equals(userName)) {
+            throw new RuntimeException("User not authorized to update this log");
         }
+
+        List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
+        NutritionTotals totals = calculateNutrition(ingredients);
 
         log.setRecipeId(request.getRecipeId());
         log.setFoodName(request.getRecipeName());
-        log.setIngredients(String.join(", ",
-                request.getIngredients().stream()
-                        .map(i -> i.get("name"))
-                        .toList()));
-        log.setCalories(totalCalories);
-        log.setProtein(totalProtein);
-        log.setCarbohydrates(totalCarbs);
-        log.setFat(totalFat);
+        log.setIngredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()));
+        log.setTotalFat(totals.totalFat());
+        log.setTotalSaturatedFat(totals.saturatedFat());
+        log.setTotalSodium(totals.sodium());
+        log.setTotalPotassium(totals.potassium());
+        log.setTotalCholestrol(totals.cholestrol());
+        log.setTotalCarbohydrates(totals.carbohydrates());
+        log.setTotalFiber(totals.fiber());
+        log.setTotalSugar(totals.sugar());
         log.setMealType(request.getMealType());
         log.setAnalyzedAt(LocalDate.now());
 
@@ -191,13 +214,15 @@ public class NutritionService {
                 log.getUserName(),
                 log.getRecipeId(),
                 log.getFoodName(),
-                log.getCalories(),
-                log.getProtein(),
-                log.getCarbohydrates(),
-                log.getFat(),
-                request.getIngredients().stream()
-                        .map(i -> i.get("name"))
-                        .toList(),
+                log.getTotalFat(),
+                log.getTotalSaturatedFat(),
+                log.getTotalSodium(),
+                log.getTotalPotassium(),
+                log.getTotalCholestrol(),
+                log.getTotalCarbohydrates(),
+                log.getTotalFiber(),
+                log.getTotalSugar(),
+                ingredients.stream().map(i -> i.get("name")).toList(),
                 log.getMealType()
         );
     }
@@ -205,6 +230,11 @@ public class NutritionService {
     public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates, String userName) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
+
+        // Add authorization check
+        if (!log.getUserName().equals(userName)) {
+            throw new RuntimeException("User not authorized to patch this log");
+        }
 
         if (updates.containsKey("mealType")) {
             log.setMealType(MealType.valueOf((String) updates.get("mealType")));
@@ -214,9 +244,18 @@ public class NutritionService {
     }
 
     public void deleteNutritionLog(Long logId, String userName) {
-        if (!logRepo.existsById(logId)) {
-            throw new RuntimeException("Nutrition log not found with id: " + logId);
+        NutritionLog log = logRepo.findById(logId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nutrition log not found with id: " + logId));
+        
+
+        if (!log.getUserName().equals(userName)) {
+            throw new RuntimeException("User not authorized to delete this log");
         }
-        logRepo.deleteById(logId);
+        
+        logRepo.delete(log);
+    }
+
+    private double safeNullableDouble(Double v) {
+        return v == null ? 0.0 : v.doubleValue();
     }
 }
