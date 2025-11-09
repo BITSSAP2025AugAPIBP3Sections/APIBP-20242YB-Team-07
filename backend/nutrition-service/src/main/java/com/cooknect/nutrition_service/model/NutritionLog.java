@@ -10,7 +10,8 @@ import java.time.LocalDate;
 
 @Entity
 @Table(uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"userName", "recipeId", "analyzedAt"})
+    @UniqueConstraint(name = "nutrition_log_user_recipe_meal_analyzed_key", 
+        columnNames = {"userName", "recipeId", "analyzedAt", "mealType"})
 })
 @Data
 @NoArgsConstructor
@@ -28,10 +29,14 @@ public class NutritionLog {
     private String foodName;
     private String ingredients;
 
-    private Double calories;
-    private Double protein;
-    private Double carbohydrates;
-    private Double fat;
+    private double totalFat;
+    private double totalSaturatedFat;
+    private double totalSodium;
+    private double totalPotassium;
+    private double totalCholestrol;
+    private double totalCarbohydrates;
+    private double totalFiber;
+    private double totalSugar;
 
     @Enumerated(EnumType.STRING)
     private MealType mealType;

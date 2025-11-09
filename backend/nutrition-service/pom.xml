@@ -79,6 +79,13 @@
 			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
 			<version>2.5.0</version>
 		</dependency>
+		<dependency>
+  			<groupId>io.netty</groupId>
+  			<artifactId>netty-resolver-dns-native-macos</artifactId>
+  			<version>4.1.99.Final</version>
+  			<classifier>osx-x86_64</classifier> <!-- or osx-aarch_64 for Apple Silicon -->
+  			<scope>runtime</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
