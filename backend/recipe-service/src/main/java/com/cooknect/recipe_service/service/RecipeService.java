@@ -32,7 +32,7 @@ public class RecipeService {
         return repo.findByUsername(username);
     }
     //Getting a particular recipe of a particular user
-    // ✅ Fetch a single recipe by username and ID
+    // Fetch a single recipe by username and ID
     public Recipe getByUsernameAndId(String username, Long recipeId) {
         return repo.findByUsernameAndId(username, recipeId)
                 .orElseThrow(() -> new RuntimeException(
