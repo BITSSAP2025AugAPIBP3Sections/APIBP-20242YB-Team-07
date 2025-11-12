@@ -35,6 +35,8 @@ public class ChallengeService {
     private RestTemplate restTemplate;
     @Value("${recipe.service.url}")
     private String recipeServiceBaseUrl;
+    @Value("${user.service.url}")
+    private String userBaseUrl;
     
 
     @Autowired
@@ -108,26 +110,40 @@ public class ChallengeService {
                 .orElseThrow(() -> new RuntimeException("Challenge not found"));
 
         boolean alreadyJoined = challenge.getParticipants().stream()
-                .anyMatch(p -> p.getUsername().equals(request.getUsername()));
+                .anyMatch(p -> Objects.equals(p.getUserId(), request.getUserId()));
 
         if (alreadyJoined) {
             return false; // Already joined
         }
 
+        // Fetch user details from user-service
+        String userServiceUrl = userBaseUrl + request.getUserId();
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+            userServiceUrl,
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        Map<String, Object> user = response.getBody();
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
         ChallengeParticipant participant = new ChallengeParticipant();
-        participant.setUsername(request.getUsername());
-        participant.setEmail(request.getEmail());
-        participant.setRole(request.getRole());
+        participant.setUserId((Long) user.get("id"));
+        participant.setUsername(user.get("username").toString());
+        participant.setEmail(user.get("email").toString());
+        participant.setRole(user.get("role").toString());
         challenge.getParticipants().add(participant);
         challengeRepository.save(challenge);
         return true;
     }
 
-
     public boolean leaveChallenge(Long challengeId, ChallengeParticipationRequest request) {
         Challenge challenge = challengeRepository.findById(challengeId)
             .orElseThrow(() -> new RuntimeException("Challenge not found"));
         ChallengeParticipant participant = new ChallengeParticipant();
+        participant.setUserId(request.getUserId());
         participant.setUsername(request.getUsername());
         participant.setEmail(request.getEmail());
         participant.setRole(request.getRole());
@@ -149,12 +165,12 @@ public class ChallengeService {
         Challenge challenge = challengeRepository.findById(challengeId)
             .orElseThrow(() -> new RuntimeException("Challenge not found"));
         boolean isParticipant = challenge.getParticipants().stream()
-            .anyMatch(p -> Objects.equals(p.getUsername(), request.getUserId()));
+            .anyMatch(p -> Objects.equals(p.getUserId(), request.getUserId()));
         if (!isParticipant) {
             throw new RuntimeException("User is not a participant in this challenge");
         }
         // Validate recipe existence and ownership via recipe-service (REST)
-        String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/" + request.getRecipeId();
+        String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/id/" + request.getRecipeId();
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
             recipeServiceUrl,
             HttpMethod.GET,
@@ -162,7 +178,7 @@ public class ChallengeService {
             new ParameterizedTypeReference<Map<String, Object>>() {}
         );
         Map<String, Object> recipe = response.getBody();
-        if (recipe == null || !Objects.equals(recipe.get("createdBy"), request.getUserId())) {
+        if (recipe == null || !Objects.equals(recipe.get("username"), request.getUserName())) {
             throw new RuntimeException("Recipe does not exist or does not belong to user");
         }
         // Prevent duplicate submissions
@@ -175,7 +191,7 @@ public class ChallengeService {
         ChallengeRecipeSubmission submission = new ChallengeRecipeSubmission();
         submission.setChallengeId(challengeId);
         submission.setRecipeId(request.getRecipeId());
-        submission.setUserId(request.getUserId());
+        submission.setUserId(String.valueOf(request.getUserId()));
         submission.setSubmissionTime(LocalDateTime.now());
         challengeRecipeSubmissionRepository.save(submission);
         return true;
@@ -197,7 +213,7 @@ public class ChallengeService {
             });
             entry.setRecipeCount(entry.getRecipeCount() + 1);
             // Fetch likes from recipe-service (REST)
-            String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/" + submission.getRecipeId();
+            String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/id/" + submission.getRecipeId();
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 recipeServiceUrl,
                 HttpMethod.GET,

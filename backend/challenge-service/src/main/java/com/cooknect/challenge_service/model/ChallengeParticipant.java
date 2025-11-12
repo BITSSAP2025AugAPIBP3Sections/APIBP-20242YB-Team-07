@@ -10,6 +10,7 @@ import java.util.Objects;
 @Getter
 @Embeddable
 public class ChallengeParticipant {
+    private Long userId;
     private String username;
     private String email;
     private String role;
@@ -19,7 +20,8 @@ public class ChallengeParticipant {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ChallengeParticipant that = (ChallengeParticipant) o;
-        return Objects.equals(username, that.username) &&
+        return Objects.equals(userId, that.userId) &&
+               Objects.equals(username, that.username) &&
                Objects.equals(email, that.email) &&
                Objects.equals(role, that.role);
     }
