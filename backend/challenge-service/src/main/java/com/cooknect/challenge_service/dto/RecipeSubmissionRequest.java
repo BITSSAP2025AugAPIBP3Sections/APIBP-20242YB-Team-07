@@ -7,5 +7,6 @@ import lombok.Setter;
 @Setter
 public class RecipeSubmissionRequest {
     private Long recipeId;
-    private String userId;
+    private Long userId;
+    private String userName;
 }
