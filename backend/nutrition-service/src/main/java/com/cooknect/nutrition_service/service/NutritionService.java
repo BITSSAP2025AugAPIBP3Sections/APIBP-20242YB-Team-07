@@ -5,6 +5,7 @@ import com.cooknect.nutrition_service.model.MealType;
 import com.cooknect.nutrition_service.model.NutritionLog;
 import com.cooknect.nutrition_service.repository.FoodItemRepository;
 import com.cooknect.nutrition_service.repository.NutritionLogRepository;
+// import com.cooknect.nutrition_service.service.RecipeServiceClient;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,8 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
 import java.util.Collections;
-import java.util.Optional; // Add the missing import
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class NutritionService {
@@ -24,17 +26,37 @@ public class NutritionService {
     private final FoodItemRepository foodRepo;
     private final NutritionLogRepository logRepo;
     private final ExternalNutritionApiService externalApiService;
+    private RecipeServiceClient recipeClient;
 
     private record NutritionTotals(double totalFat, double saturatedFat, double sodium, double potassium, double cholestrol, double carbohydrates, double fiber, double sugar) {}
 
-    public NutritionService(FoodItemRepository foodRepo, NutritionLogRepository logRepo, ExternalNutritionApiService externalApiService) {
+    public NutritionService(FoodItemRepository foodRepo, 
+                            NutritionLogRepository logRepo, 
+                            ExternalNutritionApiService externalApiService, 
+                            RecipeServiceClient recipeClient) {
         this.foodRepo = foodRepo;
         this.logRepo = logRepo;
         this.externalApiService = externalApiService;
+        this.recipeClient = recipeClient;
     }
 
     public NutritionResponse analyzeIngredients(NutritionRequest request, String userName) {
         List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
+        String recipeName = request.getRecipeName();
+
+        if (request.getRecipeId() != null){
+            Optional<RecipeServiceClient.RecipeDto> maybe = recipeClient.getRecipeById(request.getRecipeId());
+            if (maybe.isPresent()){
+                RecipeServiceClient.RecipeDto r = maybe.get();
+                recipeName = r.getTitle() != null ? r.getTitle() : recipeName;
+                if (r.getIngredients() != null){
+                    ingredients = r.getIngredients().stream()
+                            .map(i -> Map.<String,String>of("name", i.getName(),
+                                    "quantity", i.getQuantity() == null ? "1" : i.getQuantity()))
+                            .collect(Collectors.toList());
+                }
+            }
+        }
         
         // Use the refactored helper method
         NutritionTotals totals = calculateNutrition(ingredients);
@@ -42,7 +64,7 @@ public class NutritionService {
         NutritionResponse response = new NutritionResponse(
                 userName, // Use the secure userName from the header
                 request.getRecipeId(),
-                request.getRecipeName(),
+                recipeName,
                 totals.totalFat(),
                 totals.saturatedFat(),
                 totals.sodium(),
@@ -51,7 +73,7 @@ public class NutritionService {
                 totals.carbohydrates(),
                 totals.fiber(),
                 totals.sugar(),
-                ingredients.stream().map(i -> i.get("name")).toList(),
+                ingredients.stream().map(i -> i.get("name")).collect(Collectors.toList()),
                 request.getMealType()
         );
         
