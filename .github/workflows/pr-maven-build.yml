@@ -5,13 +5,32 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  build:
-    name: Build All Spring Boot Microservices
+  discover:
+    name: Discover Microservices
     runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set-matrix.outputs.services }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - id: set-matrix
+        run: |
+          echo "🔍 Finding all backend microservices..."
+          SERVICES=$(find backend -mindepth 1 -maxdepth 1 -type d -exec test -f "{}/pom.xml" \; -print | xargs -n1 basename | jq -R -s -c 'split("\n")[:-1]')
+          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+          echo "✅ Found services: $SERVICES"
+
+  build:
+    name: Build Services
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.discover.outputs.services) }}
+
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -20,16 +39,5 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build all backend services
-        run: |
-          echo "🚀 Building all Spring Boot microservices inside backend/"
-          cd backend
-
-          for dir in */ ; do
-            if [ -f "$dir/pom.xml" ]; then
-              echo "🛠️ Building $dir"
-              mvn -f "$dir/pom.xml" clean package -DskipTests
-            else
-              echo "⚠️ Skipping $dir (no pom.xml found)"
-            fi
-          done
+      - name: Build ${{ matrix.service }}
+        run: mvn -f backend/${{ matrix.service }}/pom.xml clean package -DskipTests
