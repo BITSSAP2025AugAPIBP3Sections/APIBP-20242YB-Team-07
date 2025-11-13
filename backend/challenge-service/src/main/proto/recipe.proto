@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package com.recipe;
+
+option java_package = "com.recipe";
+option java_multiple_files = true;
+option java_outer_classname = "RecipeProto";
+
+message Ingredient {
+    string name = 1;
+    string quantity = 2;
+}
+
+message Comment {
+    string text = 1;
+    string author = 2;
+}
+
+message GetRecipeByIdRequest {
+    int64 recipe_id = 1;
+}
+
+message RecipeResponse {
+    int64 id = 1;
+    string title = 2;
+    string description = 3;
+    string username = 4;
+    int32 likes = 5;
+    repeated Ingredient ingredients = 6;
+    string cuisine = 7;
+    string language = 8;
+    repeated Comment comments = 9;
+}
+
+service RecipeService {
+    rpc GetRecipeById(GetRecipeByIdRequest) returns (RecipeResponse);
+}
