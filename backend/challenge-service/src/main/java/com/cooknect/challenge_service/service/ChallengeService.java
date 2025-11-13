@@ -12,6 +12,9 @@ import com.cooknect.challenge_service.model.ChallengeParticipant;
 import com.cooknect.challenge_service.model.ChallengeRecipeSubmission;
 import com.cooknect.challenge_service.repository.ChallengeRepository;
 import com.cooknect.challenge_service.repository.ChallengeRecipeSubmissionRepository;
+import com.recipe.GetRecipeByIdRequest;
+import com.recipe.RecipeResponse;
+import com.recipe.RecipeServiceGrpc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +40,8 @@ public class ChallengeService {
     private String recipeServiceBaseUrl;
     @Value("${user.service.url}")
     private String userBaseUrl;
+    @Autowired
+    private RecipeServiceGrpc.RecipeServiceBlockingStub recipeServiceStub;
     
 
     @Autowired
@@ -170,16 +175,27 @@ public class ChallengeService {
             throw new RuntimeException("User is not a participant in this challenge");
         }
         // Validate recipe existence and ownership via recipe-service (REST)
-        String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/id/" + request.getRecipeId();
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-            recipeServiceUrl,
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<Map<String, Object>>() {}
+//        String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/id/" + request.getRecipeId();
+//        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+//            recipeServiceUrl,
+//            HttpMethod.GET,
+//            null,
+//            new ParameterizedTypeReference<Map<String, Object>>() {}
+//        );
+//        Map<String, Object> recipe = response.getBody();
+//        if (recipe == null || !Objects.equals(recipe.get("username"), request.getUserName())) {
+//            throw new RuntimeException("Recipe does not exist or does not belong to user");
+//        }
+
+        // Validate recipe existence and ownership via gRPC
+        RecipeResponse grpcResponse = recipeServiceStub.getRecipeById(
+            GetRecipeByIdRequest.newBuilder().setRecipeId(request.getRecipeId()).build()
         );
-        Map<String, Object> recipe = response.getBody();
-        if (recipe == null || !Objects.equals(recipe.get("username"), request.getUserName())) {
-            throw new RuntimeException("Recipe does not exist or does not belong to user");
+        if (grpcResponse == null || grpcResponse.getId() == 0) {
+            throw new RuntimeException("Recipe does not exist");
+        }
+        if (!Objects.equals(grpcResponse.getUsername(), request.getUserName())) {
+            throw new RuntimeException("Recipe does not belong to user");
         }
         // Prevent duplicate submissions
         boolean alreadySubmitted = !challengeRecipeSubmissionRepository
