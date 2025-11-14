@@ -1,0 +1,480 @@
+:root {
+    --primary-color: #FF6F61;
+    --primary-hover: #E85F52;
+    --secondary-bg: #f8f8f8;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.15);
+    --border-color: #ddd;
+    --font-main: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+.main-content {
+    padding: 2rem 1rem;
+    max-width: 1300px; 
+    margin: 0 auto;
+    width: 100%;
+} 
+
+.main-content {
+    font-family: var(--font-main);
+    background-color: var(--secondary-bg);
+    margin: 0;
+    padding: 0;
+    color: #333;
+    line-height: 1.6;
+    width: 100%;
+    max-width: none;
+    padding: 10px;
+    min-height: 100vh;
+}
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.profile-card {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    text-align: center;
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.profile-header {
+    background-color: var(--primary-color);
+    height: 60px; 
+    margin: 0;
+}
+
+.profile-content {
+    padding: 0 1.5rem 1.5rem;
+    margin-top: -45px;
+}
+
+.profile-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background-color: white;
+    border: 4px solid white;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profile-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-top: 0.75rem;
+    color: #333;
+}
+
+.profile-title {
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 1rem;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 1rem 0;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+.profile-link {
+    display: block;
+    text-decoration: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    padding: 0.75rem 0;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.profile-link:hover {
+    background-color: rgba(255, 111, 97, 0.05);
+}
+
+.feed-column h2 {
+    font-size: 1.8rem;
+    color: #444;
+    padding-left: 1rem;
+    border-left: 4px solid var(--primary-color);
+    margin-bottom: 1.5rem;
+}
+
+.recipe-card {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: box-shadow 0.3s, transform 0.3s;
+    border-top: 6px solid var(--primary-color);
+}
+
+
+.recipe-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.recipe-image {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+}
+
+.card-content {
+    padding: 1.5rem;
+}
+
+.card-author-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-right: 1rem;
+}
+
+.card-content h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #222;
+}
+
+.author-name {
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.author-name a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.recipe-description {
+    margin: 1rem 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.card-divider {
+    height: 1px;
+    background-color: #eee;
+    margin: 1.5rem 0;
+}
+
+.card-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.action-button {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.action-button i {
+    margin-right: 0.4rem;
+}
+
+.action-button:hover {
+    color: var(--primary-color);
+}
+
+.like-button .liked {
+    color: var(--primary-color);
+}
+
+.feed-controls {
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap; 
+}
+
+.search-container {
+    flex-grow: 1; 
+    min-width: 200px;
+}
+
+.search-bar {
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.feed-post-btn {
+    flex-shrink: 0; 
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px; 
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feed-post-btn:hover {
+    background-color: var(--primary-hover);
+    box-shadow: 0 6px 15px rgba(255, 111, 97, 0.5);
+    transform: translateY(-1px);
+}
+.feed-controls {
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap; 
+}
+
+.search-container {
+    flex-grow: 1; 
+    min-width: 200px;
+}
+
+.search-bar {
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.feed-post-btn {
+    flex-shrink: 0; 
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px; 
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feed-post-btn:hover {
+    background-color: var(--primary-hover);
+    box-shadow: 0 6px 15px rgba(255, 111, 97, 0.5);
+    transform: translateY(-1px);
+}
+
+.sidebar-card {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+.sidebar-card.challenge-card {
+    border-left: 4px solid var(--primary-color);
+}
+.sidebar-card.winner-card {
+    border-left: 4px solid gold;
+}
+.sidebar-card h4 {
+    font-size: 1.25rem;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+.sidebar-card h4 i {
+    margin-right: 0.5rem;
+}
+.challenge-list, .winner-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.challenge-item, .winner-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+}
+.winner-item:last-child, .challenge-item:last-child {
+    border-bottom: none;
+}
+.item-details {
+    display: flex;
+    align-items: center;
+}
+.item-details .icon {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-right: 1rem;
+}
+.item-details .winner-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: gold;
+    margin-right: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1rem;
+}
+.item-title {
+    font-weight: 600;
+    color: #444;
+}
+.item-meta {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 3px;
+}
+.join-btn {
+    background-color: white;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.join-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+.view-all {
+    display: block;
+    text-align: right;
+    margin-top: 1rem;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+/* --- Simple Message Box (Non-Alert) --- */
+#message-box {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #333;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+    transform: translateY(20px);
+    z-index: 2000;
+    font-weight: 500;
+}
+#message-box.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+@media (min-width: 1024px) {
+    .main-grid {
+        grid-template-columns: 1fr 2fr 1fr; 
+        gap: 2rem;
+    }
+    
+    .left-sidebar-column,
+    .right-sidebar-column {
+        position: sticky;
+        top: 80px; 
+        align-self: start; 
+        height: fit-content; 
+    }
+    
+    .hidden-on-desktop {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .hidden-on-mobile {
+        display: none;
+    }
+    .left-sidebar-column,
+    .right-sidebar-column {
+        display: none;
+    }
+}
+
+.main-content,
+.main-grid,
+.recipe-card,
+.sidebar-card,
+.profile-card {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.left-sidebar-column,
+.right-sidebar-column {
+    max-width: 100%;
+    overflow-x: hidden;
+}
