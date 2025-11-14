@@ -80,7 +80,7 @@ public class UserServiceImpl implements UserService{
                 LoginResponseDTO loginResponseDTO = new LoginResponseDTO();
                 String token = jwtService.generateToken(loginRequestDTO.getEmail(),authenticatedUser.getRole().name(),authenticatedUser.getUsername());
                 loginResponseDTO.setToken(token);
-                loginResponseDTO.setUser(authenticatedUser.getRole().toString());
+                loginResponseDTO.setRole(authenticatedUser.getRole().toString());
                 return loginResponseDTO;
             }
             else {

@@ -74,8 +74,7 @@ public class UserController {
     @PostMapping("/login")
     @Operation(summary = "User login", description = "Authenticate a user", security = {})
     public LoginResponseDTO loginUser(@RequestBody LoginRequestDTO loginRequestDTO){
-        LoginResponseDTO loginResponseDTO = service.verify(loginRequestDTO);
-        return loginResponseDTO;
+        return service.verify(loginRequestDTO);
     }
 
     @PostMapping("/register")
