@@ -1,0 +1,17 @@
+.custom-btn {
+    border-color: #FF6F61 !important;
+    color: #FF6F61 !important;
+    background: #fff !important;
+}
+
+.custom-btn.ant-btn-primary {
+    background: #FF6F61 !important;
+    border-color: #FF6F61 !important;
+    color: #fff !important;
+}
+
+.custom-btn:hover, .custom-btn:focus {
+    border-color: #FF6F61 !important;
+    color: #fff !important;
+    background: #FF6F61 !important;
+}
