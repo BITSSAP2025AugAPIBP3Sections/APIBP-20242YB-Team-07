@@ -3,14 +3,18 @@ package com.cooknect.recipe_service.controller;
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.dto.CommentDto;
 import com.cooknect.recipe_service.service.RecipeService;
+import com.cooknect.recipe_service.service.SpeechSynthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Value;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +24,12 @@ import java.util.Map;
 public class RecipeController {
 
     private final RecipeService svc;
-    public RecipeController(RecipeService svc) { this.svc = svc; }
+    private final SpeechSynthService speechSynth;
+
+    public RecipeController(RecipeService svc, SpeechSynthService speechSynth) {
+        this.svc = svc;
+        this.speechSynth = speechSynth;
+    }
 
     // Create a new recipe
     @PostMapping
@@ -119,6 +128,35 @@ public class RecipeController {
         return svc.findByIngredient(q);
     }
 
+    @GetMapping(value = "/{id}/speak", produces = "audio/wav")
+    public ResponseEntity<byte[]> speakRecipe(@PathVariable Long id,
+                                            @RequestParam(required = false) String voice) {
+        try {
+            Recipe recipe = svc.getById(id);
+
+            String text;
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                text = mapper.writeValueAsString(recipe);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                text = recipe.toString();
+            }
+
+            byte[] wav = speechSynth.synthesizeAudio(text, voice, id);
+
+            System.out.println("Speech synthesis complete.");
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header("Content-Disposition", "inline; filename=\"recipe-" + id + ".wav\"")
+                .body(wav);
+
+        } catch (Exception e) {
+            e.printStackTrace(); // IMPORTANT -> SHOW ERROR
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
     // 🔹 Update an existing recipe
     @PutMapping("/{id}")
     @Operation(summary = "Update a recipe", security = @SecurityRequirement(name = "bearerAuth"))
@@ -176,4 +214,3 @@ public class RecipeController {
         return ResponseEntity.noContent().build();
     }
 }
-

@@ -201,6 +201,7 @@ Follow Conventional Commits:
 | **docs** | **Documentation update** |
 | **test** | **Adding or updating tests** |
 | **chore** | **Maintenance or dependency updates** |
+
 Examples:
 - **feat: add voting endpoint for challenges**
 - **fix: resolve null pointer in nutrition service**

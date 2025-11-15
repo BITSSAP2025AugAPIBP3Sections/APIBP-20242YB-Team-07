@@ -83,9 +83,9 @@
   			<groupId>io.netty</groupId>
   			<artifactId>netty-resolver-dns-native-macos</artifactId>
   			<version>4.1.99.Final</version>
-  			<classifier>osx-x86_64</classifier> <!-- or osx-aarch_64 for Apple Silicon -->
+  			<classifier>osx-x86_64</classifier>
   			<scope>runtime</scope>
-		</dependency>
+		 </dependency>
 	</dependencies>
 
 	<build>
