@@ -1,21 +1,74 @@
 import "./Login.css"
 
-import {useState} from 'react';
+import { useAuth } from "../../auth/AuthContext";
+import { useNavigate } from 'react-router-dom';
+import {useState,useEffect} from 'react';
 import { LockOutlined, MailOutlined, ForkOutlined, HeartFilled, PlayCircleOutlined, UserOutlined, UserAddOutlined } from '@ant-design/icons';
 import { Card, Form, Input, Button, Typography, Checkbox, Space } from 'antd';
 const { Title, Text, Link } = Typography;
 
+
 const Login = () => {
 
     const [isRegister, setIsRegister] = useState(false); 
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [registerForm, setRegisterForm] = useState({
+        fullname: '',
+        username: '',
+        email: '',
+        password: ''
+    });
+    const { user, setUser } = useAuth();
+    const navigate = useNavigate();
 
     const toggleForm = () => {
         setIsRegister((prev) => !prev);
     };
 
-    const onLogin = async() =>{
-        console.log("Logged in")
+    useEffect(() => {
+        if (user.isAuthenticated) {
+        
+        switch (user.role) {
+            case 'USER':
+                navigate('/homepage');
+                break;
+            default:
+                navigate('/unauthorized');
+        }
+        }
+    }, [user, navigate]);
+
+    const loginUser = async (email, password) => {
+        const res = await fetch("http://localhost:8089/api/v1/users/login", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) throw new Error('Login failed');
+        return res.json(); 
+    };
+
+    const onLogin = async () => {
+        try {
+            const { token, role } = await loginUser(email, password);
+            setUser({ isAuthenticated: true, role, token });
+            localStorage.setItem('token', token);
+            localStorage.setItem('role', role);
+            switch (role) {
+                case 'USER':
+                    navigate('/homepage');
+                    break;
+                default:
+                    navigate('/unauthorized');
+            }
+        } catch (err) {
+            console.error(err);
+            // openNotification(false, 'error', 'Login failed', 'Please check your email and password and try again.')();
+        }
     }
+    console.log(email," ",password)
 
     return(
         <div className="login-mainLayout">
@@ -108,6 +161,8 @@ const Login = () => {
                                     placeholder="user@example.com"
                                     size="large"
                                     style={{ borderRadius: '8px' }}
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                 />
                                 </Form.Item>
 
@@ -122,6 +177,8 @@ const Login = () => {
                                         placeholder="Password"
                                         size="large"
                                         style={{ borderRadius: '8px' }}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
                                     />
                                 </Form.Item>
 
@@ -186,7 +243,7 @@ const Login = () => {
                                 </Text>
                             </div>
             
-                            {/* --- Login Form --- */}
+                            {/* --- Register Form --- */}
                             <Form
                                 name="recipe_register"
                                 initialValues={{ remember: true }}
@@ -208,6 +265,8 @@ const Login = () => {
                                     placeholder="Pratik Kumar"
                                     size="large"
                                     style={{ borderRadius: '8px' }}
+                                    value={registerForm.fullname}
+                                    onChange={(e) => setRegisterForm({ ...registerForm, fullname: e.target.value })}
                                 />
                                 </Form.Item>
 
@@ -224,6 +283,8 @@ const Login = () => {
                                     placeholder="Pratik_kumar17"
                                     size="large"
                                     style={{ borderRadius: '8px' }}
+                                    value={registerForm.username}
+                                    onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
                                 />
                                 </Form.Item>
 
@@ -241,6 +302,8 @@ const Login = () => {
                                     placeholder="user@example.com"
                                     size="large"
                                     style={{ borderRadius: '8px' }}
+                                    value={registerForm.email}
+                                    onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
                                 />
                                 </Form.Item>
 
@@ -255,6 +318,8 @@ const Login = () => {
                                         placeholder="Password"
                                         size="large"
                                         style={{ borderRadius: '8px' }}
+                                        value={registerForm.password}
+                                        onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                                     />
                                 </Form.Item>
 
