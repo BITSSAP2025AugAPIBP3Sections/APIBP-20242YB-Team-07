@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: cooknect
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      containers:
+        - name: frontend
+          image: cooknect/frontend:v1.0.0
+          ports:
+            - containerPort: 80
+          env:
+            - name: REACT_APP_API_URL
+              value: "http://gateway-service:8080"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+              ephemeral-storage: "50Mi"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+              ephemeral-storage: "200Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: cooknect
+  labels:
+    app: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: LoadBalancer

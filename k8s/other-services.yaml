@@ -1,0 +1,283 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: challenge-service
+  namespace: cooknect
+  labels:
+    app: challenge-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: challenge-service
+  template:
+    metadata:
+      labels:
+        app: challenge-service
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      containers:
+        - name: challenge-service
+          image: cooknect/challenge-service:v1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service:9092"
+            - name: SERVER_PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+              ephemeral-storage: "100Mi"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+              ephemeral-storage: "500Mi"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: challenge-service
+  namespace: cooknect
+  labels:
+    app: challenge-service
+spec:
+  selector:
+    app: challenge-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nutrition-service
+  namespace: cooknect
+  labels:
+    app: nutrition-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nutrition-service
+  template:
+    metadata:
+      labels:
+        app: nutrition-service
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      containers:
+        - name: nutrition-service
+          image: cooknect/nutrition-service:v1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service:9092"
+            - name: SERVER_PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+              ephemeral-storage: "100Mi"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+              ephemeral-storage: "500Mi"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nutrition-service
+  namespace: cooknect
+  labels:
+    app: nutrition-service
+spec:
+  selector:
+    app: nutrition-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mealplanner-service
+  namespace: cooknect
+  labels:
+    app: mealplanner-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mealplanner-service
+  template:
+    metadata:
+      labels:
+        app: mealplanner-service
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      containers:
+        - name: mealplanner-service
+          image: cooknect/mealplanner-service:v1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service:9092"
+            - name: SERVER_PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+              ephemeral-storage: "100Mi"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+              ephemeral-storage: "500Mi"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mealplanner-service
+  namespace: cooknect
+  labels:
+    app: mealplanner-service
+spec:
+  selector:
+    app: mealplanner-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: cooknect
+  labels:
+    app: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      containers:
+        - name: notification-service
+          image: cooknect/notification-service:v1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service:9092"
+            - name: SERVER_PORT
+              value: "8080"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+              ephemeral-storage: "100Mi"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+              ephemeral-storage: "500Mi"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: cooknect
+  labels:
+    app: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: cooknect
+  labels:
+    app: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.5.0
+          ports:
+            - containerPort: 9092
+            - containerPort: 29092
+            - containerPort: 9093
+          env:
+            - name: KAFKA_NODE_ID
+              value: "1"
+            - name: KAFKA_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka-service:9092,INTERNAL://kafka-service:29092"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "INTERNAL"
+            - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+              value: "1@kafka-service:9093"
+            - name: KAFKA_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_LOG_DIRS
+              value: "/tmp/kraft-combined-logs"
+            - name: CLUSTER_ID
+              value: "MkU3OEVBNTcwNTJENDM2Qk"
+          volumeMounts:
+            - name: kafka-storage
+              mountPath: /tmp/kraft-combined-logs
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          readinessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: kafka-storage
+          persistentVolumeClaim:
+            claimName: kafka-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  namespace: cooknect
+  labels:
+    app: kafka
+spec:
+  selector:
+    app: kafka
+  ports:
+    - name: kafka-port
+      port: 9092
+      targetPort: 9092
+    - name: kafka-internal
+      port: 29092
+      targetPort: 29092
+    - name: kafka-controller
+      port: 9093
+      targetPort: 9093
+  type: ClusterIP

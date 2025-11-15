@@ -1,0 +1,137 @@
+version: "3.8"
+
+services:
+  # Infrastructure
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8081:8080"
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
+
+  # Backend Services
+  recipe-service:
+    image: cooknect/recipe-service:v1.0.0
+    container_name: recipe-service
+    ports:
+      - "8082:8080"
+    depends_on:
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+  user-service:
+    image: cooknect/user-service:v1.0.0
+    container_name: user-service
+    ports:
+      - "8083:8080"
+    depends_on:
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+  challenge-service:
+    image: cooknect/challenge-service:v1.0.0
+    container_name: challenge-service
+    ports:
+      - "8084:8080"
+    depends_on:
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+  nutrition-service:
+    image: cooknect/nutrition-service:v1.0.0
+    container_name: nutrition-service
+    ports:
+      - "8085:8080"
+    depends_on:
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+  mealplanner-service:
+    image: cooknect/mealplanner-service:v1.0.0
+    container_name: mealplanner-service
+    ports:
+      - "8086:8080"
+    depends_on:
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+  notification-service:
+    image: cooknect/notification-service:v1.0.0
+    container_name: notification-service
+    ports:
+      - "8087:8080"
+    depends_on:
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+
+  gateway-service:
+    image: cooknect/gateway-service:v1.0.0
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - recipe-service
+      - user-service
+      - challenge-service
+      - nutrition-service
+      - mealplanner-service
+      - notification-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - USER_SERVICE_URL=http://user-service:8080
+      - RECIPE_SERVICE_URL=http://recipe-service:8080
+      - CHALLENGE_SERVICE_URL=http://challenge-service:8080
+      - NUTRITION_SERVICE_URL=http://nutrition-service:8080
+      - MEALPLANNER_SERVICE_URL=http://mealplanner-service:8080
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8080
+
+  # Frontend
+  frontend:
+    image: cooknect/frontend:v1.0.0
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway-service
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+
+volumes:
+  kafka-data:
