@@ -142,7 +142,7 @@ public class RecipeController {
                 text = recipe.toString();
             }
 
-            byte[] wav = speechSynth.synthesizeAudio(text, voice);
+            byte[] wav = speechSynth.synthesizeAudio(text, voice, id);
 
             System.out.println("Speech synthesis complete.");
 

@@ -12,12 +12,17 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.cooknect.recipe_service.model.RecipeAudio;
+import com.cooknect.recipe_service.repository.RecipeAudioRepository;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +30,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class SpeechSynthService {
@@ -35,10 +42,15 @@ public class SpeechSynthService {
     @Value("${GL_API_KEY}")
     private String apiKey;
 
+    private static final Logger log = LoggerFactory.getLogger(SpeechSynthService.class);
+
     private static final String GEMINI_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=";
 
-    public byte[] synthesizeAudio(String text, String voiceName) {
+    @Autowired
+    private RecipeAudioRepository recipeAudioRepository;
+
+    public byte[] synthesizeAudio(String text, String voiceName, Long recipeId) {
         try {
             System.out.println("Synthesizing speech with Gemini TTS...");
             ObjectNode payload = mapper.createObjectNode();
@@ -115,6 +127,17 @@ public class SpeechSynthService {
                 System.out.println("Failed to save TTS WAV to /tmp: " + ioe.getMessage());
             }
 
+            // Persist to Postgres
+            try {
+                if (recipeId != null) {
+                    RecipeAudio audio = new RecipeAudio(recipeId, wav, "audio/wav");
+                    recipeAudioRepository.save(audio);
+                    System.out.println("Saved TTS WAV to database for recipeId=" + recipeId);
+                }
+            } catch (Exception dbEx) {
+                System.out.println("Failed to save TTS WAV to DB: " + dbEx.getMessage());
+            }
+
           return wav;
         } catch (Exception e) {
             e.printStackTrace();
@@ -122,9 +145,20 @@ public class SpeechSynthService {
         }
     }
 
+    private byte[] loadPlaceholderAudio() {
+        try (InputStream in = getClass().getResourceAsStream("/placeholder.wav")) {
+            if (in == null) return new byte[0];
+            return in.readAllBytes();
+        } catch (IOException e) {
+            log.error("Failed to load placeholder audio: {}", e.getMessage(), e);
+            return new byte[0];
+        }
+    }
+
     // ---------------------------------------------------------
     // Convert raw PCM LINEAR16 → WAV wrapper
     // ---------------------------------------------------------
+
     private byte[] convertPcmToWav(byte[] pcmData) throws IOException {
 
         int sampleRate = 24000;
