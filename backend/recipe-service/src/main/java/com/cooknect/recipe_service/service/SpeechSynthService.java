@@ -32,6 +32,9 @@ import java.time.Instant;
 import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
+
 
 @Service
 public class SpeechSynthService {
@@ -46,6 +49,49 @@ public class SpeechSynthService {
 
     private static final String GEMINI_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=";
+
+
+    /**
++     * Returns existing audio for recipeId if present. Otherwise synthesizes,
++     * persists the result (if recipeId provided) and returns the bytes.
+     */
+    @Transactional
+    public byte[] getOrCreateAudio(String text, String voiceName, Long recipeId) {
+        try {
+            if (recipeId != null) {
+                Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeId(recipeId);
+                if (opt.isPresent()) {
+                    log.info("Returning cached audio for recipeId={}", recipeId);
+                    return opt.get().getAudioData();
+                }
+            }
+
+            // synthesizeAudio(...) is existing method that produces the audio bytes
+            byte[] wav = synthesizeAudio(text, voiceName, recipeId);
+
+            // Save only if recipeId provided and no existing row (avoid duplicates)
+            if (recipeId != null) {
+                try {
+                    if (!recipeAudioRepository.findByRecipeId(recipeId).isPresent()) {
+                        RecipeAudio audioEntity = new RecipeAudio(recipeId, wav, "audio/wav");
+                        RecipeAudio saved = recipeAudioRepository.save(audioEntity);
+                        log.info("Saved TTS WAV to database for recipeId={} audioId={}", recipeId, saved.getId());
+                    } else {
+                        log.info("Audio already saved concurrently for recipeId={}", recipeId);
+                    }
+                } catch (Exception dbEx) {
+                    log.warn("Failed to save TTS WAV to DB for recipeId={}: {}", recipeId, dbEx.getMessage());
+                }
+            }
+
+            return wav;
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            log.error("Unexpected error in getOrCreateAudio: {}", e.getMessage(), e);
+            throw new RuntimeException("TTS failed", e);
+        }
+    }
 
     @Autowired
     private RecipeAudioRepository recipeAudioRepository;

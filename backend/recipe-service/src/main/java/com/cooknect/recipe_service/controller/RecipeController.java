@@ -16,6 +16,10 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 
+// Logger
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +29,7 @@ public class RecipeController {
 
     private final RecipeService svc;
     private final SpeechSynthService speechSynth;
+    private static final Logger log = LoggerFactory.getLogger(RecipeController.class);
 
     public RecipeController(RecipeService svc, SpeechSynthService speechSynth) {
         this.svc = svc;
@@ -142,18 +147,19 @@ public class RecipeController {
                 text = recipe.toString();
             }
 
-            byte[] wav = speechSynth.synthesizeAudio(text, voice, id);
-
-            System.out.println("Speech synthesis complete.");
+            // use service that checks DB, generates, saves
+            byte[] wav = speechSynth.getOrCreateAudio(text, voice, id);
 
             return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header("Content-Disposition", "inline; filename=\"recipe-" + id + ".wav\"")
-                .body(wav);
+                    .contentType(MediaType.parseMediaType("audio/wav"))
+                    .header("Content-Disposition", "inline; filename=\"recipe-" + id + ".wav\"")
+                    .body(wav);
 
+        } catch (com.cooknect.recipe_service.exception.NotFoundException nf) {
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            e.printStackTrace(); // IMPORTANT -> SHOW ERROR
-            return ResponseEntity.status(500).body(null);
+            log.error("Failed to produce audio for recipe {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(503).body(null);
         }
     }
 
