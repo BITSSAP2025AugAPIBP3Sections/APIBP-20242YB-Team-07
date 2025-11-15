@@ -1,0 +1,130 @@
+.login-mainLayout{
+    display: flex;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    overflow: hidden;
+}
+
+.login-heroPanel{
+    flex: 2;
+    padding: 60px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #FF6F61 0%, #ff7f50 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-heroPattern{
+    position: absolute;
+    top: -50;
+    left: -50;
+    width: 150%;
+    height: 150%;
+    opacity: 0.1;
+    background-image: radial-gradient(circle, white 1px, transparent 1px);
+    background-size: 25px 25px;
+    transform: rotate(-10deg);
+}
+
+.login-heroContent{
+    position: relative;
+    z-index: 10;
+    max-width: 550;
+    text-align: center;
+}
+
+.login-testimonialBlock{
+    background-color: #ffffff30;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: blur(5px);
+}
+
+.login-secondaryButton{
+    height: 48px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #FF6F61;
+    border-color: white;
+    background-color: white;
+    transition: background-color 0.3s;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.login-secondaryButton-explore{
+    height: 48px;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    border-color: white;
+    transition: background-color 0.3s;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    background-color: #ffffff20;
+
+}
+
+.login-formPanel{
+    flex: 1;
+    min-width: 400px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fffaf5;
+}
+
+.login-card{
+    width: 100%;
+    max-width: 400;
+    border-radius: 16px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+    border: none;
+    transition: all 0.3s;
+    margin-right: 30px;
+}
+
+.login-logoIcon{
+    font-size: 40px;
+    color: #FF6F61;
+    margin-right: 8px;
+}
+
+.login-link-forgotPassword{
+    float: right;
+    color: #FF6F61;
+    font-weight: 500;
+}
+
+.login-buttonLogin{
+    height: 48px;
+    font-size: 16px;
+    font-weight: 700;
+    background-color: #FF6F61;
+    border-color: #FF6F61;
+    box-shadow: 0 4px 10px rgba(65, 63, 63, 0.4);
+    color: white;
+}
+
+.login-link-createAccount{
+    color: #FF6F61;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .login-heroPanel {
+        display: none;
+    }
+
+    .login-formPanel{
+        flex: 1;
+        background-color: #fff7e6;
+        padding: 10px;
+    }
+}

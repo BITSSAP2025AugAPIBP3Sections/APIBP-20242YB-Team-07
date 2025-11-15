@@ -1,5 +1,7 @@
 package com.cooknect.user_service.controller;
 
+import com.cooknect.user_service.dto.LoginRequestDTO;
+import com.cooknect.user_service.dto.LoginResponseDTO;
 import com.cooknect.user_service.dto.UsersDTO;
 import com.cooknect.user_service.model.UserModel;
 import com.cooknect.user_service.service.UserService;
@@ -71,11 +73,8 @@ public class UserController {
 
     @PostMapping("/login")
     @Operation(summary = "User login", description = "Authenticate a user", security = {})
-    public Map<String, String> loginUser(@RequestBody UserModel user){
-        String token = service.verify(user);
-        Map<String, String> response = new HashMap<>();
-        response.put("token", token);
-        return response;
+    public LoginResponseDTO loginUser(@RequestBody LoginRequestDTO loginRequestDTO){
+        return service.verify(loginRequestDTO);
     }
 
     @PostMapping("/register")

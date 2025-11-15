@@ -1,5 +1,7 @@
 package com.cooknect.user_service.service;
 
+import com.cooknect.user_service.dto.LoginRequestDTO;
+import com.cooknect.user_service.dto.LoginResponseDTO;
 import com.cooknect.user_service.dto.UsersDTO;
 import com.cooknect.user_service.model.CuisinePreference;
 import com.cooknect.user_service.model.DietaryPreference;
@@ -69,13 +71,17 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public String verify(UserModel user) {
+    public LoginResponseDTO verify(LoginRequestDTO loginRequestDTO) {
         try{
-            Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(),user.getPassword()));
+            Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequestDTO.getEmail(), loginRequestDTO.getPassword()));
 
             if(authentication.isAuthenticated()){
-                UserModel authenticatedUser = repository.findByEmail(user.getEmail());
-                return jwtService.generateToken(user.getEmail(),authenticatedUser.getRole().name(),authenticatedUser.getUsername());
+                UserModel authenticatedUser = repository.findByEmail(loginRequestDTO.getEmail());
+                LoginResponseDTO loginResponseDTO = new LoginResponseDTO();
+                String token = jwtService.generateToken(loginRequestDTO.getEmail(),authenticatedUser.getRole().name(),authenticatedUser.getUsername());
+                loginResponseDTO.setToken(token);
+                loginResponseDTO.setRole(authenticatedUser.getRole().toString());
+                return loginResponseDTO;
             }
             else {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
