@@ -15,3 +15,38 @@
     color: #fff !important;
     background: #FF6F61 !important;
 }
+
+.nonauth-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    padding: 0 24px;
+    box-shadow: 0 2px 8px #f0f1f2;
+    margin-bottom: 16px;
+}
+
+.logo {
+    font-weight: 600;
+    font-size: 20px;
+    color: #FF6F61;
+}
+
+.navbar-buttons {
+    display: flex;
+    gap: 16px;
+}
+
+.navbar-dropdown {
+    display: none;
+}
+
+/* Responsive: show dropdown, hide buttons on small screens */
+@media (max-width: 768px) {
+    .navbar-buttons {
+        display: none;
+    }
+    .navbar-dropdown {
+        display: block;
+    }
+}

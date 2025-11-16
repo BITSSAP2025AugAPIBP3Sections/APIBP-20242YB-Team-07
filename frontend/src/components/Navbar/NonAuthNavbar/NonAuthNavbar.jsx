@@ -1,27 +1,60 @@
-import { Button } from 'antd';
+import React from 'react';
+import { Button, Dropdown } from 'antd';
+import { MenuOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import "./NonAuthNavbar.css";
+import { ChefHat } from 'lucide-react';
+
+const menuItems = [
+    {
+        key: 'home',
+        label: 'Home',
+    },
+    {
+        key: 'contact',
+        label: 'Contact Us',
+    },
+    {
+        key: 'about',
+        label: 'About Us',
+    },
+    {
+        key: 'login',
+        label: 'Login',
+    },
+];
 
 const NonAuthNavbar = ({ activeButton = 'home' }) => {
     const navigate = useNavigate();
 
+    const handleMenuClick = ({ key }) => {
+        switch (key) {
+            case 'home':
+                navigate('/');
+                break;
+            case 'contact':
+                navigate('/contact');
+                break;
+            case 'about':
+                navigate('/about');
+                break;
+            case 'login':
+                navigate('/login');
+                break;
+            default:
+                break;
+        }
+    };
+
     return (
-        <div
-            className="header"
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: '#fff',
-                padding: '0 24px',
-                boxShadow: '0 2px 8px #f0f1f2',
-                marginBottom: '16px'
-            }}
-        >
-            <div className="logo" style={{ fontWeight: 600, fontSize: 20 }}>
-                Cookbook
+        <div className="header nonauth-navbar">
+            <div className="logo">
+                {/* add icons via react lucicide i.e chef-hat*/}
+                <ChefHat size={32} color="#FF6F61" />
+                Cooknect
             </div>
-            <div style={{ display: 'flex', gap: '16px' }}>
+            {/* Desktop Buttons */}
+            <div className="navbar-buttons">
                 <Button
                     className="custom-btn"
                     type={activeButton === 'home' ? 'primary' : 'default'}
@@ -50,6 +83,16 @@ const NonAuthNavbar = ({ activeButton = 'home' }) => {
                 >
                     Login
                 </Button>
+            </div>
+            {/* Mobile/Tablet Dropdown */}
+            <div className="navbar-dropdown">
+                <Dropdown
+                    menu={{ items: menuItems, onClick: handleMenuClick }}
+                    placement="bottomRight"
+                    arrow
+                >
+                    <Button icon={<MenuOutlined />} />
+                </Dropdown>
             </div>
         </div>
     );
