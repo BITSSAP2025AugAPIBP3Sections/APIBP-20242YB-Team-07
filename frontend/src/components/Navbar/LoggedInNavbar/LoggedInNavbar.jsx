@@ -73,8 +73,9 @@ const LoggedInNavbar = ({ activeKey = '1' }) => {
                 setActiveMenuKey('0');
                 break;
             case 'logout':
-                // Add logout logic here
-                console.log('Logging out...');
+                localStorage.removeItem('token');
+                localStorage.getItem('role');
+                window.location.reload();
                 break;
             default:
                 break;

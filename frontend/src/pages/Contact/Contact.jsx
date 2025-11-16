@@ -109,8 +109,6 @@ const Contact = () => {
   });
   const [form] = Form.useForm();
 
-  console.log(queryData);
-
   const openNotification = (pauseOnHover, type, message, description) => () => {
     api.open({
       message,

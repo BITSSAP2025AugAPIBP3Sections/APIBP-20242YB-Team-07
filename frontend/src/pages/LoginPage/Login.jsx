@@ -4,17 +4,27 @@ import { useAuth } from "../../auth/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import {useState,useEffect} from 'react';
 import { LockOutlined, MailOutlined, ForkOutlined, HeartFilled, PlayCircleOutlined, UserOutlined, UserAddOutlined } from '@ant-design/icons';
-import { Card, Form, Input, Button, Typography, Checkbox, Space } from 'antd';
+import { Card, Form, Input, Button, Typography, Checkbox, Space, notification } from 'antd';
 const { Title, Text, Link } = Typography;
 
 
 const Login = () => {
-
+    const [api, contextHolder] = notification.useNotification();
+    const openNotification = (pauseOnHover, type, message, description) => () => {
+        api.open({
+        message,
+        description,
+        showProgress: true,
+        pauseOnHover,
+        type,
+        });
+    };
+    const [form] = Form.useForm();
     const [isRegister, setIsRegister] = useState(false); 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [registerForm, setRegisterForm] = useState({
-        fullname: '',
+        fullName: '',
         username: '',
         email: '',
         password: ''
@@ -46,7 +56,13 @@ const Login = () => {
             body: JSON.stringify({ email, password })
         });
 
-        if (!res.ok) throw new Error('Login failed');
+        if(res.status !== 200){
+            openNotification(true, 'error', 'Login failed', 'Please check your email and password and try again.')();
+            throw new Error('Login failed');
+        }
+        if(res.status === 200) {
+            form.resetFields();
+        }
         return res.json(); 
     };
 
@@ -64,14 +80,41 @@ const Login = () => {
                     navigate('/unauthorized');
             }
         } catch (err) {
-            console.error(err);
-            // openNotification(false, 'error', 'Login failed', 'Please check your email and password and try again.')();
+            openNotification(false, 'error', 'Login failed', 'Please check your email and password and try again.')();
         }
-    }
-    console.log(email," ",password)
+    };
+
+    const onRegister = async () => {
+        try {
+            const response = await fetch("http://localhost:8089/api/v1/users/register", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(registerForm)
+            });
+
+            const data = await response.json();
+
+            if (response.status === 500 || response.status === 400) {
+                throw new Error(data.message || data.error || "Registration failed");
+            }
+
+            openNotification(true, 'success', 'Registration successful', 'Your account has been created. Please log in.')();
+            setIsRegister(false);
+            setRegisterForm({
+                fullName: '',
+                username: '',
+                email: '',
+                password: ''
+            });
+            form.resetFields();
+        } catch (err) {
+            openNotification(true, 'error', 'Registration failed', err.message)();
+        }
+    };
 
     return(
         <div className="login-mainLayout">
+            {contextHolder}
 
             {/* ---------------------------------------------------- */}
             {/* LEFT PANEL                                           */}
@@ -141,6 +184,7 @@ const Login = () => {
             
                             {/* --- Login Form --- */}
                             <Form
+                                form={form}
                                 name="recipe_login"
                                 initialValues={{ remember: true }}
                                 onFinish={onLogin}
@@ -245,17 +289,17 @@ const Login = () => {
             
                             {/* --- Register Form --- */}
                             <Form
+                                form={form}
                                 name="recipe_register"
                                 initialValues={{ remember: true }}
-                                // onFinish={onFinish}
-                                // onFinishFailed={onFinishFailed}
+                                onFinish={onRegister}
                                 layout="vertical"
                                 requiredMark={false}
                             >
                                 {/* Name Field */}
                                 <Form.Item
                                     label={<Text style={{ fontWeight: '600' }}>Full name</Text>}
-                                    name="fullname"
+                                    name="fullName"
                                     rules={[
                                         { required: true, message: 'Please input your Full Name!' }
                                     ]}
@@ -265,8 +309,8 @@ const Login = () => {
                                     placeholder="Pratik Kumar"
                                     size="large"
                                     style={{ borderRadius: '8px' }}
-                                    value={registerForm.fullname}
-                                    onChange={(e) => setRegisterForm({ ...registerForm, fullname: e.target.value })}
+                                    value={registerForm.fullName}
+                                    onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })}
                                 />
                                 </Form.Item>
 
