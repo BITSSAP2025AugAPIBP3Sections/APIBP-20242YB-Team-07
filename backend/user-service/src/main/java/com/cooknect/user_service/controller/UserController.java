@@ -1,5 +1,6 @@
 package com.cooknect.user_service.controller;
 
+import com.cooknect.user_service.dto.GeneralQueriesDTO;
 import com.cooknect.user_service.dto.LoginRequestDTO;
 import com.cooknect.user_service.dto.LoginResponseDTO;
 import com.cooknect.user_service.dto.UsersDTO;
@@ -94,6 +95,25 @@ public class UserController {
         }
         UserModel newuser = service.createUser(user);
         return ResponseEntity.ok(newuser);
+    }
+
+    @PostMapping("/query")
+    @Operation(summary = "Submit a general query", description = "Submit a general query or feedback", security = {})
+    public ResponseEntity<GeneralQueriesDTO> submitQuery(@RequestBody GeneralQueriesDTO queryDTO) {
+        if(queryDTO.getName() == null || queryDTO.getName().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        if(queryDTO.getEmail() == null || queryDTO.getEmail().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        if(queryDTO.getSubject() == null || queryDTO.getSubject().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        if(queryDTO.getMessage() == null || queryDTO.getMessage().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        GeneralQueriesDTO savedQuery = service.submitGeneralQuery(queryDTO);
+        return ResponseEntity.ok(savedQuery);
     }
 
 

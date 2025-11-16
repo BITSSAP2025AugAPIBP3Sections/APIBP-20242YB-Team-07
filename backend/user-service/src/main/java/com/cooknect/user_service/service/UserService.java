@@ -1,5 +1,6 @@
 package com.cooknect.user_service.service;
 
+import com.cooknect.user_service.dto.GeneralQueriesDTO;
 import com.cooknect.user_service.dto.LoginRequestDTO;
 import com.cooknect.user_service.dto.LoginResponseDTO;
 import com.cooknect.user_service.dto.UsersDTO;
@@ -38,4 +39,6 @@ public interface UserService {
     public Map<String, String> getHealthGoal(Long id);
 
     public Map<String, Object> getUserCuisinePreferences(Long id);
+
+    public GeneralQueriesDTO submitGeneralQuery(GeneralQueriesDTO generalQueriesDTO);
 }
