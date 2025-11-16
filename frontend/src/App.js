@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from './pages/LandingPage/Landing';
 import Home from './pages/HomePage/Home';
 import Login from './pages/LoginPage/Login';
+import Contact from './pages/Contact/Contact';
+import About from './pages/About/About';
 import { AuthProvider } from './auth/AuthContext';
 import ProtectedRoute from './auth/ProtectedRoute';
 
@@ -14,6 +16,8 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/about" element={<About />} />
             <Route
               path="/*"
               element={

@@ -1,10 +1,13 @@
 import "./Home.css"
+import LoggedInNavbar from "../../components/Navbar/LoggedInNavbar/LoggedInNavbar";
 
 import { Tag } from 'antd';
 import { HeartOutlined, MessageFilled, ShareAltOutlined } from '@ant-design/icons';
 
 const Home = () => {
     return(
+        <>
+        <LoggedInNavbar activeKey="1"/>
         <div className="main-content">
             <div className="main-grid">
                 
@@ -142,6 +145,7 @@ const Home = () => {
 
             </div>
         </div>
+        </>
     )
 }
 

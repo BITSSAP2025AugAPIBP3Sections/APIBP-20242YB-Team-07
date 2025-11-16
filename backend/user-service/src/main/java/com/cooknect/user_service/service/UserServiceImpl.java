@@ -1,16 +1,11 @@
 package com.cooknect.user_service.service;
 
+import com.cooknect.user_service.dto.GeneralQueriesDTO;
 import com.cooknect.user_service.dto.LoginRequestDTO;
 import com.cooknect.user_service.dto.LoginResponseDTO;
 import com.cooknect.user_service.dto.UsersDTO;
-import com.cooknect.user_service.model.CuisinePreference;
-import com.cooknect.user_service.model.DietaryPreference;
-import com.cooknect.user_service.model.HealthGoal;
-import com.cooknect.user_service.model.UserModel;
-import com.cooknect.user_service.repository.CuisinePreferenceRepository;
-import com.cooknect.user_service.repository.DietaryPreferenceRepository;
-import com.cooknect.user_service.repository.HealthGoalRepository;
-import com.cooknect.user_service.repository.UserRepository;
+import com.cooknect.user_service.model.*;
+import com.cooknect.user_service.repository.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -41,6 +36,9 @@ public class UserServiceImpl implements UserService{
 
     @Autowired
     CuisinePreferenceRepository cuisinePreferenceRepository;
+
+    @Autowired
+    GeneralQueriesRepository generalQueriesRepository;
 
     @Autowired
     AuthenticationManager authManager;
@@ -354,5 +352,21 @@ public class UserServiceImpl implements UserService{
         }
 
         return Map.of("cuisinePreferences", cuisines);
+    }
+
+    @Override
+    public GeneralQueriesDTO submitGeneralQuery(GeneralQueriesDTO generalQueriesDTO){
+        GeneralQueries generalQueries = new GeneralQueries();
+        generalQueries.setName(generalQueriesDTO.getName());
+        generalQueries.setEmail(generalQueriesDTO.getEmail());
+        generalQueries.setSubject(generalQueriesDTO.getSubject());
+        generalQueries.setMessage(generalQueriesDTO.getMessage());
+        GeneralQueries savedQuery = generalQueriesRepository.save(generalQueries);
+        GeneralQueriesDTO savedQueryDTO = new GeneralQueriesDTO();
+        savedQueryDTO.setName(savedQuery.getName());
+        savedQueryDTO.setEmail(savedQuery.getEmail());
+        savedQueryDTO.setSubject(savedQuery.getSubject());
+        savedQueryDTO.setMessage(savedQuery.getMessage());
+        return savedQueryDTO;
     }
 }
