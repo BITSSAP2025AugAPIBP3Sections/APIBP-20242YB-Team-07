@@ -1,13 +1,15 @@
-import './App.css';
+import "./App.css";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Landing from './pages/LandingPage/Landing';
-import Home from './pages/HomePage/Home';
-import Login from './pages/LoginPage/Login';
-import Contact from './pages/Contact/Contact';
-import About from './pages/About/About';
-import { AuthProvider } from './auth/AuthContext';
-import ProtectedRoute from './auth/ProtectedRoute';
+import Landing from "./pages/LandingPage/Landing";
+import Home from "./pages/HomePage/Home";
+import Login from "./pages/LoginPage/Login";
+import Contact from "./pages/Contact/Contact";
+import About from "./pages/About/About";
+import Profile from "./pages/Profile/Profile";
+import Recipe from "./pages/Recipe/Recipe";
+import { AuthProvider } from "./auth/AuthContext";
+import ProtectedRoute from "./auth/ProtectedRoute";
 
 function App() {
   return (
@@ -24,6 +26,9 @@ function App() {
                 <ProtectedRoute>
                   <Routes>
                     <Route path="/homepage" element={<Home />} />
+                    <Route path="/profile/:id" element={<Profile />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/recipe" element={<Recipe />} />
                   </Routes>
                 </ProtectedRoute>
               }
@@ -32,7 +37,6 @@ function App() {
           </Routes>
         </BrowserRouter>
       </AuthProvider>
-      
     </div>
   );
 }

@@ -33,6 +33,11 @@ public class UserModel {
     @Column(name="password")
     String password;
 
+    @Column(name="bio")
+    String bio;
+
+    @Column(name="avatar_url")
+    String avatarUrl;
 
     @Enumerated(EnumType.STRING)
     Role role;

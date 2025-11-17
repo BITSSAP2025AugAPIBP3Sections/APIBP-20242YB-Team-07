@@ -9,6 +9,13 @@ type User {
     cuisinePreferences: [String]
 }
 
+type CreatedUser {
+    email: String!
+    username: String!
+    fullName: String
+    password: String
+}
+
 input UserInput {
     email: String
     username: String
@@ -19,12 +26,19 @@ input UserInput {
     cuisinePreferences: [String]
 }
 
+input CreateUserInput {
+    email: String
+    username: String
+    fullName: String
+    password: String
+}
+
 type Query {
     getAllUsers: [User]
     getUserById(userId: ID!): User
 }
 
 type Mutation {
-    registerUser(user: UserInput!): User
+    registerUser(user: CreateUserInput!): CreatedUser
     updateUser(userId: ID!, user: UserInput!): User
 }

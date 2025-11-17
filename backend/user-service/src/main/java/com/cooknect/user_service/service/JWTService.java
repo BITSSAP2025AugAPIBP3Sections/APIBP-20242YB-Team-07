@@ -22,11 +22,11 @@ public class JWTService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String email,String role,String username) {
+    public String generateToken(String email,String role, Long id) {
 
         Map<String,Object> claims = new HashMap<>();
         claims.put("role",role);
-        claims.put("username",username);
+        claims.put("userid",id);
 
         return Jwts.builder()
                 .claims()
