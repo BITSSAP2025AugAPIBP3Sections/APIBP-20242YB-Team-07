@@ -1,8 +1,8 @@
 package com.cooknect.recipe_service.controller;
 
 import com.cooknect.recipe_service.model.*;
-import com.cooknect.recipe_service.dto.CommentDto;
 import com.cooknect.recipe_service.service.RecipeService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -103,15 +103,47 @@ public class RecipeGraphQlController {
 //        return svc.like(id);
 //    }
 
-    @MutationMapping(name = "addComment")
-    public Recipe addComment(
-            @Argument Long recipeId,
-            @Argument String author,
-            @Argument String text
+
+    @MutationMapping(name = "likeRecipe")
+    public Boolean likeRecipe(
+            @Argument Long id,
+            HttpServletRequest request
     ) {
-        Comment comment = new Comment();
-        comment.setAuthor(author);
-        comment.setText(text);
-        return svc.addComment(recipeId, comment);
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid X-User-Id header");
+        }
+
+        svc.likeAndUnlike(id, userId);
+        return true;
     }
+
+
+    @MutationMapping(name = "addComment")
+    public Boolean addComment(
+            @Argument Long recipeId,
+            @Argument String text,
+            HttpServletRequest request
+    ) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid X-User-Id header");
+        }
+
+        Comment comment = new Comment();
+        comment.setAuthor(String.valueOf(userId));
+        comment.setText(text);
+
+        svc.addComment(recipeId, comment);
+        return true;
+    }
+
 }

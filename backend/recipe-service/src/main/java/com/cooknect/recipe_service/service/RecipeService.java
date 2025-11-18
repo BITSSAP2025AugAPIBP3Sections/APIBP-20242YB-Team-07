@@ -1,12 +1,11 @@
 package com.cooknect.recipe_service.service;
 
-import com.cooknect.recipe_service.dto.CommentDto;
+import com.cooknect.recipe_service.dto.GetCommentDto;
 import com.cooknect.recipe_service.dto.GetRecipeDTO;
 import com.cooknect.recipe_service.dto.RecipeCreateDTO;
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.repository.RecipeLikeRepository;
 import com.cooknect.recipe_service.repository.RecipeRepository;
-//import com.cooknect.recipe_service.integration.SpoonacularClient;
 import com.cooknect.recipe_service.exception.NotFoundException;
 import com.cooknect.recipe_service.repository.RecipeSavedRepository;
 import org.springframework.stereotype.Service;
@@ -71,6 +70,19 @@ public class RecipeService {
         repo.save(recipe);
     }
 
+    /* Adding comment to a Recipe */
+    public void addComment(Long recipeId, Comment comment) {
+        Recipe recipe = getById(recipeId);
+        if(recipe==null){
+            throw new NotFoundException("Recipe not found: " + recipeId);
+        }
+
+        recipe.getComments().add(comment);
+
+        // Persist the comment + updated recipe
+        repo.save(recipe);
+    }
+
     /* Get all recipes */
     public List<GetRecipeDTO> getAllRecipes(Long userId) {
         List<Recipe> recipes = repo.findAll();
@@ -94,7 +106,7 @@ public class RecipeService {
             dto.setRecipeImageUrl(recipe.getRecipeImageUrl());
             dto.setComments(
                     recipe.getComments().stream().map(comment -> {
-                        CommentDto commentDto = new CommentDto();
+                        GetCommentDto commentDto = new GetCommentDto();
                         commentDto.setAuthor(comment.getAuthor());
                         commentDto.setText(comment.getText());
                         return commentDto;
@@ -120,6 +132,7 @@ public class RecipeService {
         return repo.findById(recipeId)
                 .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
     }
+
     //Fetching all the recipes based on username
     public List<Recipe> getByUsername(String username) {
         return repo.findByUsername(username);
@@ -204,12 +217,6 @@ public class RecipeService {
         repo.deleteById(id);
     }
 
-
-    public Recipe addComment(Long id, Comment comment) {
-        Recipe r = getById(id);
-        r.getComments().add(comment);
-        return repo.save(r);
-    }
 
     public List<Recipe> searchByTitle(String q) {
         return repo.findByTitleContainingIgnoreCase(q);

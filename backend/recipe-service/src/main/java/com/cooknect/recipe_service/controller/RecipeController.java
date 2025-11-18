@@ -1,17 +1,14 @@
 package com.cooknect.recipe_service.controller;
 
+import com.cooknect.recipe_service.dto.CreateCommentDto;
 import com.cooknect.recipe_service.dto.GetRecipeDTO;
 import com.cooknect.recipe_service.dto.RecipeCreateDTO;
 import com.cooknect.recipe_service.model.*;
-import com.cooknect.recipe_service.dto.CommentDto;
 import com.cooknect.recipe_service.service.RecipeService;
 import com.cooknect.recipe_service.service.SpeechSynthService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Value;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -86,14 +83,33 @@ public class RecipeController {
         return svc.getAllRecipes(id);
     }
 
-    // Add a comment to a recipe
+    /* Add Comment for a recipe */
     @PostMapping("/{recipeId}/comments")
-    @Operation(summary = "Add a comment to a recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe comment(@PathVariable Long recipeId, @RequestBody CommentDto dto) {
+    @Operation(
+            summary = "Add a comment to a recipe",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> addComment(
+            @PathVariable Long recipeId,
+            @RequestBody CreateCommentDto dto,
+            HttpServletRequest request
+    ) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
         Comment comment = new Comment();
-        comment.setAuthor(dto.getAuthor());
+        comment.setAuthor(String.valueOf(userId));   // Author = userId from header
         comment.setText(dto.getText());
-        return svc.addComment(recipeId, comment);
+
+        svc.addComment(recipeId, comment);
+
+        return ResponseEntity.noContent().build();
     }
 
     private static final String TOPIC = "recipe-topic";

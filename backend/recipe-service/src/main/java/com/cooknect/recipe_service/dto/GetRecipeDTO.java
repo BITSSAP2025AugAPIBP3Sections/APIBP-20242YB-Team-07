@@ -19,7 +19,7 @@ public class GetRecipeDTO {
     private String description;
     private String cuisine;
     private String recipeImageUrl;
-    private List<CommentDto> comments;
+    private List<GetCommentDto> comments;
     private List<Ingredient> ingredients;
     private List<PreparationStep> preparation;
     private int likesCount;
