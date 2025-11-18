@@ -47,6 +47,13 @@ public class UserController {
         UsersDTO users = service.getUserById(id);
         return ResponseEntity.ok(users);
     }
+    // Bulk fetch usernames by IDs
+    @PostMapping("/usernames")
+    @Operation(summary = "Get user by ID", security = @SecurityRequirement(name = "bearerAuth"), hidden = true)
+    public ResponseEntity<Map<Long, String>> getUsernamesByIds(@RequestBody List<Long> userIds) {
+        Map<Long, String> usernames = service.getUsernamesByIds(userIds);
+        return ResponseEntity.ok(usernames);
+    }
 
     @GetMapping("/user-details")
     @Operation(summary = "Get user details from header", security = @SecurityRequirement(name = "bearerAuth"), hidden = true)

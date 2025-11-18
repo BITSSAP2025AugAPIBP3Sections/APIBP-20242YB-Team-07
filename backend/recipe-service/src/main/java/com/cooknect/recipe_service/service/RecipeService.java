@@ -9,9 +9,20 @@ import com.cooknect.recipe_service.repository.RecipeLikeRepository;
 import com.cooknect.recipe_service.repository.RecipeRepository;
 import com.cooknect.recipe_service.exception.NotFoundException;
 import com.cooknect.recipe_service.repository.RecipeSavedRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class RecipeService {
@@ -19,6 +30,12 @@ public class RecipeService {
     private final RecipeRepository repo;
     private final RecipeLikeRepository likeRepository;
     private final RecipeSavedRepository savedRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;
+    @Value("${user.service.url}")
+    private String userBaseUrl;
+
 
     /* Constructor Injection for both dependencies */
     public RecipeService(RecipeRepository repo, RecipeLikeRepository likeRepository, RecipeSavedRepository savedRepository) {
@@ -93,10 +110,25 @@ public class RecipeService {
          * Doing this so that for all recipes username is fetched at once.
          * Which avoid repeated calls to user service.
         */
+
+
         List<Long> userIds = recipes.stream()
                 .map(Recipe::getUserId)
                 .distinct()
                 .toList();
+        // Build request body with all userIds
+        HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
+
+// Call the usernames endpoint
+        ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                userBaseUrl + "/usernames",
+                HttpMethod.POST,
+                request,
+                new ParameterizedTypeReference<Map<Long, String>>() {}
+        );
+
+        Map<Long, String> userIdToUsername = response.getBody();
+
 
         return recipes.stream().map(recipe -> {
             GetRecipeDTO dto = new GetRecipeDTO();
@@ -118,7 +150,8 @@ public class RecipeService {
             dto.setLikesCount(recipe.getLikes());
             dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
-//            dto.setUsername();
+            // Set username from user-service
+            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
             dto.setCommentCount(recipe.getComments().size());
             return dto;
         }).toList();
@@ -218,9 +251,6 @@ public class RecipeService {
 
         repo.deleteAll(recipes);
     }
-
-
-
 
     public List<Recipe> searchByTitle(String q) {
         return repo.findByTitleContainingIgnoreCase(q);
