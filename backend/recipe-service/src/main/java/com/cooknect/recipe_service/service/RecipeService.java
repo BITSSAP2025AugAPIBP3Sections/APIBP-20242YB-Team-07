@@ -156,7 +156,7 @@ public class RecipeService {
                 savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent()
         );
 
-        dto.setUsername(recipe.getUsername());
+//        dto.setUsername(recipe.getUsername());
         dto.setCommentCount(recipe.getComments().size());
 
         return dto;
@@ -173,69 +173,6 @@ public class RecipeService {
     public List<Recipe> listAll() {
         return repo.findAll();
     }
-
-
-
-    //Fetching all the recipes based on username
-    public List<Recipe> getByUsername(String username) {
-        return repo.findByUsername(username);
-    }
-    //Getting a particular recipe of a particular user
-    // Fetch a single recipe by username and ID
-    public Recipe getByUsernameAndId(String username, Long recipeId) {
-        return repo.findByUsernameAndId(username, recipeId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Recipe not found for user: " + username + " and id: " + recipeId));
-    }
-    //Deleting a recipe of a user
-    public void deleteRecipeByUser(String username, Long recipeId) {
-        Recipe recipe = repo.findById(recipeId)
-                .orElseThrow(() -> new NotFoundException("Recipe not found with id: " + recipeId));
-
-        // ensure the recipe belongs to the user
-//        if (!recipe.getUsername().equals(username)) {
-//            throw new RuntimeException("User not authorized to delete this recipe");
-//        }
-
-        repo.delete(recipe);
-    }
-
-    //Deleting all the recipes of a user
-
-    public void deleteAllByUser(String username) {
-        List<Recipe> userRecipes = repo.findByUsername(username);
-        if (userRecipes.isEmpty()) {
-            throw new NotFoundException("No recipes found for user: " + username);
-        }
-
-        repo.deleteAll(userRecipes);
-    }
-
-    //update username and assign all the recipes to that username
-    public void updateUsername(String oldUsername, String newUsername) {
-        List<Recipe> recipes = repo.findByUsername(oldUsername);
-
-        if (recipes.isEmpty()) {
-            throw new NotFoundException("No recipes found for user: " + oldUsername);
-        }
-
-//        for (Recipe recipe : recipes) {
-//            recipe.setUsername(newUsername);
-//        }
-
-        repo.saveAll(recipes);
-    }
-
-//    public Recipe update(Long id, Recipe update) {
-//        Recipe existing = getById(id);
-//        existing.setTitle(update.getTitle());
-//        existing.setDescription(update.getDescription());
-//        existing.setIngredients(update.getIngredients());
-//        existing.setCuisine(update.getCuisine());
-//        existing.setLanguage(update.getLanguage());
-//        return repo.save(existing);
-//    }
-
     // PATCH — partial update
     public Recipe patchUpdate(Long id, Recipe updates, Long userId) {
         Recipe existing = repo.findById(id)
@@ -259,12 +196,30 @@ public class RecipeService {
 
         return repo.save(existing);
     }
+    /*Delete a Recipe based on user Id*/
+    public void deleteRecipeByUser(Long userId, Long recipeId) {
+        Recipe recipe = repo.findById(recipeId)
+                .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
 
-    public void delete(Long id) {
-        if (!repo.existsById(id))
-            throw new NotFoundException("Recipe not found: " + id);
-        repo.deleteById(id);
+        // Ensure the user is the owner
+        if (!recipe.getUserId().equals(userId)) {
+            throw new ForbiddenException("You are not allowed to delete this recipe");
+        }
+
+        repo.delete(recipe);
     }
+
+    public void deleteAllByUser(Long userId) {
+        List<Recipe> recipes = repo.findAllByUserId((userId));
+
+        if (recipes.isEmpty()) {
+            throw new NotFoundException("No recipes found for user ID: " + userId);
+        }
+
+        repo.deleteAll(recipes);
+    }
+
+
 
 
     public List<Recipe> searchByTitle(String q) {

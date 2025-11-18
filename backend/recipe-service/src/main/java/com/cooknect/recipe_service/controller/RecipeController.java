@@ -146,23 +146,6 @@ public class RecipeController {
         return "Published: " + message;
     }
 
-
-
-
-//    // Get all recipes by username
-//    @GetMapping("/{username}")
-//    @Operation(summary = "Get all recipes by username", security = @SecurityRequirement(name = "bearerAuth"))
-//    public List<Recipe> getByUsername(@PathVariable String username) {
-//        return svc.getByUsername(username);
-//    }
-
-    // Get a specific recipe by username and recipe ID
-    @GetMapping("/{username}/recipes/{recipeId}")
-    @Operation(summary = "Get recipe by username and ID", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe getByUsernameAndId(@PathVariable String username, @PathVariable Long recipeId) {
-        return svc.getByUsernameAndId(username, recipeId);
-    }
-
     // Search recipes by title
     @GetMapping("/search")
     @Operation(summary = "Search a recipe by title", security = @SecurityRequirement(name = "bearerAuth"))
@@ -251,46 +234,47 @@ public class RecipeController {
     }
 
 
-    // Update username for all recipes of a user
-    @PutMapping("/{oldUsername}/update-username")
-    @Operation(summary = "Update username", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<String> updateUsername(
-            @PathVariable String oldUsername,
-            @RequestBody Map<String, String> requestBody) {
-
-        String newUsername = requestBody.get("newUsername");
-
-        if (newUsername == null || newUsername.isEmpty()) {
-            return ResponseEntity.badRequest().body("New username cannot be empty");
+    // Delete a specific recipe by userId and recipe ID
+    @DeleteMapping("/{recipeId}")
+    @Operation(summary = "Delete a recipe by user ID and recipe ID", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<Void> deleteRecipeByUser(
+            @PathVariable Long recipeId,
+            HttpServletRequest request
+    ) {
+        // Fetch userId from header
+        String userIdHeader = request.getHeader("X-User-Id");
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
         }
 
-        svc.updateUsername(oldUsername, newUsername);
-        return ResponseEntity.ok("Username updated successfully from " + oldUsername + " to " + newUsername);
-    }
+        // Call service method to delete the recipe
+        svc.deleteRecipeByUser(userId, recipeId);
 
-    // Delete a specific recipe by username and ID
-    @DeleteMapping("/{username}/recipe/{recipeId}")
-    @Operation(summary = "Delete a recipe by username and ID", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> deleteRecipeByUser(
-            @PathVariable String username,
-            @PathVariable Long recipeId) {
-        svc.deleteRecipeByUser(username, recipeId);
         return ResponseEntity.noContent().build();
     }
 
-    // Delete all recipes by username
-    @DeleteMapping("/{username}")
-    @Operation(summary = "Delete all recipes by username", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> deleteAllRecipesByUser(@PathVariable String username) {
-        svc.deleteAllByUser(username);
+    // Delete all recipes by userId
+    @DeleteMapping
+    @Operation(summary = "Delete all recipes by user ID", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<Void> deleteAllRecipesByUser(HttpServletRequest request) {
+        // Fetch userId from header
+        String userIdHeader = request.getHeader("X-User-Id");
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Call service method to delete all recipes for this user
+        svc.deleteAllByUser(userId);
+
         return ResponseEntity.noContent().build();
     }
 
-    // Delete a recipe by ID
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a recipe by ID", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        svc.delete(id);
-        return ResponseEntity.noContent().build();
-    }
+
+
 }
