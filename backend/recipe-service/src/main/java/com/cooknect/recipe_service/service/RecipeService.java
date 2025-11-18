@@ -103,7 +103,7 @@ public class RecipeService {
             dto.setLikesCount(recipe.getLikes());
             dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
-            dto.setUsername();
+//            dto.setUsername();
             dto.setCommentCount(recipe.getComments().size());
             return dto;
         }).toList();
