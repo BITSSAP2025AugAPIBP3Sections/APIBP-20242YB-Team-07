@@ -128,6 +128,12 @@ public class UserServiceImpl implements UserService{
                 user.getHealthGoal() != null ? user.getHealthGoal().getName() : null,
                 user.getCuisinePreferences() == null ? List.of() : user.getCuisinePreferences().stream().map(CuisinePreference::getName).toList());
     }
+    @Override
+    public Map<Long, String> getUsernamesByIds(List<Long> ids) {
+        List<UserModel> users = repository.findAllById(ids); // fetch all users at once
+        return users.stream()
+                .collect(Collectors.toMap(UserModel::getId, UserModel::getUsername));
+    }
 
     @Override
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader) {
