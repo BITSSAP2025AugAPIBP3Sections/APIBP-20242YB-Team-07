@@ -6,23 +6,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Setter
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UsersDTO {
+public class CreateUserDTO {
     @Schema(accessMode = Schema.AccessMode.READ_ONLY)
     private Long id;
 
     private String email;
-    private String role;
     private String username;
     private String fullName;
-    private String bio;
-    private String avatarUrl;
-    private String dietaryPreference;
-    private String healthGoal;
-    private List<String> cuisinePreferences;
+    private String password;
 }

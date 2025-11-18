@@ -1,9 +1,6 @@
 package com.cooknect.user_service.service;
 
-import com.cooknect.user_service.dto.GeneralQueriesDTO;
-import com.cooknect.user_service.dto.LoginRequestDTO;
-import com.cooknect.user_service.dto.LoginResponseDTO;
-import com.cooknect.user_service.dto.UsersDTO;
+import com.cooknect.user_service.dto.*;
 import com.cooknect.user_service.model.UserModel;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +9,7 @@ import java.util.Map;
 
 @Service
 public interface UserService {
-    public UserModel createUser(UserModel user);
+    public CreateUserDTO createUser(CreateUserDTO createUserDTO);
 
     public LoginResponseDTO verify(LoginRequestDTO loginRequestDTO);
 

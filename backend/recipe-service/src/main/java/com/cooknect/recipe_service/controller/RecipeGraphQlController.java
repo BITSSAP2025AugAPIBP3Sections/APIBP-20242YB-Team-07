@@ -59,24 +59,24 @@ public class RecipeGraphQlController {
 
     // === MUTATIONS ===
 
-    @MutationMapping(name = "addRecipe")
-    public Recipe addRecipe(
-            @Argument String title,
-            @Argument String description,
-            @Argument Cuisine cuisine,
-            @Argument List<Ingredient> ingredients,
-            @Argument String username
-
-    ) {
-        Recipe recipe = new Recipe();
-        recipe.setTitle(title);
-        recipe.setDescription(description);
-        recipe.setCuisine(cuisine);
-        recipe.setUsername(username);
-        recipe.setIngredients(ingredients);
-        return svc.create(recipe);
-
-    }
+//    @MutationMapping(name = "addRecipe")
+//    public Recipe addRecipe(
+//            @Argument String title,
+//            @Argument String description,
+//            @Argument Cuisine cuisine,
+//            @Argument List<Ingredient> ingredients,
+//            @Argument String username
+//
+//    ) {
+//        Recipe recipe = new Recipe();
+//        recipe.setTitle(title);
+//        recipe.setDescription(description);
+//        recipe.setCuisine(cuisine);
+//        recipe.setUsername(username);
+//        recipe.setIngredients(ingredients);
+//        return svc.create(recipe);
+//
+//    }
 
     @MutationMapping(name = "updateRecipe")
     public Recipe updateRecipe(
@@ -98,10 +98,10 @@ public class RecipeGraphQlController {
         return true;
     }
 
-    @MutationMapping(name = "likeRecipe")
-    public Recipe likeRecipe(@Argument Long id) {
-        return svc.like(id);
-    }
+//    @MutationMapping(name = "likeRecipe")
+//    public Recipe likeRecipe(@Argument Long id) {
+//        return svc.like(id);
+//    }
 
     @MutationMapping(name = "addComment")
     public Recipe addComment(

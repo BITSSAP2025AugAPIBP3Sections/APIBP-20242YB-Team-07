@@ -13,8 +13,9 @@ public class Recipe {
 
     private String title;
 
-    @Column(length = 4000)
     private String description;
+
+    private String recipeImageUrl;
 
     @ElementCollection
     @CollectionTable(name = "recipe_ingredients", joinColumns = @JoinColumn(name = "recipe_id"))
@@ -26,7 +27,17 @@ public class Recipe {
     private String language = "en";
     private int likes = 0;
 
-    private String username; // store creator id or email
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "recipe_id")
+    private List<Like> detailLikes = new ArrayList<>();
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "recipe_id")
+    private List<SavedRecipe> savedByUsers = new ArrayList<>();
+
+    private String username;
+
+    private Long userId;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "recipe_id")

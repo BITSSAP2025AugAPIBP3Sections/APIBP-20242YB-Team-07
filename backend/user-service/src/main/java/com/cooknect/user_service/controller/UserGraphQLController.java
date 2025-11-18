@@ -1,5 +1,6 @@
 package com.cooknect.user_service.controller;
 
+import com.cooknect.user_service.dto.CreateUserDTO;
 import com.cooknect.user_service.dto.UsersDTO;
 import com.cooknect.user_service.model.UserModel;
 import com.cooknect.user_service.service.UserService;
@@ -30,7 +31,7 @@ public class UserGraphQLController {
     }
 
     @MutationMapping
-    public UserModel registerUser(@Argument UserModel user) {
+    public CreateUserDTO registerUser(@Argument CreateUserDTO user) {
         if (user.getPassword() == null || user.getPassword().isEmpty()) {
             throw new IllegalArgumentException("Password cannot be empty");
         }
@@ -44,7 +45,7 @@ public class UserGraphQLController {
             throw new IllegalArgumentException("Username cannot be empty");
         }
 
-        UserModel newUser = userService.createUser(user);
+        com.cooknect.user_service.dto.CreateUserDTO newUser = userService.createUser(user);
         return newUser;
     }
 
