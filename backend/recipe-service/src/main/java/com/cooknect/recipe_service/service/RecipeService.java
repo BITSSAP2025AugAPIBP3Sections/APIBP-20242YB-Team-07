@@ -1,9 +1,14 @@
 package com.cooknect.recipe_service.service;
 
+import com.cooknect.recipe_service.dto.CommentDto;
+import com.cooknect.recipe_service.dto.GetRecipeDTO;
+import com.cooknect.recipe_service.dto.RecipeCreateDTO;
 import com.cooknect.recipe_service.model.*;
+import com.cooknect.recipe_service.repository.RecipeLikeRepository;
 import com.cooknect.recipe_service.repository.RecipeRepository;
 //import com.cooknect.recipe_service.integration.SpoonacularClient;
 import com.cooknect.recipe_service.exception.NotFoundException;
+import com.cooknect.recipe_service.repository.RecipeSavedRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,15 +17,101 @@ import java.util.List;
 public class RecipeService {
 
     private final RecipeRepository repo;
-    // Constructor Injection for both dependencies
-    public RecipeService(RecipeRepository repo) {
+    private final RecipeLikeRepository likeRepository;
+    private final RecipeSavedRepository savedRepository;
+
+    /* Constructor Injection for both dependencies */
+    public RecipeService(RecipeRepository repo, RecipeLikeRepository likeRepository, RecipeSavedRepository savedRepository) {
+        this.likeRepository = likeRepository;
+        this.savedRepository = savedRepository;
         this.repo = repo;
-
     }
-    //  CRUD Operations
 
-    public Recipe create(Recipe recipe) {
-        return repo.save(recipe);
+    /* Creating a new recipe */
+    public Recipe create(RecipeCreateDTO recipe, Long userId) {
+        Recipe newRecipe = new Recipe();
+        newRecipe.setTitle(recipe.getTitle());
+        newRecipe.setDescription(recipe.getDescription());
+        newRecipe.setIngredients(recipe.getIngredients());
+        if (recipe.getCuisine() != null) {
+            try {
+                Cuisine cuisine = Cuisine.valueOf(recipe.getCuisine().toUpperCase());
+                newRecipe.setCuisine(cuisine);
+            } catch (IllegalArgumentException e) {
+                newRecipe.setCuisine(Cuisine.OTHER);
+            }
+        } else {
+            newRecipe.setCuisine(Cuisine.OTHER);
+        }
+        newRecipe.setUserId(userId);
+        newRecipe.setRecipeImageUrl(recipe.getRecipeImageUrl());
+        return repo.save(newRecipe);
+    }
+
+    /* Like or Unlike a recipe */
+    public void likeAndUnlike(Long recipeId, Long userId) {
+        Recipe recipe = getById(recipeId);
+        if(recipe==null){
+            throw new NotFoundException("Recipe not found: " + recipeId);
+        }
+        var existingLike = likeRepository.getByRecipeIdAndUserId(recipeId, userId);
+        if (existingLike.isPresent()) {
+            /* Unlike Recipe */
+            likeRepository.delete(existingLike.get());
+            recipe.setLikes(recipe.getLikes() - 1);
+        } else {
+            /* Like Recipe */
+            Like newLike = new Like();
+            newLike.setUserId(userId);
+            newLike.setRecipeId(recipeId);
+            likeRepository.save(newLike);
+            recipe.setLikes(recipe.getLikes() + 1);
+        }
+        repo.save(recipe);
+    }
+
+    /* Get all recipes */
+    public List<GetRecipeDTO> getAllRecipes(Long userId) {
+        List<Recipe> recipes = repo.findAll();
+
+        /*
+         * Collect unique userIds.
+         * Doing this so that for all recipes username is fetched at once.
+         * Which avoid repeated calls to user service.
+        */
+        List<Long> userIds = recipes.stream()
+                .map(Recipe::getUserId)
+                .distinct()
+                .toList();
+
+        return recipes.stream().map(recipe -> {
+            GetRecipeDTO dto = new GetRecipeDTO();
+            dto.setId(recipe.getId());
+            dto.setTitle(recipe.getTitle());
+            dto.setDescription(recipe.getDescription());
+            dto.setCuisine(recipe.getCuisine().toString());
+            dto.setRecipeImageUrl(recipe.getRecipeImageUrl());
+            dto.setComments(
+                    recipe.getComments().stream().map(comment -> {
+                        CommentDto commentDto = new CommentDto();
+                        commentDto.setAuthor(comment.getAuthor());
+                        commentDto.setText(comment.getText());
+                        return commentDto;
+                    }).toList()
+            );
+            dto.setIngredients(recipe.getIngredients());
+            dto.setLikesCount(recipe.getLikes());
+            dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
+            dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
+            dto.setUsername();
+            dto.setCommentCount(recipe.getComments().size());
+            return dto;
+        }).toList();
+    }
+
+
+    public List<Recipe> listAll() {
+        return repo.findAll();
     }
 
     public Recipe getById(Long recipeId) {
@@ -44,9 +135,9 @@ public class RecipeService {
                 .orElseThrow(() -> new NotFoundException("Recipe not found with id: " + recipeId));
 
         // ensure the recipe belongs to the user
-        if (!recipe.getUsername().equals(username)) {
-            throw new RuntimeException("User not authorized to delete this recipe");
-        }
+//        if (!recipe.getUsername().equals(username)) {
+//            throw new RuntimeException("User not authorized to delete this recipe");
+//        }
 
         repo.delete(recipe);
     }
@@ -70,16 +161,11 @@ public class RecipeService {
             throw new NotFoundException("No recipes found for user: " + oldUsername);
         }
 
-        for (Recipe recipe : recipes) {
-            recipe.setUsername(newUsername);
-        }
+//        for (Recipe recipe : recipes) {
+//            recipe.setUsername(newUsername);
+//        }
 
         repo.saveAll(recipes);
-    }
-
-
-    public List<Recipe> listAll() {
-        return repo.findAll();
     }
 
     public Recipe update(Long id, Recipe update) {
@@ -116,11 +202,6 @@ public class RecipeService {
         repo.deleteById(id);
     }
 
-    public Recipe like(Long id) {
-        Recipe r = getById(id);
-        r.setLikes(r.getLikes() + 1);
-        return repo.save(r);
-    }
 
     public Recipe addComment(Long id, Comment comment) {
         Recipe r = getById(id);

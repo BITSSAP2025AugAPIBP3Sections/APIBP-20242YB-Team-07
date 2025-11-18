@@ -1,5 +1,7 @@
 package com.cooknect.recipe_service.controller;
 
+import com.cooknect.recipe_service.dto.GetRecipeDTO;
+import com.cooknect.recipe_service.dto.RecipeCreateDTO;
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.dto.CommentDto;
 import com.cooknect.recipe_service.service.RecipeService;
@@ -36,26 +38,52 @@ public class RecipeController {
         this.speechSynth = speechSynth;
     }
 
-    // Create a new recipe
+    /* Create a new recipe */
     @PostMapping
     @Operation(summary = "Create a new recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Recipe> create(@RequestBody Recipe recipe, HttpServletRequest request) {
-        String username = request.getHeader("X-User-Name");
+    public ResponseEntity<Recipe> create(@RequestBody RecipeCreateDTO recipe, HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
 
-        if (username == null || username.isEmpty()) {
+        Long id;
+        try {
+            id = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().body(null);
         }
 
-        recipe.setUsername(username);
-        Recipe saved = svc.create(recipe);
+        Recipe saved = svc.create(recipe, id);
         return ResponseEntity.ok(saved);
     }
 
-    // Like a recipe
+    /* Like or Unlike a recipe */
     @PostMapping("/{recipeId}/like")
     @Operation(summary = "Like a recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe like(@PathVariable Long recipeId) {
-        return svc.like(recipeId);
+    public ResponseEntity<?> like(@PathVariable Long recipeId, HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long id;
+        try {
+            id = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        svc.likeAndUnlike(recipeId, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /* Get all recipes */
+    @GetMapping
+    @Operation(summary = "Get all recipes", security = @SecurityRequirement(name = "bearerAuth"))
+    public List<GetRecipeDTO> listAll(HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+        Long id;
+        try {
+            id = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return List.of();
+        }
+        return svc.getAllRecipes(id);
     }
 
     // Add a comment to a recipe
@@ -81,11 +109,6 @@ public class RecipeController {
         kafkaTemplate.send(TOPIC, message);
         return "Published: " + message;
     }
-
-    // Get all recipes
-    @GetMapping
-    @Operation(summary = "Get all recipes", security = @SecurityRequirement(name = "bearerAuth"))
-    public List<Recipe> listAll() { return svc.listAll(); }
 
     // Get recipe by recipeID
     @GetMapping("/id/{recipeId}")

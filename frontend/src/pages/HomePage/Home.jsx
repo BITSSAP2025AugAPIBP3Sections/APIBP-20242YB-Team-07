@@ -393,16 +393,6 @@ const Home = () => {
               </Form.Item>
 
               <Form.Item
-                name="subtitle"
-                label="Short Summary / Subtitle"
-                rules={[
-                  { required: true, message: "A quick summary is needed!" },
-                ]}
-              >
-                <Input placeholder="A stunning weeknight dish with minimal effort..." />
-              </Form.Item>
-
-              <Form.Item
                 name="description"
                 label="Recipe Story / Detailed Description"
                 rules={[
@@ -418,8 +408,6 @@ const Home = () => {
                 />
               </Form.Item>
             </Card>
-
-            {/* Ingredients Section */}
             <Card
               title={
                 <Text strong>
@@ -430,10 +418,16 @@ const Home = () => {
               style={formItemStyle}
               bodyStyle={{ padding: "16px" }}
             >
-              <Form.List name="ingredients" initialValue={["", ""]}>
+              <Form.List
+                name="ingredients"
+                initialValue={[
+                  { name: "", quantity: "" },
+                  { name: "", quantity: "" },
+                ]}
+              >
                 {(fields, { add, remove }) => (
                   <>
-                    {fields.map(({ key, name, fieldKey, ...restField }) => (
+                    {fields.map(({ key, name, ...restField }) => (
                       <Space
                         key={key}
                         style={{ display: "flex", marginBottom: 8 }}
@@ -441,16 +435,31 @@ const Home = () => {
                       >
                         <Form.Item
                           {...restField}
-                          name={[name]}
-                          fieldKey={[fieldKey, "ingredient"]}
+                          name={[name, "name"]}
                           rules={[
-                            { required: true, message: "Missing ingredient" },
+                            {
+                              required: true,
+                              message: "Missing ingredient name",
+                            },
                           ]}
                           style={{ margin: 0, flexGrow: 1 }}
                         >
                           <Input
-                            placeholder="e.g., 2 Salmon Fillets (6oz each)"
-                            style={{ width: 350 }}
+                            placeholder="Ingredient name (e.g., Paneer)"
+                            style={{ width: 180 }}
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "quantity"]}
+                          rules={[
+                            { required: true, message: "Missing quantity" },
+                          ]}
+                          style={{ margin: 0, flexGrow: 1 }}
+                        >
+                          <Input
+                            placeholder="Quantity (e.g., 250 grams (cubed))"
+                            style={{ width: 180 }}
                           />
                         </Form.Item>
                         <MinusCircle
@@ -470,9 +479,13 @@ const Home = () => {
                   </>
                 )}
               </Form.List>
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Add each ingredient one by one. In the description, use "-"
+                  before each ingredient (e.g., "- 250g Paneer").
+                </Text>
+              </div>
             </Card>
-
-            {/* Steps/Instructions Section */}
             <Card
               title={
                 <Text strong>
@@ -533,9 +546,14 @@ const Home = () => {
                   </>
                 )}
               </Form.List>
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Add each step one by one. In the description, use "-" before
+                  each step (e.g., "- Preheat oven to 400°F").
+                </Text>
+              </div>
             </Card>
 
-            {/* Metadata Section */}
             <Card
               title={
                 <Text strong>
@@ -562,7 +580,6 @@ const Home = () => {
                 <Input placeholder="e.g., Chef Alex" />
               </Form.Item>
             </Card>
-
             <Form.Item style={{ marginTop: "30px" }}>
               <Button
                 type="primary"
