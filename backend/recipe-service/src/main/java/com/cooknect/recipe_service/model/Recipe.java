@@ -21,6 +21,14 @@ public class Recipe {
     @CollectionTable(name = "recipe_ingredients", joinColumns = @JoinColumn(name = "recipe_id"))
     private List<Ingredient> ingredients = new ArrayList<>();
 
+
+    @ElementCollection
+    @CollectionTable(
+            name = "recipe_preparation_steps",
+            joinColumns = @JoinColumn(name = "recipe_id")
+    )
+    private List<PreparationStep> preparation = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     private Cuisine cuisine = Cuisine.OTHER;
 

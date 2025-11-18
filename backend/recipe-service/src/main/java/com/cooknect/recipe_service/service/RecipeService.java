@@ -33,6 +33,7 @@ public class RecipeService {
         newRecipe.setTitle(recipe.getTitle());
         newRecipe.setDescription(recipe.getDescription());
         newRecipe.setIngredients(recipe.getIngredients());
+        newRecipe.setPreparation(recipe.getPreparation());
         if (recipe.getCuisine() != null) {
             try {
                 Cuisine cuisine = Cuisine.valueOf(recipe.getCuisine().toUpperCase());
@@ -100,6 +101,7 @@ public class RecipeService {
                     }).toList()
             );
             dto.setIngredients(recipe.getIngredients());
+            dto.setPreparation(recipe.getPreparation());
             dto.setLikesCount(recipe.getLikes());
             dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
