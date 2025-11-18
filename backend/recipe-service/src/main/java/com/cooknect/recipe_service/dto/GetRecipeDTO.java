@@ -1,6 +1,7 @@
 package com.cooknect.recipe_service.dto;
 
 import com.cooknect.recipe_service.model.Ingredient;
+import com.cooknect.recipe_service.model.PreparationStep;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class GetRecipeDTO {
     private String recipeImageUrl;
     private List<CommentDto> comments;
     private List<Ingredient> ingredients;
+    private List<PreparationStep> preparation;
     private int likesCount;
     private boolean likedByUser;
     private boolean savedByUser;
