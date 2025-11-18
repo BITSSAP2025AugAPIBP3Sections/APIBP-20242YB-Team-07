@@ -43,7 +43,7 @@ public class Recipe {
     @JoinColumn(name = "recipe_id")
     private List<SavedRecipe> savedByUsers = new ArrayList<>();
 
-    private String username;
+
 
     private Long userId;
 

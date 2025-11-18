@@ -48,6 +48,9 @@ type Mutation {
     addRecipe(title: String!, description: String, cuisine: Cuisine, createdBy: String): Recipe
     updateRecipe(id: ID!, title: String, description: String, cuisine: Cuisine): Recipe
     deleteRecipe(id: ID!): Boolean
-    likeRecipe(id: ID!): Recipe
-    addComment(recipeId: ID!, author: String!, text: String!): Recipe
+    likeRecipe(id: ID!): Boolean
+    addComment(
+        recipeId: ID!,
+        text: String!
+    ): Boolean
 }

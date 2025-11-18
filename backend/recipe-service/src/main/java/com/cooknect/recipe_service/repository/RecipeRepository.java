@@ -16,9 +16,8 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     @Query("SELECT r FROM Recipe r JOIN r.ingredients i WHERE LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Recipe> findByIngredientName(@Param("name") String name);
     List<Recipe> findByTitleContainingIgnoreCase(String title);
-    List<Recipe> findByUsername(String username);
-    Optional<Recipe> findByUsernameAndId(String username, Long id);
     @EntityGraph(attributePaths = {"ingredients", "comments"})
     Optional<Recipe> findById(Long id);
 
+    List<Recipe> findAllByUserId(Long userId);
 }
