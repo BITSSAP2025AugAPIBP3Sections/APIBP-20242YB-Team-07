@@ -3,6 +3,7 @@ package com.cooknect.recipe_service.service;
 import com.cooknect.recipe_service.dto.GetCommentDto;
 import com.cooknect.recipe_service.dto.GetRecipeDTO;
 import com.cooknect.recipe_service.dto.RecipeCreateDTO;
+import com.cooknect.recipe_service.exception.ForbiddenException;
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.repository.RecipeLikeRepository;
 import com.cooknect.recipe_service.repository.RecipeRepository;
@@ -50,7 +51,7 @@ public class RecipeService {
 
     /* Like or Unlike a recipe */
     public void likeAndUnlike(Long recipeId, Long userId) {
-        Recipe recipe = getById(recipeId);
+        Recipe recipe = getRecipeById(recipeId);
         if(recipe==null){
             throw new NotFoundException("Recipe not found: " + recipeId);
         }
@@ -72,7 +73,7 @@ public class RecipeService {
 
     /* Adding comment to a Recipe */
     public void addComment(Long recipeId, Comment comment) {
-        Recipe recipe = getById(recipeId);
+        Recipe recipe = getRecipeById(recipeId);
         if(recipe==null){
             throw new NotFoundException("Recipe not found: " + recipeId);
         }
@@ -122,16 +123,58 @@ public class RecipeService {
             return dto;
         }).toList();
     }
+   /* Get Recipe by id based on User id   */
+    public GetRecipeDTO getById(Long recipeId, Long userId) {
+        Recipe recipe = repo.findById(recipeId)
+                .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
+
+        GetRecipeDTO dto = new GetRecipeDTO();
+        dto.setId(recipe.getId());
+        dto.setTitle(recipe.getTitle());
+        dto.setDescription(recipe.getDescription());
+        dto.setCuisine(recipe.getCuisine().toString());
+        dto.setRecipeImageUrl(recipe.getRecipeImageUrl());
+
+        dto.setComments(
+                recipe.getComments().stream().map(comment -> {
+                    GetCommentDto c = new GetCommentDto();
+                    c.setAuthor(comment.getAuthor());
+                    c.setText(comment.getText());
+                    return c;
+                }).toList()
+        );
+
+        dto.setIngredients(recipe.getIngredients());
+        dto.setPreparation(recipe.getPreparation());
+        dto.setLikesCount(recipe.getLikes());
+
+        dto.setLikedByUser(
+                likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent()
+        );
+
+        dto.setSavedByUser(
+                savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent()
+        );
+
+        dto.setUsername(recipe.getUsername());
+        dto.setCommentCount(recipe.getComments().size());
+
+        return dto;
+    }
+
+    /* Get Recipe by id*/
+    public Recipe getRecipeById(Long recipeId) {
+        return repo.findById(recipeId)
+                .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
+    }
+
 
 
     public List<Recipe> listAll() {
         return repo.findAll();
     }
 
-    public Recipe getById(Long recipeId) {
-        return repo.findById(recipeId)
-                .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
-    }
+
 
     //Fetching all the recipes based on username
     public List<Recipe> getByUsername(String username) {
@@ -183,19 +226,25 @@ public class RecipeService {
         repo.saveAll(recipes);
     }
 
-    public Recipe update(Long id, Recipe update) {
-        Recipe existing = getById(id);
-        existing.setTitle(update.getTitle());
-        existing.setDescription(update.getDescription());
-        existing.setIngredients(update.getIngredients());
-        existing.setCuisine(update.getCuisine());
-        existing.setLanguage(update.getLanguage());
-        return repo.save(existing);
-    }
+//    public Recipe update(Long id, Recipe update) {
+//        Recipe existing = getById(id);
+//        existing.setTitle(update.getTitle());
+//        existing.setDescription(update.getDescription());
+//        existing.setIngredients(update.getIngredients());
+//        existing.setCuisine(update.getCuisine());
+//        existing.setLanguage(update.getLanguage());
+//        return repo.save(existing);
+//    }
 
     // PATCH — partial update
-    public Recipe patchUpdate(Long id, Recipe updates) {
-        Recipe existing = getById(id);
+    public Recipe patchUpdate(Long id, Recipe updates, Long userId) {
+        Recipe existing = repo.findById(id)
+                .orElseThrow(() -> new NotFoundException("Recipe not found: " + id));
+
+        // Optional: Prevent unauthorized users from editing others’ recipes
+        if (!existing.getUserId().equals(userId)) {
+            throw new ForbiddenException("You cannot update the user of the recipe");
+        }
 
         if (updates.getTitle() != null)
             existing.setTitle(updates.getTitle());

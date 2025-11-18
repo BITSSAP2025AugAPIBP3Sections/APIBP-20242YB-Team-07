@@ -26,10 +26,10 @@ public class RecipeGraphQlController {
         return svc.listAll();
     }
 
-    @QueryMapping(name = "recipeById")
-    public Recipe recipeById(@Argument Long id) {
-        return svc.getById(id);
-    }
+//    @QueryMapping(name = "recipeById")
+//    public Recipe recipeById(@Argument Long id) {
+//        return svc.getById(id);
+//    }
 
     @QueryMapping(name = "searchRecipes")
     public List<Recipe> searchRecipes(@Argument String title) {
@@ -78,25 +78,25 @@ public class RecipeGraphQlController {
 //
 //    }
 
-    @MutationMapping(name = "updateRecipe")
-    public Recipe updateRecipe(
-            @Argument Long id,
-            @Argument String title,
-            @Argument String description,
-            @Argument Cuisine cuisine
-    ) {
-        Recipe recipe = new Recipe();
-        recipe.setTitle(title);
-        recipe.setDescription(description);
-        recipe.setCuisine(cuisine);
-        return svc.update(id, recipe);
-    }
-
-    @MutationMapping(name = "deleteRecipe")
-    public Boolean deleteRecipe(@Argument Long id) {
-        svc.delete(id);
-        return true;
-    }
+//    @MutationMapping(name = "updateRecipe")
+//    public Recipe updateRecipe(
+//            @Argument Long id,
+//            @Argument String title,
+//            @Argument String description,
+//            @Argument Cuisine cuisine
+//    ) {
+//        Recipe recipe = new Recipe();
+//        recipe.setTitle(title);
+//        recipe.setDescription(description);
+//        recipe.setCuisine(cuisine);
+//        return svc.update(id, recipe);
+//    }
+//
+//    @MutationMapping(name = "deleteRecipe")
+//    public Boolean deleteRecipe(@Argument Long id) {
+//        svc.delete(id);
+//        return true;
+//    }
 
 //    @MutationMapping(name = "likeRecipe")
 //    public Recipe likeRecipe(@Argument Long id) {
