@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -163,18 +164,45 @@ public class RecipeController {
         }
     }
 
-    // 🔹 Update an existing recipe
+    //Translate Recipe into target language
+    @GetMapping("/{id}/translate/{targetLanguage}")
+    @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"))
+    public String translateRecipe(
+            @PathVariable Long id,
+            @PathVariable String targetLanguage) {
+        return speechSynth.translateText(id, targetLanguage);
+    }
+
+    @GetMapping("/metadata")
+    @Operation(summary = "Get service metadata", security = @SecurityRequirement(name = "bearerAuth"))
+    public Map<String, Object> serviceMetadata() {
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("service", "recipe-service");
+        String version = this.getClass().getPackage().getImplementationVersion();
+        meta.put("version", version != null ? version : "unknown");
+        meta.put("kafkaTopic", TOPIC);
+        // lightweight runtime info
+        meta.put("availableProcessors", Runtime.getRuntime().availableProcessors());
+        meta.put("freeMemory", Runtime.getRuntime().freeMemory());
+        return meta;
+    }
+
+    // 🔹 Update an existing recipe will also delete its audio
     @PutMapping("/{id}")
     @Operation(summary = "Update a recipe", security = @SecurityRequirement(name = "bearerAuth"))
     public Recipe update(@PathVariable Long id, @RequestBody Recipe recipe) {
-        return svc.update(id, recipe);
+        Recipe updated = svc.update(id, recipe);
+        speechSynth.deleteAudioForRecipe(id);
+        return updated;
     }
 
-    // Partially update a recipe
+    // Partially update a recipe will also delete its audio
     @PatchMapping("/{id}")
     @Operation(summary = "Patch update recipe", security = @SecurityRequirement(name = "bearerAuth"))
     public Recipe patchUpdate(@PathVariable Long id, @RequestBody Recipe updates) {
-        return svc.patchUpdate(id, updates);
+        Recipe updated = svc.patchUpdate(id, updates);
+        speechSynth.deleteAudioForRecipe(id);
+        return updated;
     }
 
     // Update username for all recipes of a user
