@@ -237,7 +237,7 @@ public class RecipeService {
 
         return repo.save(existing);
     }
-    /*Delete a Recipe based on user Id*/
+    /* Delete a Recipe based on user Id */
     public void deleteRecipeByUser(Long userId, Long recipeId) {
         Recipe recipe = repo.findById(recipeId)
                 .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
@@ -252,11 +252,6 @@ public class RecipeService {
 
     public void deleteAllByUser(Long userId) {
         List<Recipe> recipes = repo.findAllByUserId((userId));
-
-        if (recipes.isEmpty()) {
-            throw new NotFoundException("No recipes found for user ID: " + userId);
-        }
-
         repo.deleteAll(recipes);
     }
 
