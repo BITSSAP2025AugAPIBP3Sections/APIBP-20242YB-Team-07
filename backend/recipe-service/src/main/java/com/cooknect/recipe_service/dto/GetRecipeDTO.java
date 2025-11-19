@@ -27,4 +27,5 @@ public class GetRecipeDTO {
     private boolean savedByUser;
     private String username;
     private int commentCount;
+    private Long userId;
 }

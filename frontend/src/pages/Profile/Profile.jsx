@@ -19,7 +19,6 @@ import {
   notification,
 } from "antd";
 import {
-  ChefHat,
   Edit,
   Camera,
   BookOpen,
@@ -29,8 +28,9 @@ import {
   Mail,
   Upload as UploadIcon,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import LoggedInNavbar from "../../components/Navbar/LoggedInNavbar/LoggedInNavbar";
+import { useAuth } from "../../auth/AuthContext";
 
 const { Header, Content, Footer } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -227,6 +227,7 @@ const RecipeCard = ({ recipe }) => (
  */
 const Profile = () => {
   const { id: userId } = useParams();
+  const { user } = useAuth();
 
   const { token } = theme.useToken();
   const [form] = Form.useForm();
@@ -242,7 +243,7 @@ const Profile = () => {
   };
 
   // --- State ---
-  const [user, setUser] = useState({
+  const [fetchedUserProfile, setFetchedUserProfile] = useState({
     email: "",
     role: "",
     username: "",
@@ -277,7 +278,7 @@ const Profile = () => {
         localStorage.removeItem("role");
         window.location.reload();
       }
-      setUser(data);
+      setFetchedUserProfile(data);
     } catch (error) {
       console.error("Error fetching user profile:", error);
     }
@@ -287,13 +288,13 @@ const Profile = () => {
   // --- Handlers ---
   const showEditModal = () => {
     form.setFieldsValue({
-      username: user.username,
-      email: user.email,
-      bio: user.bio,
-      fullName: user.fullName,
-      dietaryPreference: user.dietaryPreference,
-      healthGoal: user.healthGoal,
-      cuisinePreferences: user.cuisinePreferences,
+      username: fetchedUserProfile.username,
+      email: fetchedUserProfile.email,
+      bio: fetchedUserProfile.bio,
+      fullName: fetchedUserProfile.fullName,
+      dietaryPreference: fetchedUserProfile.dietaryPreference,
+      healthGoal: fetchedUserProfile.healthGoal,
+      cuisinePreferences: fetchedUserProfile.cuisinePreferences,
     });
     setIsModalVisible(true);
   };
@@ -345,7 +346,8 @@ const Profile = () => {
               username: values.username,
               email: values.email,
               bio: values.bio,
-              avatarUrl: values.avatar?.[0]?.thumbUrl || user.avatarUrl,
+              avatarUrl:
+                values.avatar?.[0]?.thumbUrl || fetchedUserProfile.avatarUrl,
               dietaryPreference: values.dietaryPreference,
               healthGoal: values.healthGoal,
               cuisinePreferences: values.cuisinePreferences,
@@ -359,12 +361,13 @@ const Profile = () => {
             throw new Error(data.message || "Failed to update profile");
           }
 
-          setUser({
-            ...user,
+          setFetchedUserProfile({
+            ...fetchedUserProfile,
             username: values.username,
             email: values.email,
             bio: values.bio,
-            avatarUrl: values.avatar?.[0]?.thumbUrl || user.avatarUrl,
+            avatarUrl:
+              values.avatar?.[0]?.thumbUrl || fetchedUserProfile.avatarUrl,
             dietaryPreference: values.dietaryPreference,
             healthGoal: values.healthGoal,
             cuisinePreferences: values.cuisinePreferences,
@@ -414,32 +417,38 @@ const Profile = () => {
           <Card style={styles.profileHeaderCard}>
             <ProfileAvatar
               src={
-                user.avatarUrl ||
+                fetchedUserProfile.avatarUrl ||
                 "https://img.freepik.com/premium-vector/cartoon-chef-with-thumbs-up-sign-that-says-thumbs-up_1166763-15878.jpg"
               }
-              onEditClick={showEditModal}
+              onEditClick={
+                user.userData.id === fetchedUserProfile.id
+                  ? showEditModal
+                  : undefined
+              }
             />
             <div style={{ flex: 1 }}>
               <Title level={2} style={{ margin: 0, fontWeight: "800" }}>
-                {user.username}
+                {fetchedUserProfile.username}
               </Title>
               <Paragraph
                 style={{ color: token.colorTextSecondary, fontSize: "16px" }}
               >
-                {user.fullName}
+                {fetchedUserProfile.fullName}
               </Paragraph>
               <Paragraph
                 style={{ color: token.colorTextSecondary, fontSize: "16px" }}
               >
-                {user.email}
+                {fetchedUserProfile.email}
               </Paragraph>
-              <Paragraph style={{ marginTop: "16px" }}>{user.bio}</Paragraph>
+              <Paragraph style={{ marginTop: "16px" }}>
+                {fetchedUserProfile.bio}
+              </Paragraph>
               <Paragraph style={{ marginTop: "16px" }}>
                 <Text strong style={{ fontSize: "16px" }}>
                   Dietary Preference:{" "}
                 </Text>{" "}
                 <Tag color="red" style={{ fontSize: "16px" }}>
-                  {user.dietaryPreference || "Not specified"}
+                  {fetchedUserProfile.dietaryPreference || "Not specified"}
                 </Tag>
                 <br />
               </Paragraph>
@@ -448,34 +457,42 @@ const Profile = () => {
                   Health Goal:{" "}
                 </Text>{" "}
                 <Tag color="volcano" style={{ fontSize: "16px" }}>
-                  {user.healthGoal || "Not specified"}
+                  {fetchedUserProfile.healthGoal || "Not specified"}
                 </Tag>
               </Paragraph>
               <Paragraph style={{ marginTop: "16px" }}>
                 <Text strong style={{ fontSize: "16px" }}>
                   Cuisine Preferences:{" "}
                 </Text>{" "}
-                {user.cuisinePreferences &&
-                user.cuisinePreferences.length > 0 ? (
-                  user.cuisinePreferences.map((cuisine, index) => (
-                    <Tag color="blue" key={index} style={{ fontSize: "16px" }}>
-                      {cuisine}
-                    </Tag>
-                  ))
+                {fetchedUserProfile.cuisinePreferences &&
+                fetchedUserProfile.cuisinePreferences.length > 0 ? (
+                  fetchedUserProfile.cuisinePreferences.map(
+                    (cuisine, index) => (
+                      <Tag
+                        color="blue"
+                        key={index}
+                        style={{ fontSize: "16px" }}
+                      >
+                        {cuisine}
+                      </Tag>
+                    )
+                  )
                 ) : (
                   <Tag color="blue" style={{ fontSize: "16px" }}>
                     Not specified
                   </Tag>
                 )}
               </Paragraph>
-              <Button
-                type="primary"
-                icon={<Edit size={16} />}
-                style={{ marginTop: "16px", fontWeight: "600" }}
-                onClick={showEditModal}
-              >
-                Edit Profile
-              </Button>
+              {fetchedUserProfile.id === user.userData.id && (
+                <Button
+                  type="primary"
+                  icon={<Edit size={16} />}
+                  style={{ marginTop: "16px", fontWeight: "600" }}
+                  onClick={showEditModal}
+                >
+                  Edit Profile
+                </Button>
+              )}
             </div>
           </Card>
 
