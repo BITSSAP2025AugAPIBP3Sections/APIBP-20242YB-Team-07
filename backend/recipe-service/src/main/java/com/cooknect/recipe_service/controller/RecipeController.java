@@ -179,14 +179,22 @@ public class RecipeController {
         return "Published: " + message;
     }
 
-    // Search recipes by title
+    /*
+         * Searches for recipes whose titles match the given query string.
+     */
+
     @GetMapping("/search")
     @Operation(summary = "Search a recipe by title", security = @SecurityRequirement(name = "bearerAuth"))
     public List<Recipe> search(@RequestParam String q) {
         return svc.searchByTitle(q);
     }
 
-    // Get recipes by cuisine type
+    /*
+          * Retrieves all recipes for a given cuisine type.
+          * The provided cuisine string is converted to a valid enum value;
+          * if the conversion fails, the cuisine is defaulted to Cuisine.OTHER.
+     */
+
     @GetMapping("/cuisine/{type}")
     @Operation(summary = "Get all recipes by cuisine", security = @SecurityRequirement(name = "bearerAuth"))
     public List<Recipe> byCuisine(@PathVariable String type) {
@@ -199,7 +207,9 @@ public class RecipeController {
         return svc.findByCuisine(c);
     }
 
-    // Get recipes containing a specific ingredient
+   /*
+        * Fetch all the Recipes containing a specific ingredient
+    */
     @GetMapping("/ingredient")
     @Operation(summary = "Get all recipes by ingredient", security = @SecurityRequirement(name = "bearerAuth"))
     public List<Recipe> byIngredient(@RequestParam String q) {
@@ -212,12 +222,20 @@ public class RecipeController {
         try {
             Recipe recipe = svc.getRecipeById(id);
 
+            // Prepare text to be spoken
+            Map<String, Object> textMap = Map.of(
+                    "title", recipe.getTitle(),
+                    "description", recipe.getDescription(),
+                    "ingredients", recipe.getIngredients(),
+                    "preparation", recipe.getPreparation()
+            );
+
             String text;
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                text = mapper.writeValueAsString(recipe);
+                text = mapper.writeValueAsString(textMap);
             } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                text = recipe.toString();
+                text = textMap.toString();
             }
 
             // use service that checks DB, generates, saves
@@ -234,18 +252,14 @@ public class RecipeController {
             log.error("Failed to produce audio for recipe {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(503).body(null);
         }
-
     }
 
-//    // Update an existing recipe
-//    @PutMapping("/{id}")
-//    @Operation(summary = "Update a recipe", security = @SecurityRequirement(name = "bearerAuth"))
-//    public Recipe update(@PathVariable Long id, @RequestBody Recipe recipe) {
-//        return svc.update(id, recipe);
-//    }
+    /*
+        * Updates an existing recipe.
+        * This endpoint accepts a PATCH request with only the fields that need to be updated.
+        * The user ID is extracted from the "X-User-Id" request header to validate update permissions.
+     */
 
-
-    /* Update the Recipe */
     @PatchMapping("/{id}")
     @Operation(summary = "Partially update a recipe", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Recipe> patchRecipe(
@@ -267,7 +281,10 @@ public class RecipeController {
     }
 
 
-    // Delete a specific recipe by userId and recipe ID
+    /*
+        * Delete a specific recipe by userId and recipe ID
+        * It checks the recipe deleted by the user belongs to that particular user only
+     */
     @DeleteMapping("/{recipeId}")
     @Operation(summary = "Delete a recipe by user ID and recipe ID", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Void> deleteRecipeByUser(
@@ -288,18 +305,25 @@ public class RecipeController {
 
         return ResponseEntity.noContent().build();
     }
-
-    // Delete all recipes by userId
-    @DeleteMapping
+    /*
+        * Deleting all Recipes of the user as user account has been deleted.
+     */
+    @DeleteMapping("/{userId}")
     @Operation(summary = "Delete all recipes by user ID", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> deleteAllRecipesByUser(HttpServletRequest request) {
+    public ResponseEntity<Void> deleteAllRecipesByUser(
+            @PathVariable Long userId,
+            HttpServletRequest request) {
         // Fetch userId from header
         String userIdHeader = request.getHeader("X-User-Id");
-        Long userId;
+        Long userIdHeaderLong;
         try {
-            userId = Long.parseLong(userIdHeader);
+            userIdHeaderLong = Long.parseLong(userIdHeader);
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().build();
+        }
+
+        if(!userIdHeaderLong.equals(userId)) {
+            return ResponseEntity.status(403).build(); // Forbidden
         }
 
         // Call service method to delete all recipes for this user
@@ -307,7 +331,4 @@ public class RecipeController {
 
         return ResponseEntity.noContent().build();
     }
-
-
-
 }
