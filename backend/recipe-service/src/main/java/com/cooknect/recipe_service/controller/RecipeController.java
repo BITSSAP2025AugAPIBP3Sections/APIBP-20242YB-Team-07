@@ -104,7 +104,7 @@ public class RecipeController {
     }
 
     /* Get All Recipes of a user */
-    @GetMapping
+    @GetMapping(params = "userId")
     @Operation(summary = "Get recipes, optionally by userId", security = @SecurityRequirement(name = "bearerAuth"))
     public List<GetRecipeDTO> listAll(
             @RequestParam(required = false) Long userId,
@@ -277,24 +277,6 @@ public class RecipeController {
         meta.put("freeMemory", Runtime.getRuntime().freeMemory());
         return meta;
     }
-
-    // 🔹 Update an existing recipe will also delete its audio
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe update(@PathVariable Long id, @RequestBody Recipe recipe) {
-        Recipe updated = svc.update(id, recipe);
-        speechSynth.deleteAudioForRecipe(id);
-        return updated;
-    }
-
-    // Partially update a recipe will also delete its audio
-    @PatchMapping("/{id}")
-    @Operation(summary = "Patch update recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe patchUpdate(@PathVariable Long id, @RequestBody Recipe updates) {
-        Recipe updated = svc.patchUpdate(id, updates);
-        speechSynth.deleteAudioForRecipe(id);
-        return updated;
-    }
     /*
         * Updates an existing recipe.
         * This endpoint accepts a PATCH request with only the fields that need to be updated.
@@ -318,6 +300,7 @@ public class RecipeController {
         }
 
         Recipe updated = svc.patchUpdate(id, recipe, userId);
+        speechSynth.deleteAudioForRecipe(id);
         return ResponseEntity.ok(updated);
     }
 
