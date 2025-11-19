@@ -18,6 +18,7 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long> {
     List<Recipe> findByTitleContainingIgnoreCase(String title);
     @EntityGraph(attributePaths = {"ingredients", "comments"})
     Optional<Recipe> findById(Long id);
+    List<Recipe> findByUserId(Long userId);
 
     List<Recipe> findAllByUserId(Long userId);
 }

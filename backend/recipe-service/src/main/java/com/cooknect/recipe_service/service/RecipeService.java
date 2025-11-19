@@ -88,6 +88,27 @@ public class RecipeService {
         repo.save(recipe);
     }
 
+    /* Save or Unsave a Recipe */
+    public void saveAndUnsave(Long recipeId, Long userId) {
+        Recipe recipe = getRecipeById(recipeId);
+        if(recipe==null){
+            throw new NotFoundException("Recipe not found: " + recipeId);
+        }
+        var existingSaved = savedRepository.getByRecipeIdAndUserId(recipeId, userId);
+        if (existingSaved.isPresent()) {
+            /* Unsave a Recipe */
+            savedRepository.delete(existingSaved.get());
+        }
+        else{
+            /* Save a Recipe */
+            SavedRecipe saved = new SavedRecipe();
+            saved.setUserId(userId);
+            saved.setRecipeId(recipeId);
+            savedRepository.save(saved);
+        }
+
+    }
+
     /* Adding comment to a Recipe */
     public void addComment(Long recipeId, Comment comment) {
         Recipe recipe = getRecipeById(recipeId);
@@ -156,7 +177,38 @@ public class RecipeService {
             return dto;
         }).toList();
     }
-   /* Get Recipe by id based on User id   */
+
+    /* Get all Recipes based on user Id */
+    public List<GetRecipeDTO> getRecipesByUserId(Long userId, Long requesterId) {
+        List<Recipe> recipes = repo.findByUserId(userId);
+
+        return recipes.stream().map(recipe -> {
+            GetRecipeDTO dto = new GetRecipeDTO();
+            dto.setId(recipe.getId());
+            dto.setTitle(recipe.getTitle());
+            dto.setDescription(recipe.getDescription());
+            dto.setCuisine(recipe.getCuisine().toString());
+            dto.setRecipeImageUrl(recipe.getRecipeImageUrl());
+            dto.setIngredients(recipe.getIngredients());
+            dto.setPreparation(recipe.getPreparation());
+            dto.setLikesCount(recipe.getLikes());
+            dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), requesterId).isPresent());
+            dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), requesterId).isPresent());
+            dto.setCommentCount(recipe.getComments().size());
+
+            dto.setComments(
+                    recipe.getComments().stream().map(comment -> {
+                        GetCommentDto c = new GetCommentDto();
+                        c.setAuthor(comment.getAuthor());
+                        c.setText(comment.getText());
+                        return c;
+                    }).toList()
+            );
+
+            return dto;
+        }).toList();
+    }
+   /* Get Recipe by id based on User id */
     public GetRecipeDTO getById(Long recipeId, Long userId) {
         Recipe recipe = repo.findById(recipeId)
                 .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
@@ -195,7 +247,7 @@ public class RecipeService {
         return dto;
     }
 
-    /* Get Recipe by id*/
+    /* Get Recipe by id */
     public Recipe getRecipeById(Long recipeId) {
         return repo.findById(recipeId)
                 .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
