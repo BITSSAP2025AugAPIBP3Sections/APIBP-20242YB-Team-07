@@ -16,21 +16,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Sort;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-
-import org.springframework.web.client.RestTemplate;
-
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -126,7 +114,7 @@ public class RecipeService {
         // Build request body with all userIds
         HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
 
-// Call the usernames endpoint
+        // Call the usernames endpoint
         ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
                 userBaseUrl + "/usernames",
                 HttpMethod.POST,
@@ -169,6 +157,18 @@ public class RecipeService {
         Recipe recipe = repo.findById(recipeId)
                 .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
 
+        List<Long> userIds = List.of(recipe.getUserId());
+        // Build request body with all userIds
+        HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
+        // Call the usernames endpoint
+        ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                userBaseUrl + "/usernames",
+                HttpMethod.POST,
+                request,
+                new ParameterizedTypeReference<Map<Long, String>>() {}
+        );
+        Map<Long, String> userIdToUsername = response.getBody();
+
         GetRecipeDTO dto = new GetRecipeDTO();
         dto.setId(recipe.getId());
         dto.setTitle(recipe.getTitle());
@@ -196,8 +196,8 @@ public class RecipeService {
         dto.setSavedByUser(
                 savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent()
         );
-
-//        dto.setUsername(recipe.getUsername());
+        // Set username from user-service
+        dto.setUsername(userIdToUsername.get(recipe.getUserId()));
         dto.setCommentCount(recipe.getComments().size());
 
         return dto;

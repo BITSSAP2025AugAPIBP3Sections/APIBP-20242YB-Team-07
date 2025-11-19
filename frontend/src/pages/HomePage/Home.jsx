@@ -330,7 +330,9 @@ const Home = () => {
                 />
                 <div className="card-content">
                   <div className="card-author-info">
-                    <div className="author-avatar">CA</div>
+                    <div className="author-avatar">
+                      {recipe?.username?.charAt(0).toUpperCase() || "U"}
+                    </div>
                     <div>
                       <h3>{recipe?.title}</h3>
                       <div className="author-name">
@@ -343,7 +345,7 @@ const Home = () => {
                             })
                           }
                         >
-                          @{recipe.userId || "Chef_Alex"}
+                          @{recipe?.username}
                         </a>
                       </div>
                     </div>

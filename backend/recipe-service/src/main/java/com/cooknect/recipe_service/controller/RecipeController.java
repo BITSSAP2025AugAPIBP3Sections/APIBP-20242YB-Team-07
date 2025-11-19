@@ -179,12 +179,20 @@ public class RecipeController {
         try {
             Recipe recipe = svc.getRecipeById(id);
 
+            // Prepare text to be spoken
+            Map<String, Object> textMap = Map.of(
+                    "title", recipe.getTitle(),
+                    "description", recipe.getDescription(),
+                    "ingredients", recipe.getIngredients(),
+                    "preparation", recipe.getPreparation()
+            );
+
             String text;
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                text = mapper.writeValueAsString(recipe);
+                text = mapper.writeValueAsString(textMap);
             } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                text = recipe.toString();
+                text = textMap.toString();
             }
 
             // use service that checks DB, generates, saves
@@ -201,7 +209,6 @@ public class RecipeController {
             log.error("Failed to produce audio for recipe {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(503).body(null);
         }
-
     }
 
 //    // Update an existing recipe

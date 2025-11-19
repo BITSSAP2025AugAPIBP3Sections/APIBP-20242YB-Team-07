@@ -1,4 +1,4 @@
-import React, { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import {
   Layout,
   Typography,
@@ -19,16 +19,14 @@ import {
   Bookmark,
   Send,
   MessageCircle,
-  Globe,
-  Volume2,
-  Pause,
-  Loader2,
-  ThumbsUp,
   ListOrdered,
   ChefHat,
+  Delete,
 } from "lucide-react";
+import { SoundOutlined } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import LoggedInNavbar from "../../components/Navbar/LoggedInNavbar/LoggedInNavbar";
+import { useAuth } from "../../auth/AuthContext";
 
 const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
@@ -68,13 +66,7 @@ const mockRecipe = {
   author: { name: "Chef Alex", avatar: "CA" },
 };
 
-// --- Mock API Constants ---
-const apiKey = "";
-const apiModel = "gemini-2.5-flash-preview-tts"; // For Text-to-Speech
-
-/**
- * --- CSS Styles (Plain CSS-in-JS for a creative look) ---
- */
+// * --- CSS Styles (Plain CSS-in-JS for a creative look) ---
 const styles = {
   contentArea: {
     padding: "0 24px 64px 24px",
@@ -128,19 +120,16 @@ const styles = {
   },
 };
 
-/**
- * Main Recipe Page Component
- */
 const Recipe = () => {
   const { id: recipeId } = useParams();
   const { token } = theme.useToken();
   const [isSaved, setIsSaved] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [recipeData, setRecipeData] = useState(null);
-
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-  };
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [deleteButtonLoading, setDeleteButtonLoading] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchRecipeData();
@@ -148,6 +137,7 @@ const Recipe = () => {
 
   const fetchRecipeData = async () => {
     console.log("Fetching recipe data for ID:", recipeId);
+    console.log("Calling from comment");
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -199,11 +189,9 @@ const Recipe = () => {
     }
   };
 
-  const handleCommentSubmit = () => {
-    if (!commentText.trim()) return;
-
+  const handleCommentSubmit = async () => {
     try {
-      const response = fetch(
+      const response = await fetch(
         `http://localhost:8089/api/v1/recipes/${recipeId}/comments`,
         {
           method: "POST",
@@ -214,16 +202,100 @@ const Recipe = () => {
           body: JSON.stringify({ text: commentText }),
         }
       );
+
       if (response.status === 401 || response.status === 403) {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
         window.location.reload();
+        return;
       }
+
+      if (!response.ok) {
+        throw new Error("Failed to post comment");
+      }
+
       setCommentText("");
-      fetchRecipeData();
+      console.log("Comment posted successfully");
+
+      // Now fetch recipe data after comment is posted
+      await fetchRecipeData();
     } catch (error) {
       console.error("Error posting comment:", error);
     }
+  };
+
+  const handleDeleteRecipe = async (recipeId) => {
+    setDeleteButtonLoading(true);
+    try {
+      const response = await fetch(
+        `http://localhost:8089/api/v1/recipes/${recipeId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.status === 204) {
+        console.log("Recipe deleted successfully");
+        window.location.reload();
+      } else {
+        throw new Error("Failed to delete recipe");
+      }
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+    } finally {
+      setDeleteButtonLoading(false);
+    }
+  };
+
+  const playRecipeAudio = async (recipeId) => {
+    setAudioLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:8089/api/v1/recipes/${recipeId}/speak`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch audio");
+      }
+
+      // Get audio as blob
+      const audioBlob = await response.blob();
+
+      // Create object URL from blob
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Create and play audio
+      const audio = new Audio(audioUrl);
+
+      audio.onplay = () => setIsPlaying(true);
+      audio.onended = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(audioUrl); // Clean up
+      };
+      audio.onerror = () => {
+        setIsPlaying(false);
+        console.error("Error playing audio");
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error("Error fetching audio:", error);
+    } finally {
+      setAudioLoading(false);
+    }
+  };
+
+  const handleSave = () => {
+    setIsSaved(!isSaved);
   };
 
   console.log("Fetched Recipe Data:", recipeData);
@@ -233,6 +305,7 @@ const Recipe = () => {
       style={{ minHeight: "100vh", backgroundColor: token.colorBgContainer }}
     >
       <LoggedInNavbar activeKey="1" />
+
       {/* Hero Image Section */}
       <div style={styles.heroImageContainer}>
         <img
@@ -264,11 +337,12 @@ const Recipe = () => {
                   <Avatar
                     style={{ backgroundColor: "#264653", marginRight: "8px" }}
                   >
-                    {mockRecipe.author.avatar}
+                    {recipeData?.username?.charAt(0).toUpperCase() || "U"}
                   </Avatar>
-                  <Text strong>{mockRecipe.author.name}</Text>
+                  <Text strong>{recipeData?.username}</Text>
                 </div>
               </div>
+
               {/* Action Buttons (Likes, Saves, Tags) */}
               <Card
                 style={{
@@ -318,6 +392,20 @@ const Recipe = () => {
                       ? "Bookmarked"
                       : "Save Recipe"}
                   </Button>
+                  {user.userData.id === recipeData?.userId && (
+                    <Button
+                      size="large"
+                      type="primary"
+                      danger
+                      icon={<Delete size={20} />}
+                      onClick={() => {
+                        handleDeleteRecipe(recipeData?.id);
+                      }}
+                      loading={deleteButtonLoading}
+                    >
+                      Delete Recipe
+                    </Button>
+                  )}
                 </Space>
                 <Divider style={{ margin: "16px 0" }} />
                 <Space size={[0, 8]} wrap>
@@ -333,6 +421,7 @@ const Recipe = () => {
                   </Tag>
                 </Space>
               </Card>
+
               {/* Description & Feature Controls (Translate & Audio) */}
               <div style={{ marginBottom: "40px" }}>
                 <Title
@@ -346,53 +435,17 @@ const Recipe = () => {
                   The Story
                 </Title>
 
-                {/* <Space style={{ marginBottom: "20px" }} wrap>
+                <Space style={{ marginBottom: "20px" }} wrap>
                   <Button
-                    size="large"
-                    icon={
-                      isTranslating ? (
-                        <Loader2 size={18} style={styles.loadingAnimation} />
-                      ) : (
-                        <Globe size={18} />
-                      )
-                    }
-                    // onClick={handleTranslate}
-                    disabled={isTranslating || isLoadingAudio}
-                    type={isTranslated ? "primary" : "default"}
+                    type="primary"
+                    icon={<SoundOutlined />}
+                    loading={audioLoading}
+                    onClick={() => playRecipeAudio(recipeData?.id)}
+                    disabled={isPlaying}
                   >
-                    {isTranslating
-                      ? "Translating..."
-                      : isTranslated
-                      ? "Show Original (EN)"
-                      : "Translate to French"}
+                    {isPlaying ? "Playing..." : "Listen to Recipe"}
                   </Button>
-                  <Button
-                    size="large"
-                    icon={
-                      isLoadingAudio ? (
-                        <Loader2 size={18} style={styles.loadingAnimation} />
-                      ) : isSpeaking ? (
-                        <Pause size={18} />
-                      ) : (
-                        <Volume2 size={18} />
-                      )
-                    }
-                    onClick={handleAudio}
-                    disabled={isLoadingAudio || isTranslating}
-                    type={isSpeaking ? "primary" : "default"}
-                    style={{
-                      backgroundColor: isSpeaking ? "#52c41a" : undefined,
-                      borderColor: isSpeaking ? "#52c41a" : undefined,
-                    }}
-                  >
-                    {isLoadingAudio
-                      ? "Loading Audio..."
-                      : isSpeaking
-                      ? "Pause Reading"
-                      : "Read Aloud"}
-                  </Button>
-                </Space> */}
-
+                </Space>
                 <div style={styles.descriptionContainer}>
                   <Paragraph
                     style={{ fontSize: "1.1em", lineHeight: "1.8", margin: 0 }}
@@ -401,6 +454,8 @@ const Recipe = () => {
                   </Paragraph>
                 </div>
               </div>
+
+              {/* Ingredients & Preparation Steps */}
               <div style={styles.sectionCard}>
                 <Title
                   level={2}
@@ -432,6 +487,8 @@ const Recipe = () => {
                   )}
                 />
               </div>
+
+              {/* Preparation Steps */}
               <div style={styles.sectionCard}>
                 <Title
                   level={2}
@@ -473,6 +530,8 @@ const Recipe = () => {
                 />
               </div>
             </Col>
+
+            {/* --- RIGHT COLUMN: Comments Section --- */}
             <Col xs={24} lg={8}>
               {/* Comments Section */}
               <div style={{ padding: "0 10px" }}>

@@ -32,7 +32,7 @@ import { useParams } from "react-router-dom";
 import LoggedInNavbar from "../../components/Navbar/LoggedInNavbar/LoggedInNavbar";
 import { useAuth } from "../../auth/AuthContext";
 
-const { Header, Content, Footer } = Layout;
+const { Content, Footer } = Layout;
 const { Title, Paragraph, Text } = Typography;
 const { TabPane } = Tabs;
 
