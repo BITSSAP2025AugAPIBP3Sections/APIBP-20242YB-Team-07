@@ -21,7 +21,7 @@ type FoodItem {
 # Represents a logged nutrition entry
 type NutritionLog {
     id: ID!
-    userName: String
+    userId: ID
     recipeId: ID
     foodName: String
     ingredients: String
@@ -43,7 +43,7 @@ type DailyIntakeSummary {
 
 # The response from an analysis or update mutation
 type NutritionResponse {
-    userName: String
+    userId: ID
     recipeId: ID
     recipeName: String
     totalCalories: Float
@@ -73,7 +73,7 @@ input IngredientInput {
 }
 
 input NutritionRequestInput {
-    userName: String!
+    userId: ID
     recipeId: ID
     recipeName: String
     mealType: MealType
@@ -85,9 +85,9 @@ input NutritionRequestInput {
 type Query {
     allFoodItems: [FoodItem]
     allNutritionLogs: [NutritionLog]
-    logsByUserName(userName: String!): [NutritionLog]
-    logsByMealType(userName: String!, mealType: MealType!): [NutritionLog]
-    todayIntakeSummary(userName: String!): DailyIntakeSummary
+    logsByuserId(userId: ID!): [NutritionLog]
+    logsByMealType(userId: ID!, mealType: MealType!): [NutritionLog]
+    todayIntakeSummary(userId: ID!): DailyIntakeSummary
 }
 
 # Defines all the mutations (write operations)
