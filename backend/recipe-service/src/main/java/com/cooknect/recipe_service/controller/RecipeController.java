@@ -70,6 +70,24 @@ public class RecipeController {
         return ResponseEntity.noContent().build();
     }
 
+    /* Save or Unsave a recipe */
+    @PostMapping("/{recipeId}/save")
+    @Operation(summary = "Save or Unsave a recipe", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> saveRecipe(@PathVariable Long recipeId, HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("Invalid user id");
+        }
+
+        svc.saveAndUnsave(recipeId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+
     /* Get all recipes */
     @GetMapping
     @Operation(summary = "Get all recipes", security = @SecurityRequirement(name = "bearerAuth"))
@@ -83,6 +101,21 @@ public class RecipeController {
         }
         return svc.getAllRecipes(id);
     }
+
+    /* Get All Recipes of a user */
+    @GetMapping
+    @Operation(summary = "Get recipes, optionally by userId", security = @SecurityRequirement(name = "bearerAuth"))
+    public List<GetRecipeDTO> listAll(
+            @RequestParam(required = false) Long userId,
+            @RequestHeader("X-User-Id") Long requesterId
+    ) {
+        if (userId != null) {
+            return svc.getRecipesByUserId(userId, requesterId);
+        }
+        return svc.getAllRecipes(requesterId);
+    }
+
+
     /* Get recipe by ID */
     @GetMapping("/{recipeId}")
     @Operation(summary = "Get recipe by ID", security = @SecurityRequirement(name = "bearerAuth"))
