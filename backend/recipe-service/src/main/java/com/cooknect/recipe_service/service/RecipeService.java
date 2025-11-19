@@ -15,14 +15,11 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-
-
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 @Service
 public class RecipeService {
@@ -103,15 +100,13 @@ public class RecipeService {
 
     /* Get all recipes */
     public List<GetRecipeDTO> getAllRecipes(Long userId) {
-        List<Recipe> recipes = repo.findAll();
+        List<Recipe> recipes = repo.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
         /*
          * Collect unique userIds.
          * Doing this so that for all recipes username is fetched at once.
          * Which avoid repeated calls to user service.
         */
-
-
         List<Long> userIds = recipes.stream()
                 .map(Recipe::getUserId)
                 .distinct()
@@ -119,7 +114,7 @@ public class RecipeService {
         // Build request body with all userIds
         HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
 
-// Call the usernames endpoint
+        // Call the usernames endpoint
         ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
                 userBaseUrl + "/usernames",
                 HttpMethod.POST,
@@ -152,6 +147,7 @@ public class RecipeService {
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             // Set username from user-service
             dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            dto.setUserId(recipe.getUserId());
             dto.setCommentCount(recipe.getComments().size());
             return dto;
         }).toList();
@@ -161,13 +157,25 @@ public class RecipeService {
         Recipe recipe = repo.findById(recipeId)
                 .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
 
+        List<Long> userIds = List.of(recipe.getUserId());
+        // Build request body with all userIds
+        HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
+        // Call the usernames endpoint
+        ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                userBaseUrl + "/usernames",
+                HttpMethod.POST,
+                request,
+                new ParameterizedTypeReference<Map<Long, String>>() {}
+        );
+        Map<Long, String> userIdToUsername = response.getBody();
+
         GetRecipeDTO dto = new GetRecipeDTO();
         dto.setId(recipe.getId());
         dto.setTitle(recipe.getTitle());
         dto.setDescription(recipe.getDescription());
         dto.setCuisine(recipe.getCuisine().toString());
         dto.setRecipeImageUrl(recipe.getRecipeImageUrl());
-
+        dto.setUserId(recipe.getUserId());
         dto.setComments(
                 recipe.getComments().stream().map(comment -> {
                     GetCommentDto c = new GetCommentDto();
@@ -188,8 +196,8 @@ public class RecipeService {
         dto.setSavedByUser(
                 savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent()
         );
-
-//        dto.setUsername(recipe.getUsername());
+        // Set username from user-service
+        dto.setUsername(userIdToUsername.get(recipe.getUserId()));
         dto.setCommentCount(recipe.getComments().size());
 
         return dto;

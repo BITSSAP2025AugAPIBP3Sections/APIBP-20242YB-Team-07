@@ -28,7 +28,7 @@ function App() {
                     <Route path="/homepage" element={<Home />} />
                     <Route path="/profile/:id" element={<Profile />} />
                     <Route path="/profile" element={<Profile />} />
-                    <Route path="/recipe" element={<Recipe />} />
+                    <Route path="/recipe/:id" element={<Recipe />} />
                   </Routes>
                 </ProtectedRoute>
               }
