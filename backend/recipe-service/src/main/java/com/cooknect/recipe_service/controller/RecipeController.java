@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -103,7 +104,7 @@ public class RecipeController {
     }
 
     /* Get All Recipes of a user */
-    @GetMapping
+    @GetMapping(params = "userId")
     @Operation(summary = "Get recipes, optionally by userId", security = @SecurityRequirement(name = "bearerAuth"))
     public List<GetRecipeDTO> listAll(
             @RequestParam(required = false) Long userId,
@@ -254,6 +255,28 @@ public class RecipeController {
         }
     }
 
+    //Translate Recipe into target language
+    @GetMapping("/{id}/translate/{targetLanguage}")
+    @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"))
+    public String translateRecipe(
+            @PathVariable Long id,
+            @PathVariable String targetLanguage) {
+        return speechSynth.translateText(id, targetLanguage);
+    }
+
+    @GetMapping("/metadata")
+    @Operation(summary = "Get service metadata", security = @SecurityRequirement(name = "bearerAuth"))
+    public Map<String, Object> serviceMetadata() {
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("service", "recipe-service");
+        String version = this.getClass().getPackage().getImplementationVersion();
+        meta.put("version", version != null ? version : "unknown");
+        meta.put("kafkaTopic", TOPIC);
+        // lightweight runtime info
+        meta.put("availableProcessors", Runtime.getRuntime().availableProcessors());
+        meta.put("freeMemory", Runtime.getRuntime().freeMemory());
+        return meta;
+    }
     /*
         * Updates an existing recipe.
         * This endpoint accepts a PATCH request with only the fields that need to be updated.
@@ -277,6 +300,7 @@ public class RecipeController {
         }
 
         Recipe updated = svc.patchUpdate(id, recipe, userId);
+        speechSynth.deleteAudioForRecipe(id);
         return ResponseEntity.ok(updated);
     }
 
