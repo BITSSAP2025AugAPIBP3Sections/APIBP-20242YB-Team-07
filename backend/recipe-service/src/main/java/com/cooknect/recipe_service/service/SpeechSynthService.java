@@ -211,6 +211,10 @@ public class SpeechSynthService {
         }
     }
 
+
+    // ---------------------------------------------------------
+    // Convert raw PCM LINEAR16 → WAV wrapper
+    // ---------------------------------------------------------
     private byte[] convertPcmToWav(byte[] pcmData) throws IOException {
 
         int sampleRate = 24000;
