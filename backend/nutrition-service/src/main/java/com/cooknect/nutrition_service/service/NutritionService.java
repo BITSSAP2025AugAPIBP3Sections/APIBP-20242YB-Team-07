@@ -40,7 +40,7 @@ public class NutritionService {
         this.recipeClient = recipeClient;
     }
 
-    public NutritionResponse analyzeIngredients(NutritionRequest request, String userName) {
+    public NutritionResponse analyzeIngredients(NutritionRequest request, Long userId) {
         List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
         String recipeName = request.getRecipeName();
 
@@ -62,23 +62,23 @@ public class NutritionService {
         NutritionTotals totals = calculateNutrition(ingredients);
 
         NutritionResponse response = new NutritionResponse(
-                userName, // Use the secure userName from the header
-                request.getRecipeId(),
-                recipeName,
-                totals.totalFat(),
-                totals.saturatedFat(),
-                totals.sodium(),
-                totals.potassium(),
-                totals.cholestrol(),
-                totals.carbohydrates(),
-                totals.fiber(),
-                totals.sugar(),
-                ingredients.stream().map(i -> i.get("name")).collect(Collectors.toList()),
-                request.getMealType()
-        );
+                 userId,
+                 request.getRecipeId(),
+                 recipeName,
+                 totals.totalFat(),
+                 totals.saturatedFat(),
+                 totals.sodium(),
+                 totals.potassium(),
+                 totals.cholestrol(),
+                 totals.carbohydrates(),
+                 totals.fiber(),
+                 totals.sugar(),
+                 ingredients.stream().map(i -> i.get("name")).collect(Collectors.toList()),
+                 request.getMealType()
+         );
         
         NutritionLog log = NutritionLog.builder()
-                .userName(userName) // Use the secure userName from the header
+                .userId(userId) 
                 .recipeId(request.getRecipeId())
                 .foodName(request.getRecipeName())
                 .ingredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()))
@@ -182,17 +182,17 @@ public class NutritionService {
         return foodRepo.save(foodItem);
     }
 
-    public List<NutritionLog> getNutritionLogsByUserName(String userName) {
-        return logRepo.findByUserName(userName);
+    public List<NutritionLog> getNutritionLogsByUserId(Long userId) {
+        return logRepo.findByUserId(userId);
     }
 
-    public List<NutritionLog> getNutritionLogsByMealType(String userName, MealType mealType) {
-        return logRepo.findByUserNameAndMealType(userName, mealType);
+    public List<NutritionLog> getNutritionLogsByMealType(Long userId, MealType mealType) {
+        return logRepo.findByUserIdAndMealType(userId, mealType);
     }
 
-    public DailyIntakeSummary getTodayIntakeSummary(String userName) {
+    public DailyIntakeSummary getTodayIntakeSummary(Long userId) {
         LocalDate today = LocalDate.now();
-        List<NutritionLog> todayLogs = logRepo.findByUserNameAndAnalyzedAt(userName, today);
+        List<NutritionLog> todayLogs = logRepo.findByUserIdAndAnalyzedAt(userId, today);
         double totalFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalFat).sum();
         double totalSaturatedFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalSaturatedFat).sum();
         double totalSodium = todayLogs.stream().mapToDouble(NutritionLog::getTotalSodium).sum();
@@ -204,12 +204,12 @@ public class NutritionService {
         return new DailyIntakeSummary(totalFat, totalSaturatedFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar); 
     }
 
-    public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, String userName) {
+    public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, Long userId) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
 
         // Add authorization check
-        if (!log.getUserName().equals(userName)) {
+        if (!log.getUserId().equals(userId)) {
             throw new RuntimeException("User not authorized to update this log");
         }
 
@@ -233,7 +233,7 @@ public class NutritionService {
         logRepo.save(log);
 
         return new NutritionResponse(
-                log.getUserName(),
+                log.getUserId(),
                 log.getRecipeId(),
                 log.getFoodName(),
                 log.getTotalFat(),
@@ -249,12 +249,12 @@ public class NutritionService {
         );
     }
 
-    public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates, String userName) {
+    public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates, Long userId) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
 
         // Add authorization check
-        if (!log.getUserName().equals(userName)) {
+        if (!log.getUserId().equals(userId)) {
             throw new RuntimeException("User not authorized to patch this log");
         }
 
@@ -265,12 +265,12 @@ public class NutritionService {
         return logRepo.save(log);
     }
 
-    public void deleteNutritionLog(Long logId, String userName) {
+    public void deleteNutritionLog(Long logId, long userId) {
         NutritionLog log = logRepo.findById(logId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nutrition log not found with id: " + logId));
         
 
-        if (!log.getUserName().equals(userName)) {
+        if (!log.getUserId().equals(userId)) {
             throw new RuntimeException("User not authorized to delete this log");
         }
         

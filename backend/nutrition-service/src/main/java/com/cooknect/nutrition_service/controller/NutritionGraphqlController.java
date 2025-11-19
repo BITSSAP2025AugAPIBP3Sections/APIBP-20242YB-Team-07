@@ -3,7 +3,6 @@ package com.cooknect.nutrition_service.controller;
 import com.cooknect.nutrition_service.dto.DailyIntakeSummary;
 import com.cooknect.nutrition_service.dto.NutritionRequest;
 import com.cooknect.nutrition_service.dto.NutritionResponse;
-import com.cooknect.nutrition_service.model.FoodItem;
 import com.cooknect.nutrition_service.model.MealType;
 import com.cooknect.nutrition_service.model.NutritionLog;
 import com.cooknect.nutrition_service.service.NutritionService;
@@ -27,40 +26,30 @@ public class NutritionGraphqlController {
     // --- QUERIES ---
 
     @QueryMapping
-    public List<FoodItem> allFoodItems() {
-        return nutritionService.getAllFoodItems();
-    }
-
-    @QueryMapping
     public List<NutritionLog> allNutritionLogs() {
         return nutritionService.getAllNutritionLogs();
     }
 
     @QueryMapping
-    public List<NutritionLog> logsByUserName(@Argument String userName) {
-        return nutritionService.getNutritionLogsByUserName(userName);
+    public List<NutritionLog> logsByUserId(@Argument long userId) {
+        return nutritionService.getNutritionLogsByUserId(userId);
     }
 
     @QueryMapping
-    public List<NutritionLog> logsByMealType(@Argument String userName, @Argument MealType mealType) {
-        return nutritionService.getNutritionLogsByMealType(userName, mealType);
+    public List<NutritionLog> logsByMealType(@Argument Long userId, @Argument MealType mealType) {
+        return nutritionService.getNutritionLogsByMealType(userId, mealType);
     }
 
     @QueryMapping
-    public DailyIntakeSummary todayIntakeSummary(@Argument String userName) {
-        return nutritionService.getTodayIntakeSummary(userName);
+    public DailyIntakeSummary todayIntakeSummary(@Argument Long userId) {
+        return nutritionService.getTodayIntakeSummary(userId);
     }
 
     // --- MUTATIONS ---
 
-    @MutationMapping
-    public FoodItem addFoodItem(@Argument("foodItem") FoodItem foodItem) {
-        return nutritionService.addFoodItem(foodItem);
-    }
-
     private NutritionRequest buildRequestFromMap(Map<String, Object> requestMap) {
         NutritionRequest request = new NutritionRequest();
-        request.setUserName((String) requestMap.get("userName"));
+        request.setUserId((Long) requestMap.get("userId"));
         request.setRecipeId(requestMap.get("recipeId") != null ? Long.parseLong(requestMap.get("recipeId").toString()) : null);
         request.setRecipeName((String) requestMap.get("recipeName"));
         
@@ -91,23 +80,23 @@ public class NutritionGraphqlController {
     @MutationMapping
     public NutritionResponse analyzeIngredients(@Argument("request") Map<String, Object> requestMap) {
         NutritionRequest request = buildRequestFromMap(requestMap);
-        return nutritionService.analyzeIngredients(request, request.getUserName());
+        return nutritionService.analyzeIngredients(request, request.getUserId());
     }
 
     @MutationMapping
     public NutritionResponse updateNutritionLog(@Argument Long logId, @Argument("request") Map<String, Object> requestMap) {
         NutritionRequest request = buildRequestFromMap(requestMap);
-        return nutritionService.updateNutritionLog(logId, request, request.getUserName());
+        return nutritionService.updateNutritionLog(logId, request, request.getUserId());
     }
 
     @MutationMapping
-    public NutritionLog patchNutritionLog(@Argument Long logId, @Argument("updates") Map<String, Object> updates, @Argument String userName) {
-        return nutritionService.patchNutritionLog(logId, updates, userName);
+    public NutritionLog patchNutritionLog(@Argument Long logId, @Argument("updates") Map<String, Object> updates, @Argument Long userId) {
+        return nutritionService.patchNutritionLog(logId, updates, userId);
     }
 
     @MutationMapping
-    public String deleteNutritionLog(@Argument Long logId, @Argument String userName) {
-        nutritionService.deleteNutritionLog(logId, userName);
+    public String deleteNutritionLog(@Argument Long logId, @Argument Long userId) {
+        nutritionService.deleteNutritionLog(logId, userId);
         return "Nutrition log with ID " + logId + " deleted successfully.";
     }
 }

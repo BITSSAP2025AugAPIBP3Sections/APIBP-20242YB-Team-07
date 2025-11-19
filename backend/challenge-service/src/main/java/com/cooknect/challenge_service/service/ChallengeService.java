@@ -144,21 +144,22 @@ public class ChallengeService {
         return true;
     }
 
+
     public boolean leaveChallenge(Long challengeId, ChallengeParticipationRequest request) {
         Challenge challenge = challengeRepository.findById(challengeId)
-            .orElseThrow(() -> new RuntimeException("Challenge not found"));
-        ChallengeParticipant participant = new ChallengeParticipant();
-        participant.setUserId(request.getUserId());
-        participant.setUsername(request.getUsername());
-        participant.setEmail(request.getEmail());
-        participant.setRole(request.getRole());
-        boolean removed = challenge.getParticipants().remove(participant);
-        if (removed) {
-            challengeRepository.save(challenge);
-        }
-        return removed;
-    }
+                .orElseThrow(() -> new RuntimeException("Challenge not found"));
 
+        Optional<ChallengeParticipant> participantOpt = challenge.getParticipants().stream()
+                .filter(p -> Objects.equals(p.getUserId(), request.getUserId()))
+                .findFirst();
+
+        if (participantOpt.isPresent()) {
+            challenge.getParticipants().remove(participantOpt.get());
+            challengeRepository.save(challenge);
+            return true;
+        }
+        return false;
+    }
     public List<ChallengeParticipant> getChallengeParticipants(Long challengeId) {
         Challenge challenge = challengeRepository.findById(challengeId)
             .orElseThrow(() -> new RuntimeException("Challenge not found"));

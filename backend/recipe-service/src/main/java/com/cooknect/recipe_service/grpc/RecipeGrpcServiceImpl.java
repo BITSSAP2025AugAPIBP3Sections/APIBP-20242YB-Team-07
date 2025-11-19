@@ -30,7 +30,7 @@ public class RecipeGrpcServiceImpl extends RecipeServiceGrpc.RecipeServiceImplBa
                 .setId(recipe.getId())
                 .setTitle(recipe.getTitle())
                 .setDescription(recipe.getDescription())
-                .setUsername(recipe.getUsername())
+//                .setUsername(recipe.getUsername())
                 .setLikes(recipe.getLikes())
                 .setCuisine(String.valueOf(recipe.getCuisine()))
                 .setLanguage(recipe.getLanguage());

@@ -1,8 +1,6 @@
 package com.cooknect.user_service.controller;
 
-import com.cooknect.user_service.dto.LoginRequestDTO;
-import com.cooknect.user_service.dto.LoginResponseDTO;
-import com.cooknect.user_service.dto.UsersDTO;
+import com.cooknect.user_service.dto.*;
 import com.cooknect.user_service.model.UserModel;
 import com.cooknect.user_service.service.UserService;
 
@@ -27,11 +25,11 @@ public class UserController {
     @GetMapping("/hello")
     public void greet(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
-        String userNameHeader = request.getHeader("X-User-Name");
+        String userIdHeader = request.getHeader("X-User-Id");
         String userRole = request.getHeader("X-User-Role");
 
         System.out.println("Authorization Header received in UserService: " + authHeader);
-        System.out.println("X-User-Name Header received in UserService: " + userNameHeader);
+        System.out.println("X-User-Id Header received in UserService: " + userIdHeader);
         System.out.println("X-User-Role Header received in UserService: " + userRole);
 
     }
@@ -46,6 +44,30 @@ public class UserController {
     @GetMapping("/{id}")
     @Operation(summary = "Get user by ID", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<UsersDTO> getUserById(@PathVariable Long id) {
+        UsersDTO users = service.getUserById(id);
+        return ResponseEntity.ok(users);
+    }
+    // Bulk fetch usernames by IDs
+    @PostMapping("/usernames")
+    @Operation(summary = "Get user by ID", security = @SecurityRequirement(name = "bearerAuth"), hidden = true)
+    public ResponseEntity<Map<Long, String>> getUsernamesByIds(@RequestBody List<Long> userIds) {
+        Map<Long, String> usernames = service.getUsernamesByIds(userIds);
+        return ResponseEntity.ok(usernames);
+    }
+
+    @GetMapping("/user-details")
+    @Operation(summary = "Get user details from header", security = @SecurityRequirement(name = "bearerAuth"), hidden = true)
+    public ResponseEntity<UsersDTO> getUserDetailsFromHeader(HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+        if (userIdHeader == null || userIdHeader.isEmpty()) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        Long id;
+        try {
+            id = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
         UsersDTO users = service.getUserById(id);
         return ResponseEntity.ok(users);
     }
@@ -79,7 +101,7 @@ public class UserController {
 
     @PostMapping("/register")
     @Operation(summary = "User registration", description = "Register a new user", security = {})
-    public ResponseEntity<?> createUser(@RequestBody UserModel user) {
+    public ResponseEntity<?> createUser(@RequestBody CreateUserDTO user) {
         if(user.getPassword() == null || user.getPassword().isEmpty()){
             return ResponseEntity.badRequest().body(Map.of("error", "Password cannot be empty"));
         }
@@ -92,8 +114,27 @@ public class UserController {
         if(user.getUsername() == null || user.getUsername().isEmpty()){
             return ResponseEntity.badRequest().body(Map.of("error", "Username cannot be empty"));
         }
-        UserModel newuser = service.createUser(user);
-        return ResponseEntity.ok(newuser);
+        CreateUserDTO newUser = service.createUser(user);
+        return ResponseEntity.ok(newUser);
+    }
+
+    @PostMapping("/query")
+    @Operation(summary = "Submit a general query", description = "Submit a general query or feedback", security = {})
+    public ResponseEntity<GeneralQueriesDTO> submitQuery(@RequestBody GeneralQueriesDTO queryDTO) {
+        if(queryDTO.getName() == null || queryDTO.getName().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        if(queryDTO.getEmail() == null || queryDTO.getEmail().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        if(queryDTO.getSubject() == null || queryDTO.getSubject().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        if(queryDTO.getMessage() == null || queryDTO.getMessage().isEmpty()){
+            return ResponseEntity.badRequest().body(null);
+        }
+        GeneralQueriesDTO savedQuery = service.submitGeneralQuery(queryDTO);
+        return ResponseEntity.ok(savedQuery);
     }
 
 
@@ -109,6 +150,21 @@ public class UserController {
         }
         if (userDTO.getUsername() == null || userDTO.getUsername().isEmpty()){
             return ResponseEntity.badRequest().body(Map.of("error", "Username cannot be empty"));
+        }
+        if(userDTO.getBio() == null || userDTO.getBio().isEmpty()){
+            return ResponseEntity.badRequest().body(Map.of("error", "Bio cannot be null"));
+        }
+        if(userDTO.getAvatarUrl() == null || userDTO.getAvatarUrl().isEmpty()){
+            return ResponseEntity.badRequest().body(Map.of("error", "Avatar URL cannot be null"));
+        }
+        if(userDTO.getDietaryPreference() == null || userDTO.getDietaryPreference().isEmpty()){
+            return ResponseEntity.badRequest().body(Map.of("error", "Dietary Preference cannot be null"));
+        }
+        if(userDTO.getHealthGoal() == null || userDTO.getHealthGoal().isEmpty()){
+            return ResponseEntity.badRequest().body(Map.of("error", "Health Goal cannot be null"));
+        }
+        if(userDTO.getCuisinePreferences() == null || userDTO.getCuisinePreferences().isEmpty()){
+            return ResponseEntity.badRequest().body(Map.of("error", "Cuisine Preferences cannot be null"));
         }
         UsersDTO updatedUser = service.updateUser(id, userDTO,userEmailHeader);
         return ResponseEntity.ok(updatedUser);

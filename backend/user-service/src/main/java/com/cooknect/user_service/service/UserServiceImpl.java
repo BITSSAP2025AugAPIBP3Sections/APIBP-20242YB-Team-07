@@ -1,16 +1,8 @@
 package com.cooknect.user_service.service;
 
-import com.cooknect.user_service.dto.LoginRequestDTO;
-import com.cooknect.user_service.dto.LoginResponseDTO;
-import com.cooknect.user_service.dto.UsersDTO;
-import com.cooknect.user_service.model.CuisinePreference;
-import com.cooknect.user_service.model.DietaryPreference;
-import com.cooknect.user_service.model.HealthGoal;
-import com.cooknect.user_service.model.UserModel;
-import com.cooknect.user_service.repository.CuisinePreferenceRepository;
-import com.cooknect.user_service.repository.DietaryPreferenceRepository;
-import com.cooknect.user_service.repository.HealthGoalRepository;
-import com.cooknect.user_service.repository.UserRepository;
+import com.cooknect.user_service.dto.*;
+import com.cooknect.user_service.model.*;
+import com.cooknect.user_service.repository.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -43,6 +35,9 @@ public class UserServiceImpl implements UserService{
     CuisinePreferenceRepository cuisinePreferenceRepository;
 
     @Autowired
+    GeneralQueriesRepository generalQueriesRepository;
+
+    @Autowired
     AuthenticationManager authManager;
 
     @Autowired
@@ -52,7 +47,7 @@ public class UserServiceImpl implements UserService{
     public static final String EMAIL_REGEX = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
     @Override
-    public UserModel createUser(UserModel user){
+    public CreateUserDTO createUser(CreateUserDTO user){
         UserModel existingUser = repository.findByEmail(user.getEmail());
         if(existingUser != null){
             throw new RuntimeException("User with email " + user.getEmail() + " already exists");
@@ -67,7 +62,14 @@ public class UserServiceImpl implements UserService{
         newUser.setRole(UserModel.Role.USER);
         newUser.setUsername(user.getUsername());
         newUser.setFullName(user.getFullName());
-        return repository.save(newUser);
+        UserModel savedUser = repository.save(newUser);
+        CreateUserDTO createdUserDTO = new CreateUserDTO();
+        createdUserDTO.setEmail(savedUser.getEmail());
+        createdUserDTO.setUsername(savedUser.getUsername());
+        createdUserDTO.setFullName(savedUser.getFullName());
+        createdUserDTO.setPassword(savedUser.getPassword());
+        createdUserDTO.setId(savedUser.getId());
+        return createdUserDTO;
     }
 
     @Override
@@ -78,7 +80,7 @@ public class UserServiceImpl implements UserService{
             if(authentication.isAuthenticated()){
                 UserModel authenticatedUser = repository.findByEmail(loginRequestDTO.getEmail());
                 LoginResponseDTO loginResponseDTO = new LoginResponseDTO();
-                String token = jwtService.generateToken(loginRequestDTO.getEmail(),authenticatedUser.getRole().name(),authenticatedUser.getUsername());
+                String token = jwtService.generateToken(loginRequestDTO.getEmail(),authenticatedUser.getRole().name(),authenticatedUser.getId());
                 loginResponseDTO.setToken(token);
                 loginResponseDTO.setRole(authenticatedUser.getRole().toString());
                 return loginResponseDTO;
@@ -105,6 +107,8 @@ public class UserServiceImpl implements UserService{
                         u.getRole().name(),
                         u.getUsername(),
                         u.getFullName(),
+                        u.getBio(),
+                        u.getAvatarUrl(),
                         u.getDietaryPreference() != null ? u.getDietaryPreference().getName() : null,
                         u.getHealthGoal() != null ? u.getHealthGoal().getName() : null,
                         u.getCuisinePreferences() == null ? List.of() : u.getCuisinePreferences().stream().map(CuisinePreference::getName).toList())).toList();
@@ -118,9 +122,17 @@ public class UserServiceImpl implements UserService{
                 user.getRole().name(),
                 user.getUsername(),
                 user.getFullName(),
+                user.getBio(),
+                user.getAvatarUrl(),
                 user.getDietaryPreference() != null ? user.getDietaryPreference().getName() : null,
                 user.getHealthGoal() != null ? user.getHealthGoal().getName() : null,
                 user.getCuisinePreferences() == null ? List.of() : user.getCuisinePreferences().stream().map(CuisinePreference::getName).toList());
+    }
+    @Override
+    public Map<Long, String> getUsernamesByIds(List<Long> ids) {
+        List<UserModel> users = repository.findAllById(ids); // fetch all users at once
+        return users.stream()
+                .collect(Collectors.toMap(UserModel::getId, UserModel::getUsername));
     }
 
     @Override
@@ -143,12 +155,27 @@ public class UserServiceImpl implements UserService{
         user.setEmail(userDTO.getEmail());
         user.setUsername(userDTO.getUsername());
         user.setFullName(userDTO.getFullName());
+        user.setBio(userDTO.getBio());
+        user.setAvatarUrl(userDTO.getAvatarUrl());
+        DietaryPreference diet = dietaryPreferenceRepository.findByName(userDTO.getDietaryPreference())
+                .orElseThrow(() -> new RuntimeException("Enter a valid Dietary preference"));
+        HealthGoal goal = healthGoalRepository.findByName(userDTO.getHealthGoal())
+                .orElseThrow(() -> new RuntimeException("Enter a valid Health goal"));
+        Set<CuisinePreference> cuisines = userDTO.getCuisinePreferences().stream()
+                .map(name -> cuisinePreferenceRepository.findByName(name)
+                        .orElseThrow(() -> new RuntimeException("Invalid cuisine: " + name)))
+                .collect(Collectors.toSet());
+        user.setDietaryPreference(diet);
+        user.setHealthGoal(goal);
+        user.setCuisinePreferences(cuisines);
         UserModel updatedUser = repository.save(user);
         return new UsersDTO(updatedUser.getId(),
                 updatedUser.getEmail(),
                 updatedUser.getRole().name(),
                 updatedUser.getUsername(),
                 updatedUser.getFullName(),
+                updatedUser.getBio(),
+                updatedUser.getAvatarUrl(),
                 updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
                 updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
                 updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
@@ -205,6 +232,8 @@ public class UserServiceImpl implements UserService{
                 updatedUser.getRole().name(),
                 updatedUser.getUsername(),
                 updatedUser.getFullName(),
+                updatedUser.getBio(),
+                updatedUser.getAvatarUrl(),
                 updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
                 updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
                 updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
@@ -246,6 +275,8 @@ public class UserServiceImpl implements UserService{
                 updatedUser.getRole().name(),
                 updatedUser.getUsername(),
                 updatedUser.getFullName(),
+                updatedUser.getBio(),
+                updatedUser.getAvatarUrl(),
                 updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
                 updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
                 updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
@@ -267,6 +298,8 @@ public class UserServiceImpl implements UserService{
                 updatedUser.getRole().name(),
                 updatedUser.getUsername(),
                 updatedUser.getFullName(),
+                updatedUser.getBio(),
+                updatedUser.getAvatarUrl(),
                 updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
                 updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
                 updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
@@ -288,6 +321,8 @@ public class UserServiceImpl implements UserService{
                 updatedUser.getRole().name(),
                 updatedUser.getUsername(),
                 updatedUser.getFullName(),
+                updatedUser.getBio(),
+                updatedUser.getAvatarUrl(),
                 updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
                 updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
                 updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
@@ -312,6 +347,8 @@ public class UserServiceImpl implements UserService{
                 updatedUser.getRole().name(),
                 updatedUser.getUsername(),
                 updatedUser.getFullName(),
+                updatedUser.getBio(),
+                updatedUser.getAvatarUrl(),
                 updatedUser.getDietaryPreference() != null ? updatedUser.getDietaryPreference().getName() : null,
                 updatedUser.getHealthGoal() != null ? updatedUser.getHealthGoal().getName() : null,
                 updatedUser.getCuisinePreferences() == null ? List.of() : updatedUser.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()
@@ -354,5 +391,21 @@ public class UserServiceImpl implements UserService{
         }
 
         return Map.of("cuisinePreferences", cuisines);
+    }
+
+    @Override
+    public GeneralQueriesDTO submitGeneralQuery(GeneralQueriesDTO generalQueriesDTO){
+        GeneralQueries generalQueries = new GeneralQueries();
+        generalQueries.setName(generalQueriesDTO.getName());
+        generalQueries.setEmail(generalQueriesDTO.getEmail());
+        generalQueries.setSubject(generalQueriesDTO.getSubject());
+        generalQueries.setMessage(generalQueriesDTO.getMessage());
+        GeneralQueries savedQuery = generalQueriesRepository.save(generalQueries);
+        GeneralQueriesDTO savedQueryDTO = new GeneralQueriesDTO();
+        savedQueryDTO.setName(savedQuery.getName());
+        savedQueryDTO.setEmail(savedQuery.getEmail());
+        savedQueryDTO.setSubject(savedQuery.getSubject());
+        savedQueryDTO.setMessage(savedQuery.getMessage());
+        return savedQueryDTO;
     }
 }

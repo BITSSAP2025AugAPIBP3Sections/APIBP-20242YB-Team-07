@@ -1,8 +1,6 @@
 package com.cooknect.user_service.service;
 
-import com.cooknect.user_service.dto.LoginRequestDTO;
-import com.cooknect.user_service.dto.LoginResponseDTO;
-import com.cooknect.user_service.dto.UsersDTO;
+import com.cooknect.user_service.dto.*;
 import com.cooknect.user_service.model.UserModel;
 import org.springframework.stereotype.Service;
 
@@ -11,13 +9,15 @@ import java.util.Map;
 
 @Service
 public interface UserService {
-    public UserModel createUser(UserModel user);
+    public CreateUserDTO createUser(CreateUserDTO createUserDTO);
 
     public LoginResponseDTO verify(LoginRequestDTO loginRequestDTO);
 
     public List<UsersDTO> getAllUsers();
 
     public UsersDTO getUserById(Long id);
+
+    public Map<Long, String> getUsernamesByIds(List<Long> ids);
 
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader);
 
@@ -38,4 +38,6 @@ public interface UserService {
     public Map<String, String> getHealthGoal(Long id);
 
     public Map<String, Object> getUserCuisinePreferences(Long id);
+
+    public GeneralQueriesDTO submitGeneralQuery(GeneralQueriesDTO generalQueriesDTO);
 }

@@ -7,7 +7,4 @@ import lombok.Setter;
 @Getter
 public class ChallengeParticipationRequest {
     private Long userId;
-    private String username;
-    private String email;
-    private String role;
 }
