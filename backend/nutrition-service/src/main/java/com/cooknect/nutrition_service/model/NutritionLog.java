@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Entity
 @Table(uniqueConstraints = {
     @UniqueConstraint(name = "nutrition_log_user_recipe_meal_analyzed_key", 
-        columnNames = {"userName", "recipeId", "analyzedAt", "mealType"})
+        columnNames = {"user_id", "recipeId", "analyzedAt", "mealType"})
 })
 @Data
 @NoArgsConstructor
@@ -22,7 +22,8 @@ public class NutritionLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String userName;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     private Long recipeId;
 

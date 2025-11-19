@@ -13,9 +13,9 @@ import java.util.Optional;
 public interface NutritionLogRepository extends JpaRepository<NutritionLog, Long> {
     Optional<NutritionLog> findByFoodName(String foodName);
     Optional<NutritionLog> findByRecipeId(Long recipeId);
-    List<NutritionLog> findByUserName(String userName);
-    List<NutritionLog> findByUserNameAndMealType(String userName, MealType mealType);
-    List<NutritionLog> findByUserNameAndAnalyzedAt(String userName, LocalDate analyzedAt);
-    List<NutritionLog> findByUserNameAndMealTypeAndAnalyzedAt(String userName, MealType mealType, LocalDate analyzedAt);
-    List<NutritionLog> findByUserNameAndAnalyzedAtBetween(String userName, LocalDate startDate, LocalDate endDate);
+    List<NutritionLog> findByUserId(Long userId);
+    List<NutritionLog> findByUserIdAndMealType(long userId, MealType mealType);
+    List<NutritionLog> findByUserIdAndAnalyzedAt(Long userId, LocalDate analyzedAt);
+    List<NutritionLog> findByUserIdAndMealTypeAndAnalyzedAt(Long userId, MealType mealType, LocalDate analyzedAt);
+    List<NutritionLog> findByUserIdAndAnalyzedAtBetween(Long userId, LocalDate startDate, LocalDate endDate);
 }

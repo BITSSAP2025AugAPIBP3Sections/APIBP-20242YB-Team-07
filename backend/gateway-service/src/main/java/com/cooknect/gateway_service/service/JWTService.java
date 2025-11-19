@@ -35,8 +35,8 @@ public class JWTService {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
-    public String extractUsernameField(String token) {
-        return extractClaim(token, claims -> claims.get("username", String.class));
+    public Long extractUserIdField(String token) {
+        return extractClaim(token, claims -> claims.get("userid", Long.class));
     }
 
     private boolean isTokenExpired(String token) {

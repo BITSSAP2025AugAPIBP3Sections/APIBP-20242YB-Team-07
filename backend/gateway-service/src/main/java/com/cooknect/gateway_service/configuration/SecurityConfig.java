@@ -31,7 +31,8 @@ public class SecurityConfig {
             "/api-docs/**",
             "/aggregate/**",
             "/api/v1/users/login",
-            "/api/v1/users/register"
+            "/api/v1/users/register",
+            "/api/v1/users/query"
     };
     @Bean
     public AuthenticationManager authenticationManager() {

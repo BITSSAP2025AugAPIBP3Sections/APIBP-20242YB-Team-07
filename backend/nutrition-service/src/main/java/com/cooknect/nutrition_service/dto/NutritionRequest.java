@@ -11,7 +11,7 @@ public class NutritionRequest {
     private String recipeName;
     private List<Map<String, String>> ingredients;
     private MealType mealType = MealType.BREAKFAST;
-    private String userName;
+    private Long userId;
 
     public NutritionRequest() {
     }
@@ -55,11 +55,11 @@ public class NutritionRequest {
         this.mealType = (mealType != null) ? mealType : MealType.BREAKFAST;
     }
 
-    public String getUserName() {
-        return userName;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

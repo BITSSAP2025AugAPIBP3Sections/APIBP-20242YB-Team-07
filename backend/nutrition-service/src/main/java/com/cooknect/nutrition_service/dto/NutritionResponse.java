@@ -6,7 +6,7 @@ import com.cooknect.nutrition_service.model.MealType;
 
 public class NutritionResponse {
 
-    private String userName;
+    private Long userId;
     private Long recipeId;
     private String recipeName;
     private double totalFat;
@@ -24,7 +24,7 @@ public class NutritionResponse {
     public NutritionResponse() {}
 
     // Parameterized constructor
-    public NutritionResponse(String userName,
+    public NutritionResponse(Long userId,
                             Long recipeId, 
                             String recipeName, 
                             double totalFat,
@@ -37,7 +37,7 @@ public class NutritionResponse {
                             double totalSugar,
                             List<String> analyzedIngredients, 
                             MealType mealType) {
-        this.userName = userName;
+        this.userId = userId;
         this.recipeId = recipeId;
         this.recipeName = recipeName;
         this.totalFat = totalFat;
@@ -89,6 +89,6 @@ public class NutritionResponse {
     public MealType getMealType() {return mealType;}
     public void setMealType(MealType mealType) { this.mealType = mealType;}
 
-    public String getUserName() { return userName; }
-    public void setUserName(String userName) { this.userName = userName; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 }

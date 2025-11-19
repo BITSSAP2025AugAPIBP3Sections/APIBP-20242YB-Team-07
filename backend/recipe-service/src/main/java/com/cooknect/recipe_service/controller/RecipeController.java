@@ -1,15 +1,15 @@
 package com.cooknect.recipe_service.controller;
 
+import com.cooknect.recipe_service.dto.CreateCommentDto;
+import com.cooknect.recipe_service.dto.GetRecipeDTO;
+import com.cooknect.recipe_service.dto.RecipeCreateDTO;
+
 import com.cooknect.recipe_service.model.*;
-import com.cooknect.recipe_service.dto.CommentDto;
 import com.cooknect.recipe_service.service.RecipeService;
 import com.cooknect.recipe_service.service.SpeechSynthService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Value;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -37,36 +37,133 @@ public class RecipeController {
         this.speechSynth = speechSynth;
     }
 
-    // Create a new recipe
+    /* Create a new recipe */
     @PostMapping
     @Operation(summary = "Create a new recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Recipe> create(@RequestBody Recipe recipe, HttpServletRequest request) {
-        String username = request.getHeader("X-User-Name");
+    public ResponseEntity<Recipe> create(@RequestBody RecipeCreateDTO recipe, HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
 
-        if (username == null || username.isEmpty()) {
+        Long id;
+        try {
+            id = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().body(null);
         }
 
-        recipe.setUsername(username);
-        Recipe saved = svc.create(recipe);
+        Recipe saved = svc.create(recipe, id);
         return ResponseEntity.ok(saved);
     }
 
-    // Like a recipe
+    /* Like or Unlike a recipe */
     @PostMapping("/{recipeId}/like")
     @Operation(summary = "Like a recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe like(@PathVariable Long recipeId) {
-        return svc.like(recipeId);
+    public ResponseEntity<?> like(@PathVariable Long recipeId, HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long id;
+        try {
+            id = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        svc.likeAndUnlike(recipeId, id);
+        return ResponseEntity.noContent().build();
     }
 
-    // Add a comment to a recipe
+    /* Save or Unsave a recipe */
+    @PostMapping("/{recipeId}/save")
+    @Operation(summary = "Save or Unsave a recipe", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> saveRecipe(@PathVariable Long recipeId, HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("Invalid user id");
+        }
+
+        svc.saveAndUnsave(recipeId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    /* Get all recipes */
+    @GetMapping
+    @Operation(summary = "Get all recipes", security = @SecurityRequirement(name = "bearerAuth"))
+    public List<GetRecipeDTO> listAll(HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+        Long id;
+        try {
+            id = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return List.of();
+        }
+        return svc.getAllRecipes(id);
+    }
+
+    /* Get All Recipes of a user */
+    @GetMapping
+    @Operation(summary = "Get recipes, optionally by userId", security = @SecurityRequirement(name = "bearerAuth"))
+    public List<GetRecipeDTO> listAll(
+            @RequestParam(required = false) Long userId,
+            @RequestHeader("X-User-Id") Long requesterId
+    ) {
+        if (userId != null) {
+            return svc.getRecipesByUserId(userId, requesterId);
+        }
+        return svc.getAllRecipes(requesterId);
+    }
+
+
+    /* Get recipe by ID */
+    @GetMapping("/{recipeId}")
+    @Operation(summary = "Get recipe by ID", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<GetRecipeDTO> getById(
+            @PathVariable Long recipeId,
+            HttpServletRequest request
+    ) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        GetRecipeDTO dto = svc.getById(recipeId, userId);
+        return ResponseEntity.ok(dto);
+    }
+
+    /* Add Comment for a recipe */
     @PostMapping("/{recipeId}/comments")
-    @Operation(summary = "Add a comment to a recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe comment(@PathVariable Long recipeId, @RequestBody CommentDto dto) {
+    @Operation(
+            summary = "Add a comment to a recipe",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> addComment(
+            @PathVariable Long recipeId,
+            @RequestBody CreateCommentDto dto,
+            HttpServletRequest request
+    ) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
         Comment comment = new Comment();
-        comment.setAuthor(dto.getAuthor());
+        comment.setAuthor(String.valueOf(userId));   // Author = userId from header
         comment.setText(dto.getText());
-        return svc.addComment(recipeId, comment);
+
+        svc.addComment(recipeId, comment);
+
+        return ResponseEntity.noContent().build();
     }
 
     private static final String TOPIC = "recipe-topic";
@@ -83,38 +180,22 @@ public class RecipeController {
         return "Published: " + message;
     }
 
-    // Get all recipes
-    @GetMapping
-    @Operation(summary = "Get all recipes", security = @SecurityRequirement(name = "bearerAuth"))
-    public List<Recipe> listAll() { return svc.listAll(); }
+    /*
+         * Searches for recipes whose titles match the given query string.
+     */
 
-    // Get recipe by recipeID
-    @GetMapping("/id/{recipeId}")
-    @Operation(summary = "Get recipe by ID", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe get(@PathVariable Long recipeId) { return svc.getById(recipeId); }
-
-    // Get all recipes by username
-    @GetMapping("/{username}")
-    @Operation(summary = "Get all recipes by username", security = @SecurityRequirement(name = "bearerAuth"))
-    public List<Recipe> getByUsername(@PathVariable String username) {
-        return svc.getByUsername(username);
-    }
-
-    // Get a specific recipe by username and recipe ID
-    @GetMapping("/{username}/recipes/{recipeId}")
-    @Operation(summary = "Get recipe by username and ID", security = @SecurityRequirement(name = "bearerAuth"))
-    public Recipe getByUsernameAndId(@PathVariable String username, @PathVariable Long recipeId) {
-        return svc.getByUsernameAndId(username, recipeId);
-    }
-
-    // Search recipes by title
     @GetMapping("/search")
     @Operation(summary = "Search a recipe by title", security = @SecurityRequirement(name = "bearerAuth"))
     public List<Recipe> search(@RequestParam String q) {
         return svc.searchByTitle(q);
     }
 
-    // Get recipes by cuisine type
+    /*
+          * Retrieves all recipes for a given cuisine type.
+          * The provided cuisine string is converted to a valid enum value;
+          * if the conversion fails, the cuisine is defaulted to Cuisine.OTHER.
+     */
+
     @GetMapping("/cuisine/{type}")
     @Operation(summary = "Get all recipes by cuisine", security = @SecurityRequirement(name = "bearerAuth"))
     public List<Recipe> byCuisine(@PathVariable String type) {
@@ -127,7 +208,9 @@ public class RecipeController {
         return svc.findByCuisine(c);
     }
 
-    // Get recipes containing a specific ingredient
+   /*
+        * Fetch all the Recipes containing a specific ingredient
+    */
     @GetMapping("/ingredient")
     @Operation(summary = "Get all recipes by ingredient", security = @SecurityRequirement(name = "bearerAuth"))
     public List<Recipe> byIngredient(@RequestParam String q) {
@@ -136,16 +219,24 @@ public class RecipeController {
 
     @GetMapping(value = "/{id}/speak", produces = "audio/wav")
     public ResponseEntity<byte[]> speakRecipe(@PathVariable Long id,
-                                            @RequestParam(required = false) String voice) {
+                                            @RequestParam(required = false) String voice ) {
         try {
-            Recipe recipe = svc.getById(id);
+            Recipe recipe = svc.getRecipeById(id);
+
+            // Prepare text to be spoken
+            Map<String, Object> textMap = Map.of(
+                    "title", recipe.getTitle(),
+                    "description", recipe.getDescription(),
+                    "ingredients", recipe.getIngredients(),
+                    "preparation", recipe.getPreparation()
+            );
 
             String text;
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                text = mapper.writeValueAsString(recipe);
+                text = mapper.writeValueAsString(textMap);
             } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                text = recipe.toString();
+                text = textMap.toString();
             }
 
             // use service that checks DB, generates, saves
@@ -204,47 +295,81 @@ public class RecipeController {
         speechSynth.deleteAudioForRecipe(id);
         return updated;
     }
+    /*
+        * Updates an existing recipe.
+        * This endpoint accepts a PATCH request with only the fields that need to be updated.
+        * The user ID is extracted from the "X-User-Id" request header to validate update permissions.
+     */
 
-    // Update username for all recipes of a user
-    @PutMapping("/{oldUsername}/update-username")
-    @Operation(summary = "Update username", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<String> updateUsername(
-            @PathVariable String oldUsername,
-            @RequestBody Map<String, String> requestBody) {
+    @PatchMapping("/{id}")
+    @Operation(summary = "Partially update a recipe", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<Recipe> patchRecipe(
+            @PathVariable Long id,
+            @RequestBody Recipe recipe,
+            HttpServletRequest request
+    ) {
+        String userIdHeader = request.getHeader("X-User-Id");
 
-        String newUsername = requestBody.get("newUsername");
-
-        if (newUsername == null || newUsername.isEmpty()) {
-            return ResponseEntity.badRequest().body("New username cannot be empty");
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
         }
 
-        svc.updateUsername(oldUsername, newUsername);
-        return ResponseEntity.ok("Username updated successfully from " + oldUsername + " to " + newUsername);
+        Recipe updated = svc.patchUpdate(id, recipe, userId);
+        return ResponseEntity.ok(updated);
     }
 
-    // Delete a specific recipe by username and ID
-    @DeleteMapping("/{username}/recipe/{recipeId}")
-    @Operation(summary = "Delete a recipe by username and ID", security = @SecurityRequirement(name = "bearerAuth"))
+
+    /*
+        * Delete a specific recipe by userId and recipe ID
+        * It checks the recipe deleted by the user belongs to that particular user only
+     */
+    @DeleteMapping("/{recipeId}")
+    @Operation(summary = "Delete a recipe by user ID and recipe ID", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Void> deleteRecipeByUser(
-            @PathVariable String username,
-            @PathVariable Long recipeId) {
-        svc.deleteRecipeByUser(username, recipeId);
+            @PathVariable Long recipeId,
+            HttpServletRequest request
+    ) {
+        // Fetch userId from header
+        String userIdHeader = request.getHeader("X-User-Id");
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Call service method to delete the recipe
+        svc.deleteRecipeByUser(userId, recipeId);
+
         return ResponseEntity.noContent().build();
     }
+    /*
+        * Deleting all Recipes of the user as user account has been deleted.
+     */
+    @DeleteMapping("/{userId}")
+    @Operation(summary = "Delete all recipes by user ID", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<Void> deleteAllRecipesByUser(
+            @PathVariable Long userId,
+            HttpServletRequest request) {
+        // Fetch userId from header
+        String userIdHeader = request.getHeader("X-User-Id");
+        Long userIdHeaderLong;
+        try {
+            userIdHeaderLong = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().build();
+        }
 
-    // Delete all recipes by username
-    @DeleteMapping("/{username}")
-    @Operation(summary = "Delete all recipes by username", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> deleteAllRecipesByUser(@PathVariable String username) {
-        svc.deleteAllByUser(username);
-        return ResponseEntity.noContent().build();
-    }
+        if(!userIdHeaderLong.equals(userId)) {
+            return ResponseEntity.status(403).build(); // Forbidden
+        }
 
-    // Delete a recipe by ID
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a recipe by ID", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        svc.delete(id);
+        // Call service method to delete all recipes for this user
+        svc.deleteAllByUser(userId);
+
         return ResponseEntity.noContent().build();
     }
 }

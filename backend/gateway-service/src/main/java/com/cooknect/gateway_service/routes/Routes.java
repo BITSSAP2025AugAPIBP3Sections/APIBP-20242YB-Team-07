@@ -3,7 +3,7 @@ package com.cooknect.gateway_service.routes;
 import com.cooknect.gateway_service.service.JWTService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.MediaType;
+import java.lang.Long;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.function.RequestPredicates;
 import org.springframework.web.servlet.function.RouterFunction;
@@ -42,9 +42,9 @@ public class Routes {
                                         if (authHeader != null) {
                                             headers.set("Authorization", authHeader);
                                             String role = jwtService.extractRole(authHeader.substring(7));
-                                            String username = jwtService.extractUsernameField(authHeader.substring(7));
+                                            Long userId = jwtService.extractUserIdField(authHeader.substring(7));
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
@@ -77,9 +77,9 @@ public class Routes {
                                             headers.set("Authorization", authHeader);
                                             String jwtToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
                                             String role = jwtService.extractRole(jwtToken);
-                                            String username = jwtService.extractUsernameField(jwtToken);
+                                            Long userId= jwtService.extractUserIdField(jwtToken);
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
@@ -112,9 +112,9 @@ public class Routes {
                                         if (authHeader != null) {
                                             headers.set("Authorization", authHeader);
                                             String role = jwtService.extractRole(authHeader.substring(7));
-                                            String username = jwtService.extractUsernameField(authHeader.substring(7));
+                                            Long userId = jwtService.extractUserIdField(authHeader.substring(7));
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
@@ -147,9 +147,9 @@ public class Routes {
                                             headers.set("Authorization", authHeader);
                                             String jwtToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
                                             String role = jwtService.extractRole(jwtToken);
-                                            String username = jwtService.extractUsernameField(jwtToken);
+                                            Long userId= jwtService.extractUserIdField(jwtToken);
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
@@ -182,9 +182,9 @@ public class Routes {
                                         if (authHeader != null) {
                                             headers.set("Authorization", authHeader);
                                             String role = jwtService.extractRole(authHeader.substring(7));
-                                            String username = jwtService.extractUsernameField(authHeader.substring(7));
+                                            Long userId = jwtService.extractUserIdField(authHeader.substring(7));
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
@@ -217,9 +217,9 @@ public class Routes {
                                             headers.set("Authorization", authHeader);
                                             String jwtToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
                                             String role = jwtService.extractRole(jwtToken);
-                                            String username = jwtService.extractUsernameField(jwtToken);
+                                            Long userId= jwtService.extractUserIdField(jwtToken);
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
@@ -252,9 +252,9 @@ public class Routes {
                                         if (authHeader != null) {
                                             headers.set("Authorization", authHeader);
                                             String role = jwtService.extractRole(authHeader.substring(7));
-                                            String username = jwtService.extractUsernameField(authHeader.substring(7));
+                                            Long userId = jwtService.extractUserIdField(authHeader.substring(7));
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
@@ -287,9 +287,9 @@ public class Routes {
                                             headers.set("Authorization", authHeader);
                                             String jwtToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
                                             String role = jwtService.extractRole(jwtToken);
-                                            String username = jwtService.extractUsernameField(jwtToken);
+                                            Long userId= jwtService.extractUserIdField(jwtToken);
                                             headers.set("X-User-Role", role);
-                                            headers.set("X-User-Name", username);
+                                            headers.set("X-User-Id", String.valueOf(userId));
                                         }
                                         if (userEmail != null) {
                                             headers.set("X-User-Email", userEmail);
