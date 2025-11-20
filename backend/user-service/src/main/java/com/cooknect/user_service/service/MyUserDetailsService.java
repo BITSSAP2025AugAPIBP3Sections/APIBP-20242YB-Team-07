@@ -20,7 +20,6 @@ public class MyUserDetailsService implements UserDetailsService {
         UserModel user = repository.findByEmail(username);
 
         if(user == null){
-            System.out.println("User not found");
             throw new UsernameNotFoundException("User Not Found !!");
         }
         return new UserPrincipal(user);

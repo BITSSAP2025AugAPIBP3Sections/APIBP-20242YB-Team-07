@@ -1,7 +1,8 @@
 package com.cooknect.user_service.controller;
 
+import com.cooknect.common.events.UserEvent;
 import com.cooknect.user_service.dto.*;
-import com.cooknect.user_service.model.UserModel;
+import com.cooknect.user_service.event.UserEventProducer;
 import com.cooknect.user_service.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,17 +22,8 @@ public class UserController {
     @Autowired
     UserService service;
 
-    @GetMapping("/hello")
-    public void greet(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        String userIdHeader = request.getHeader("X-User-Id");
-        String userRole = request.getHeader("X-User-Role");
-
-        System.out.println("Authorization Header received in UserService: " + authHeader);
-        System.out.println("X-User-Id Header received in UserService: " + userIdHeader);
-        System.out.println("X-User-Role Header received in UserService: " + userRole);
-
-    }
+    @Autowired
+    UserEventProducer userEventProducer;
 
     @GetMapping("/")
     @Operation(summary = "Get all users", security = @SecurityRequirement(name = "bearerAuth"))
@@ -96,6 +87,13 @@ public class UserController {
     @PostMapping("/login")
     @Operation(summary = "User login", description = "Authenticate a user", security = {})
     public LoginResponseDTO loginUser(@RequestBody LoginRequestDTO loginRequestDTO){
+        UsersDTO user = service.getUserByEmail(loginRequestDTO.getEmail());
+        UserEvent event = new UserEvent(
+        loginRequestDTO.getEmail(),
+        "User Logged In Successfully",
+        String.format("Hi %s! \nYou have been successfully logged into Cooknect.", user.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return service.verify(loginRequestDTO);
     }
 
@@ -115,6 +113,12 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of("error", "Username cannot be empty"));
         }
         CreateUserDTO newUser = service.createUser(user);
+        UserEvent event = new UserEvent(
+        newUser.getEmail(),
+        "User Registered Successfully",
+        String.format("Hi %s! \nWelcome to Cooknect. Your account has been created successfully with username %s.", newUser.getFullName(), newUser.getUsername())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.ok(newUser);
     }
 
@@ -134,6 +138,13 @@ public class UserController {
             return ResponseEntity.badRequest().body(null);
         }
         GeneralQueriesDTO savedQuery = service.submitGeneralQuery(queryDTO);
+        UsersDTO user = service.getUserByEmail(queryDTO.getEmail());
+        UserEvent event = new UserEvent(
+        queryDTO.getEmail(),
+        "Query Submitted Successfully",
+        String.format("Hi %s! \nYour query has been submitted successfully on Cooknect.", user.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.ok(savedQuery);
     }
 
@@ -167,6 +178,12 @@ public class UserController {
             return ResponseEntity.badRequest().body(Map.of("error", "Cuisine Preferences cannot be null"));
         }
         UsersDTO updatedUser = service.updateUser(id, userDTO,userEmailHeader);
+        UserEvent event = new UserEvent(
+        updatedUser.getEmail(),
+        "User Updated Successfully",
+        String.format("Hi %s! \nYour profile has been successfully updated on Cooknect.", updatedUser.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -175,6 +192,12 @@ public class UserController {
     public ResponseEntity<UsersDTO> updatePreferences(@PathVariable Long id, UsersDTO userDTO,HttpServletRequest request){
         String userEmailHeader = request.getHeader("X-User-Email");
         UsersDTO updatedUser = service.updatePreferences(id, userDTO, userEmailHeader);
+        UserEvent event = new UserEvent(
+        updatedUser.getEmail(),
+        "User Preferences Updated Successfully",
+        String.format("Hi %s! \nYour preferences have been updated successfully on Cooknect.", updatedUser.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -183,6 +206,12 @@ public class UserController {
     public ResponseEntity<UsersDTO> updateHealthGoalPreference(@PathVariable Long id, UsersDTO userDTO,HttpServletRequest request){
         String userEmailHeader = request.getHeader("X-User-Email");
         UsersDTO updatedUser = service.updateHealthGoalPreference(id, userDTO, userEmailHeader);
+        UserEvent event = new UserEvent(
+        updatedUser.getEmail(),
+        "Health Goal Updated Successfully",
+        String.format("Hi %s! \nYour health goal has been updated successfully on Cooknect.", updatedUser.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -191,6 +220,12 @@ public class UserController {
     public ResponseEntity<UsersDTO> updateDietaryPreference(@PathVariable Long id, UsersDTO userDTO,HttpServletRequest request){
         String userEmailHeader = request.getHeader("X-User-Email");
         UsersDTO updatedUser = service.updateDietaryPreference(id, userDTO, userEmailHeader);
+        UserEvent event = new UserEvent(
+        updatedUser.getEmail(),
+        "Dietary Preference Updated Successfully",
+        String.format("Hi %s! \nYour dietary preference has been updated successfully on Cooknect.", updatedUser.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -199,6 +234,12 @@ public class UserController {
     public ResponseEntity<UsersDTO> updateCuisinePreference(@PathVariable Long id, UsersDTO userDTO,HttpServletRequest request){
         String userEmailHeader = request.getHeader("X-User-Email");
         UsersDTO updatedUser = service.updateCuisinePreference(id, userDTO, userEmailHeader);
+        UserEvent event = new UserEvent(
+        updatedUser.getEmail(),
+        "Cuisine Preference Updated Successfully",
+        String.format("Hi %s! \nYour cuisine preference has been updated successfully on Cooknect.", updatedUser.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -206,7 +247,14 @@ public class UserController {
     @Operation(summary = "Delete user by ID", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Void> deleteUser(@PathVariable Long id,HttpServletRequest request) {
         String userEmailHeader = request.getHeader("X-User-Email");
+        UsersDTO user = service.getUserByEmail(userEmailHeader);
         service.deleteUser(id,userEmailHeader);
+        UserEvent event = new UserEvent(
+        user.getEmail(),
+        "User Deleted Successfully",
+        String.format("Hi %s! \nYour account has been deleted successfully from Cooknect.", user.getFullName())
+        );
+        userEventProducer.sendUserEvent(event);
         return ResponseEntity.noContent().build();
     }
 }

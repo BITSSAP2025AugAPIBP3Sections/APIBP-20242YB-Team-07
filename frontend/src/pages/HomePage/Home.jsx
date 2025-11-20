@@ -106,9 +106,12 @@ const Home = () => {
     }
   };
 
-  const fetchAllRecipes = async () => {
+  const fetchAllRecipes = async (userId) => {
     try {
-      const response = await fetch("http://localhost:8089/api/v1/recipes", {
+      const url = userId
+        ? `http://localhost:8089/api/v1/recipes?userId=${userId}`
+        : "http://localhost:8089/api/v1/recipes";
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -162,6 +165,33 @@ const Home = () => {
   const handleCancel = () => {
     setIsModalVisible(false);
     form.resetFields();
+  };
+
+  const handleSaveUnsave = async (recipeId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8089/api/v1/recipes/${recipeId}/save`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        window.location.reload();
+      }
+      if (!response.ok) {
+        throw new Error("Failed to save/unsave recipe");
+      }
+      // Refresh recipes after saving/unsaving
+      fetchAllRecipes();
+    } catch (error) {
+      console.error("Error saving/unsaving recipe:", error);
+    }
   };
 
   //   console the form data
@@ -285,9 +315,16 @@ const Home = () => {
                 <a
                   href="#"
                   className="profile-link"
-                  onclick="navigate('My Saved Recipes'); return false;"
+                  onClick={() => fetchAllRecipes(userProfile.id)}
                 >
-                  <i class="fas fa-bookmark"></i> My Cookbook
+                  My Cookbook
+                </a>
+                <a
+                  href="#"
+                  className="profile-link"
+                  onClick={() => fetchAllRecipes()}
+                >
+                  All Recipes
                 </a>
               </div>
             </div>
@@ -390,11 +427,20 @@ const Home = () => {
                     </button>
                     <button
                       className="action-button"
-                      onClick={() => console.log("Save recipe")}
+                      onClick={() => handleSaveUnsave(recipe.id)}
                     >
-                      <Bookmark />
+                      {recipe?.savedByUser ? (
+                        <Bookmark
+                          style={{
+                            color: "#1890ff",
+                            fill: "#1890ff",
+                          }}
+                        />
+                      ) : (
+                        <Bookmark />
+                      )}
                       <span style={{ marginLeft: "5px", fontWeight: "500" }}>
-                        Save
+                        {recipe?.savedByUser ? "Saved" : "Save"}
                       </span>
                     </button>
                   </div>

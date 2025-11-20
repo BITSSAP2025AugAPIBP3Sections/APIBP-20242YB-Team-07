@@ -19,6 +19,8 @@ public interface UserService {
 
     public Map<Long, String> getUsernamesByIds(List<Long> ids);
 
+    public UsersDTO getUserByEmail(String email);
+
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader);
 
     public UsersDTO updateUserGraphql(Long id, UsersDTO userDto);
