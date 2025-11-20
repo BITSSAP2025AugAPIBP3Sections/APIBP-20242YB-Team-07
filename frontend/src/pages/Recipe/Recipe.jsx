@@ -32,40 +32,6 @@ const { Content } = Layout;
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
 
-// --- Mock Data (Removed Cook Time/Servings) ---
-const mockRecipe = {
-  id: "r-101",
-  title: "Spicy Garlic & Honey Glazed Salmon",
-  subtitle: "A stunning weeknight dish with minimal effort and maximum flavor.",
-  originalDescription:
-    "This salmon recipe balances sweet, spicy, and savory flavors perfectly. The glaze caramelizes beautifully, creating a crispy exterior while keeping the fish tender and moist. It's quick enough for a weeknight but impressive enough for company. The subtle kick of chili flakes is mandatory!",
-  ingredients: [
-    "2 Salmon Fillets (6oz each)",
-    "3 Cloves Garlic, minced",
-    "1/4 cup Honey (local is best)",
-    "2 tbsp Soy Sauce (low sodium)",
-    "1 tbsp Rice Vinegar",
-    "1 tsp Red Chili Flakes",
-    "1 tbsp Olive Oil",
-    "Salt and Pepper to taste",
-  ],
-  steps: [
-    "Preheat oven to 400°F (200°C). Line a baking sheet with parchment paper.",
-    "In a small bowl, whisk together the garlic, honey, soy sauce, rice vinegar, and chili flakes to make the irresistible glaze.",
-    "Season salmon fillets with salt and pepper.",
-    "Heat olive oil in an oven-safe skillet and sear the salmon skin-side down for 2 minutes for extra crispiness.",
-    "Transfer salmon to the oven. Brush generously with the glaze.",
-    "Bake for 12-15 minutes, or until the salmon flakes easily. Brush with remaining glaze halfway through.",
-    "Serve immediately over rice or with fresh steamed asparagus for a complete meal.",
-  ],
-  likes: 452,
-  images: [
-    "https://placehold.co/1200x500/FF6F61/ffffff?text=Feature+Recipe+Image",
-  ],
-  tags: ["Fish", "Dinner", "Spicy", "Healthy", "Gluten-Free Option"],
-  author: { name: "Chef Alex", avatar: "CA" },
-};
-
 // * --- CSS Styles (Plain CSS-in-JS for a creative look) ---
 const styles = {
   contentArea: {
