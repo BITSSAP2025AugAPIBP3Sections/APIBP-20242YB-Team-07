@@ -22,18 +22,6 @@ public class UserController {
     @Autowired
     UserService service;
 
-    @GetMapping("/hello")
-    public void greet(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        String userIdHeader = request.getHeader("X-User-Id");
-        String userRole = request.getHeader("X-User-Role");
-
-        System.out.println("Authorization Header received in UserService: " + authHeader);
-        System.out.println("X-User-Id Header received in UserService: " + userIdHeader);
-        System.out.println("X-User-Role Header received in UserService: " + userRole);
-
-    }
-
     @GetMapping("/")
     @Operation(summary = "Get all users", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<List<UsersDTO>> getAllUsers() {
