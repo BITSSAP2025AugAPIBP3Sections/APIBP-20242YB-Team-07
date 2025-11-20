@@ -3,6 +3,8 @@ package com.cooknect.recipe_service.controller;
 import com.cooknect.recipe_service.dto.CreateCommentDto;
 import com.cooknect.recipe_service.dto.GetRecipeDTO;
 import com.cooknect.recipe_service.dto.RecipeCreateDTO;
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.service.RecipeService;
@@ -15,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
+
 
 // Logger
 import org.slf4j.Logger;
@@ -92,25 +95,32 @@ public class RecipeController {
     /* Get all recipes */
     @GetMapping
     @Operation(summary = "Get all recipes optionally by userId and saved status", security = @SecurityRequirement(name = "bearerAuth"))
-    public List<GetRecipeDTO> listAll(
+    public PageResponseDTO<GetRecipeDTO> listAll(
             HttpServletRequest request,
             @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) Boolean saved
+            @RequestParam(required = false) Boolean saved,
+            PageRequestDTO pageRequestDTO
     ) {
         String userIdHeader = request.getHeader("X-User-Id");
         Long id;
         try {
             id = Long.parseLong(userIdHeader);
         } catch (NumberFormatException e) {
-            return List.of();
+            PageResponseDTO<GetRecipeDTO> emptyResponse = new PageResponseDTO<>();
+            emptyResponse.setContent(List.of());
+            emptyResponse.setPage(0);
+            emptyResponse.setSize(0);
+            emptyResponse.setTotalElements(0);
+            emptyResponse.setTotalPages(0);
+            return emptyResponse;
         }
         if (userId != null && Boolean.TRUE.equals(saved)) {
             // Fetch only saved recipes for the user
-            return svc.getSavedRecipesByUserId(userId);
+            return svc.getSavedRecipesByUserId(userId,pageRequestDTO);
         } else if (userId != null) {
-            return svc.getRecipesByUserId(userId);
+            return svc.getRecipesByUserId(userId,pageRequestDTO);
         }
-        return svc.getAllRecipes(id);
+        return svc.getAllRecipes(id,pageRequestDTO);
     }
 
 
