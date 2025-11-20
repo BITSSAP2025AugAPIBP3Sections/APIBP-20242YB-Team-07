@@ -33,11 +33,6 @@ const items = [
     label: "My Profile",
   },
   {
-    key: "settings",
-    icon: <SettingOutlined style={{ marginRight: "8px" }} />,
-    label: "Settings",
-  },
-  {
     type: "divider",
   },
   {
@@ -63,7 +58,7 @@ const LoggedInNavbar = ({ activeKey = "1" }) => {
         navigate("/recipe");
         break;
       case "3":
-        navigate("/browse");
+        navigate("/challenges");
         break;
       case "4":
         navigate("/profile");
@@ -77,10 +72,6 @@ const LoggedInNavbar = ({ activeKey = "1" }) => {
     switch (key) {
       case "profile":
         navigate("/profile");
-        setActiveMenuKey("0");
-        break;
-      case "settings":
-        navigate("/settings");
         setActiveMenuKey("0");
         break;
       case "logout":
@@ -115,8 +106,7 @@ const LoggedInNavbar = ({ activeKey = "1" }) => {
         style={styles.menu}
         items={[
           { key: "1", label: "Recipes" },
-          { key: "2", label: "My Recipes" },
-          { key: "3", label: "Browse" },
+          { key: "3", label: "Challenges" },
           { key: "4", label: "Profile" },
         ]}
       />

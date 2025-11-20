@@ -91,8 +91,12 @@ public class RecipeController {
 
     /* Get all recipes */
     @GetMapping
-    @Operation(summary = "Get all recipes", security = @SecurityRequirement(name = "bearerAuth"))
-    public List<GetRecipeDTO> listAll(HttpServletRequest request) {
+    @Operation(summary = "Get all recipes optionally by userId and saved status", security = @SecurityRequirement(name = "bearerAuth"))
+    public List<GetRecipeDTO> listAll(
+            HttpServletRequest request,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Boolean saved
+    ) {
         String userIdHeader = request.getHeader("X-User-Id");
         Long id;
         try {
@@ -100,20 +104,13 @@ public class RecipeController {
         } catch (NumberFormatException e) {
             return List.of();
         }
-        return svc.getAllRecipes(id);
-    }
-
-    /* Get All Recipes of a user */
-    @GetMapping(params = "userId")
-    @Operation(summary = "Get recipes, optionally by userId", security = @SecurityRequirement(name = "bearerAuth"))
-    public List<GetRecipeDTO> listAll(
-            @RequestParam(required = false) Long userId,
-            @RequestHeader("X-User-Id") Long requesterId
-    ) {
-        if (userId != null) {
-            return svc.getRecipesByUserId(userId, requesterId);
+        if (userId != null && Boolean.TRUE.equals(saved)) {
+            // Fetch only saved recipes for the user
+            return svc.getSavedRecipesByUserId(userId);
+        } else if (userId != null) {
+            return svc.getRecipesByUserId(userId);
         }
-        return svc.getAllRecipes(requesterId);
+        return svc.getAllRecipes(id);
     }
 
 

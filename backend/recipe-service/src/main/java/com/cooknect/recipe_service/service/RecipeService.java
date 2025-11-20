@@ -175,8 +175,24 @@ public class RecipeService {
     }
 
     /* Get all Recipes based on user Id */
-    public List<GetRecipeDTO> getRecipesByUserId(Long userId, Long requesterId) {
+    public List<GetRecipeDTO> getRecipesByUserId(Long userId) {
         List<Recipe> recipes = repo.findByUserId(userId);
+
+        if(recipes.isEmpty()){
+            return List.of();
+        }
+
+        List<Long> userIds = List.of(userId);
+        // Build request body with all userIds
+        HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
+        // Call the usernames endpoint
+        ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                userBaseUrl + "/usernames",
+                HttpMethod.POST,
+                request,
+                new ParameterizedTypeReference<Map<Long, String>>() {}
+        );
+        Map<Long, String> userIdToUsername = response.getBody();
 
         return recipes.stream().map(recipe -> {
             GetRecipeDTO dto = new GetRecipeDTO();
@@ -188,10 +204,11 @@ public class RecipeService {
             dto.setIngredients(recipe.getIngredients());
             dto.setPreparation(recipe.getPreparation());
             dto.setLikesCount(recipe.getLikes());
-            dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), requesterId).isPresent());
-            dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), requesterId).isPresent());
+            dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
+            dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setCommentCount(recipe.getComments().size());
-
+            dto.setUserId(recipe.getUserId());
+            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
             dto.setComments(
                     recipe.getComments().stream().map(comment -> {
                         GetCommentDto c = new GetCommentDto();
@@ -204,6 +221,52 @@ public class RecipeService {
             return dto;
         }).toList();
     }
+
+    /* Get all Recipes saved by User */
+    public List<GetRecipeDTO> getSavedRecipesByUserId(Long userId) {
+        List<SavedRecipe> savedRecipes = savedRepository.findByUserId(userId);
+        if(savedRecipes.isEmpty()){
+            return List.of();
+        }
+        List<Long> recipeIds = savedRecipes.stream()
+                .map(SavedRecipe::getRecipeId)
+                .toList();
+        List<Recipe> recipes = repo.findAllById(recipeIds);
+
+        List<Long> userIds = recipes.stream()
+                .map(Recipe::getUserId)
+                .distinct()
+                .toList();
+        // Build request body with all userIds
+        HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
+        // Call the usernames endpoint
+        ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                userBaseUrl + "/usernames",
+                HttpMethod.POST,
+                request,
+                new ParameterizedTypeReference<Map<Long, String>>() {}
+        );
+        Map<Long, String> userIdToUsername = response.getBody();
+
+        return recipes.stream().map(recipe -> {
+            GetRecipeDTO dto = new GetRecipeDTO();
+            dto.setId(recipe.getId());
+            dto.setTitle(recipe.getTitle());
+            dto.setDescription(recipe.getDescription());
+            dto.setCuisine(recipe.getCuisine().toString());
+            dto.setRecipeImageUrl(recipe.getRecipeImageUrl());
+            dto.setIngredients(recipe.getIngredients());
+            dto.setPreparation(recipe.getPreparation());
+            dto.setLikesCount(recipe.getLikes());
+            dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
+            dto.setSavedByUser(true); // Since these are saved recipes
+            dto.setCommentCount(recipe.getComments().size());
+            dto.setUserId(recipe.getUserId());
+            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            return dto;
+        }).toList();
+    }
+
    /* Get Recipe by id based on User id */
     public GetRecipeDTO getById(Long recipeId, Long userId) {
         Recipe recipe = repo.findById(recipeId)

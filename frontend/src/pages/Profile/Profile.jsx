@@ -213,7 +213,7 @@ const RecipeCard = ({ recipe }) => (
     cover={
       <img
         alt={recipe.title}
-        src={recipe.image}
+        src={recipe.recipeImageUrl}
         style={styles.recipeCardImage}
       />
     }
@@ -228,6 +228,7 @@ const RecipeCard = ({ recipe }) => (
 const Profile = () => {
   const { id: userId } = useParams();
   const { user } = useAuth();
+  console.log("userId from params:", user.userData.id);
 
   const { token } = theme.useToken();
   const [form] = Form.useForm();
@@ -256,8 +257,12 @@ const Profile = () => {
   });
   useEffect(() => {
     fetchUserProfile();
-  }, []);
+    fetchPostedRecipes();
+    fetchSavedRecipes();
+  }, [user]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [postedRecipes, setPostedRecipes] = useState([]);
+  const [savedRecipes, setSavedRecipes] = useState([]);
 
   const fetchUserProfile = async () => {
     try {
@@ -284,6 +289,68 @@ const Profile = () => {
     }
   };
   console.log(user);
+
+  const fetchPostedRecipes = async () => {
+    try {
+      // Wait until user context is loaded before making API call
+      if (!user || !user.userData || !user.userData.id) return;
+
+      const response = await fetch(
+        userId
+          ? `http://localhost:8089/api/v1/recipes?userId=${userId}`
+          : `http://localhost:8089/api/v1/recipes?userId=${user.userData.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const data = await response.json();
+      console.log("sachit is", data);
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        window.location.reload();
+      }
+      if (data.length === 0) {
+        setPostedRecipes([]);
+      } else {
+        setPostedRecipes(data);
+      }
+    } catch (error) {
+      console.error("Error fetching posted recipes:", error);
+    }
+  };
+
+  const fetchSavedRecipes = async () => {
+    if (!user || !user.userData || !user.userData.id) return;
+    try {
+      const response = await fetch(
+        userId
+          ? `http://localhost:8089/api/v1/recipes?userId=${userId}&saved=true`
+          : `http://localhost:8089/api/v1/recipes?userId=${user?.userData?.id}&saved=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const data = await response.json();
+      console.log("saved recipes", data);
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        window.location.reload();
+      }
+      if (data.length === 0) {
+        setSavedRecipes([]);
+      } else {
+        setSavedRecipes(data);
+      }
+    } catch (error) {
+      console.error("Error fetching saved recipes:", error);
+    }
+  };
 
   // --- Handlers ---
   const showEditModal = () => {
@@ -509,13 +576,13 @@ const Profile = () => {
               <TabPane
                 tab={
                   <Space>
-                    <BookOpen /> Posted Recipes ({mockPostedRecipes.length})
+                    <BookOpen /> Posted Recipes ({postedRecipes?.length})
                   </Space>
                 }
                 key="1"
               >
                 <div style={styles.recipeList}>
-                  {mockPostedRecipes.map((recipe) => (
+                  {postedRecipes?.map((recipe) => (
                     <RecipeCard key={recipe.id} recipe={recipe} />
                   ))}
                 </div>
@@ -525,13 +592,13 @@ const Profile = () => {
               <TabPane
                 tab={
                   <Space>
-                    <Bookmark /> Saved Recipes ({mockSavedRecipes.length})
+                    <Bookmark /> Saved Recipes ({savedRecipes.length})
                   </Space>
                 }
                 key="2"
               >
                 <div style={styles.recipeList}>
-                  {mockSavedRecipes.map((recipe) => (
+                  {savedRecipes.map((recipe) => (
                     <RecipeCard key={recipe.id} recipe={recipe} />
                   ))}
                 </div>
