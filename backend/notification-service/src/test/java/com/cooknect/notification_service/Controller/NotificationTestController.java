@@ -3,11 +3,11 @@ package com.cooknect.notification_service.Controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 
-import com.cooknect.notification_service.service.EmailService;
+import com.cooknect.notification_service.service.NotificationService;
 
 public class NotificationTestController {
     @Autowired
-    private EmailService emailService;
+    private NotificationService emailService;
 
     @GetMapping("/test-mail")
     public String testMail() {
