@@ -136,6 +136,21 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
+    public UsersDTO getUserByEmail(String email) {
+        UserModel user = repository.findByEmail(email);
+        return new UsersDTO(user.getId(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getBio(),
+                user.getAvatarUrl(),
+                user.getDietaryPreference() != null ? user.getDietaryPreference().getName() : null,
+                user.getHealthGoal() != null ? user.getHealthGoal().getName() : null,
+                user.getCuisinePreferences() == null ? List.of() : user.getCuisinePreferences().stream().map(CuisinePreference::getName).toList());
+    }
+
+    @Override
     public UsersDTO updateUser(Long id, UsersDTO userDTO, String userEmailHeader) {
         UserModel user = repository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         if(!user.getEmail().equals(userEmailHeader)){
