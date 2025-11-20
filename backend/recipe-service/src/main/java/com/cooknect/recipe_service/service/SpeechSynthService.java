@@ -16,13 +16,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.cooknect.recipe_service.model.RecipeAudio;
 import com.cooknect.recipe_service.repository.RecipeAudioRepository;
+import com.cooknect.recipe_service.model.Recipe;
+import com.cooknect.recipe_service.repository.RecipeRepository;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +43,9 @@ public class SpeechSynthService {
     private final ObjectMapper mapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @Autowired
+    private RecipeRepository recipeRepository;
+
     @Value("${GL_API_KEY}")
     private String apiKey;
 
@@ -50,10 +54,10 @@ public class SpeechSynthService {
     private static final String GEMINI_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=";
 
-
+    private static final String translate_api = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     /**
-+     * Returns existing audio for recipeId if present. Otherwise synthesizes,
-+     * persists the result (if recipeId provided) and returns the bytes.
+     * Returns existing audio for recipeId if present. Otherwise synthesizes,
+     * persists the result (if recipeId provided) and returns the bytes.
      */
     @Transactional
     public byte[] getOrCreateAudio(String text, String voiceName, Long recipeId) {
@@ -98,7 +102,6 @@ public class SpeechSynthService {
 
     public byte[] synthesizeAudio(String text, String voiceName, Long recipeId) {
         try {
-            System.out.println("Synthesizing speech with Gemini TTS...");
             ObjectNode payload = mapper.createObjectNode();
 
             // ---- contents ----
@@ -191,20 +194,27 @@ public class SpeechSynthService {
         }
     }
 
-    private byte[] loadPlaceholderAudio() {
-        try (InputStream in = getClass().getResourceAsStream("/placeholder.wav")) {
-            if (in == null) return new byte[0];
-            return in.readAllBytes();
-        } catch (IOException e) {
-            log.error("Failed to load placeholder audio: {}", e.getMessage(), e);
-            return new byte[0];
+    @Transactional
+    public void deleteAudioForRecipe(Long recipeId) {
+        if(recipeId == null) return;
+        try {
+            Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeId(recipeId);
+            if (opt.isPresent()) {
+                recipeAudioRepository.delete(opt.get());
+                log.info("Deleted audio for recipeId={}", recipeId);
+            }
+            else {
+                log.info("No cached audio found to delete for recipeId={}", recipeId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to delete audio for recipeId={}: {}", recipeId, e.getMessage(), e);
         }
     }
+
 
     // ---------------------------------------------------------
     // Convert raw PCM LINEAR16 → WAV wrapper
     // ---------------------------------------------------------
-
     private byte[] convertPcmToWav(byte[] pcmData) throws IOException {
 
         int sampleRate = 24000;
@@ -248,5 +258,77 @@ public class SpeechSynthService {
 
     private void writeShort(ByteArrayOutputStream out, short value) throws IOException {
         out.write(ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN).putShort(value).array());
+    }
+
+
+    // Translate the recipe into chosen language
+    @Transactional
+    public String translateText(Long id, String targetLanguage) {
+        try {
+            if(id == null) {
+                throw new IllegalArgumentException("Recipe ID cannot be null for translation.");
+            }
+
+            Recipe recipe = recipeRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Recipe not found for ID: " + id));
+            String text = "Title: " + recipe.getTitle() + "\n\nDescription: " + recipe.getDescription() + "\n\nIngredients: " + recipe.getIngredients().toString() + "\n\nCuisine: " + recipe.getCuisine().toString();
+
+            ObjectNode payload = mapper.createObjectNode();
+
+            String instruction = "Translate the following text into " + targetLanguage + ":" + text;
+            System.out.println("Translation instruction: " + instruction);
+            // ---- contents ----
+            ArrayNode contents = mapper.createArrayNode();
+            ObjectNode contentObj = mapper.createObjectNode();
+            ArrayNode parts = mapper.createArrayNode();
+            ObjectNode textObj = mapper.createObjectNode();
+            textObj.put("text", instruction);
+            parts.add(textObj);
+            contentObj.set("parts", parts);
+            contents.add(contentObj);
+            payload.set("contents", contents);
+
+            // ---- Prepare POST Request ----
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> request =
+                    new HttpEntity<>(payload.toString(), headers);
+
+            String url = translate_api + "?key=" + apiKey;
+
+            // ---- Call Gemini ----
+            ResponseEntity<JsonNode> response;
+            try {
+                response =
+                        restTemplate.postForEntity(url, request, JsonNode.class);
+            } catch (org.springframework.web.client.HttpClientErrorException httpEx) {
+                String bodyText = httpEx.getResponseBodyAsString();
+                log.error("Gemini HTTP error: status={}, body={}", httpEx.getStatusCode(), bodyText);
+                throw new RuntimeException("Gemini error: " + httpEx.getStatusCode() + ": " + (bodyText == null ? "[no body]" : bodyText), httpEx);
+            }
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("Gemini HTTP error: " + response.getStatusCode());
+            }
+
+            JsonNode body = response.getBody();
+            if (body == null) {
+                throw new RuntimeException("Empty response from Gemini");
+            }
+
+            // ---- Extract Translated Text ----
+            String translatedText = body
+                    .path("candidates").get(0)
+                    .path("content")
+                    .path("parts").get(0)
+                    .path("text")
+                    .asText();
+
+            return translatedText;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Gemini error: " + e.getMessage(), e);
+        }
     }
 }

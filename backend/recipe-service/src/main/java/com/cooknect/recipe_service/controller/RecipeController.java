@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,6 +71,24 @@ public class RecipeController {
         return ResponseEntity.noContent().build();
     }
 
+    /* Save or Unsave a recipe */
+    @PostMapping("/{recipeId}/save")
+    @Operation(summary = "Save or Unsave a recipe", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> saveRecipe(@PathVariable Long recipeId, HttpServletRequest request) {
+        String userIdHeader = request.getHeader("X-User-Id");
+
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdHeader);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("Invalid user id");
+        }
+
+        svc.saveAndUnsave(recipeId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+
     /* Get all recipes */
     @GetMapping
     @Operation(summary = "Get all recipes", security = @SecurityRequirement(name = "bearerAuth"))
@@ -83,6 +102,21 @@ public class RecipeController {
         }
         return svc.getAllRecipes(id);
     }
+
+    /* Get All Recipes of a user */
+    @GetMapping(params = "userId")
+    @Operation(summary = "Get recipes, optionally by userId", security = @SecurityRequirement(name = "bearerAuth"))
+    public List<GetRecipeDTO> listAll(
+            @RequestParam(required = false) Long userId,
+            @RequestHeader("X-User-Id") Long requesterId
+    ) {
+        if (userId != null) {
+            return svc.getRecipesByUserId(userId, requesterId);
+        }
+        return svc.getAllRecipes(requesterId);
+    }
+
+
     /* Get recipe by ID */
     @GetMapping("/{recipeId}")
     @Operation(summary = "Get recipe by ID", security = @SecurityRequirement(name = "bearerAuth"))
@@ -221,6 +255,28 @@ public class RecipeController {
         }
     }
 
+    //Translate Recipe into target language
+    @GetMapping("/{id}/translate/{targetLanguage}")
+    @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"))
+    public String translateRecipe(
+            @PathVariable Long id,
+            @PathVariable String targetLanguage) {
+        return speechSynth.translateText(id, targetLanguage);
+    }
+
+    @GetMapping("/metadata")
+    @Operation(summary = "Get service metadata", security = @SecurityRequirement(name = "bearerAuth"))
+    public Map<String, Object> serviceMetadata() {
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("service", "recipe-service");
+        String version = this.getClass().getPackage().getImplementationVersion();
+        meta.put("version", version != null ? version : "unknown");
+        meta.put("kafkaTopic", TOPIC);
+        // lightweight runtime info
+        meta.put("availableProcessors", Runtime.getRuntime().availableProcessors());
+        meta.put("freeMemory", Runtime.getRuntime().freeMemory());
+        return meta;
+    }
     /*
         * Updates an existing recipe.
         * This endpoint accepts a PATCH request with only the fields that need to be updated.
@@ -244,6 +300,7 @@ public class RecipeController {
         }
 
         Recipe updated = svc.patchUpdate(id, recipe, userId);
+        speechSynth.deleteAudioForRecipe(id);
         return ResponseEntity.ok(updated);
     }
 
