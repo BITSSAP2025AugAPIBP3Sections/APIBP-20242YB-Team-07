@@ -123,7 +123,6 @@ const styles = {
 const Recipe = () => {
   const { id: recipeId } = useParams();
   const { token } = theme.useToken();
-  const [isSaved, setIsSaved] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [recipeData, setRecipeData] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -294,8 +293,31 @@ const Recipe = () => {
     }
   };
 
-  const handleSave = () => {
-    setIsSaved(!isSaved);
+  const handleSave = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8089/api/v1/recipes/${recipeId}/save`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        window.location.reload();
+      }
+      if (!response.ok) {
+        throw new Error("Failed to save/unsave recipe");
+      }
+      // Refresh recipes after saving/unsaving
+      fetchRecipeData();
+    } catch (error) {
+      console.error("Error saving/unsaving recipe:", error);
+    }
   };
 
   console.log("Fetched Recipe Data:", recipeData);
