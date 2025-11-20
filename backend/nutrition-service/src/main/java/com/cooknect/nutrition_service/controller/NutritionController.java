@@ -12,6 +12,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +25,8 @@ import java.util.*;
 @RequestMapping("/api/v1/nutrition")
 @RequiredArgsConstructor
 public class NutritionController {
+
+    private static final Logger logger = LoggerFactory.getLogger(NutritionController.class);
 
     @Autowired
     private NutritionService nutritionService;
@@ -42,6 +47,7 @@ public class NutritionController {
     @PostMapping("/analyze")
     @Operation(summary = "Analyze food ingredients", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<NutritionResponse> analyze(@RequestBody NutritionRequest req, @RequestHeader("X-User-Id") Long userId) {
+        logger.info("Analyzing ingredients for user ID: {}", userId);
         req.setUserId(userId);
         return ResponseEntity.ok(nutritionService.analyzeIngredients(req, userId));
     }
@@ -49,30 +55,35 @@ public class NutritionController {
     @GetMapping("/health")
     @Operation(summary = "Health check", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<String> healthCheck() {
+        logger.info("Health check endpoint called");
         return ResponseEntity.ok("Nutrition Service is up and running!");
     }
 
     @GetMapping("/allNutritionLogs")
     @Operation(summary = "Get all nutrition logs", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<List<NutritionLog>> getAllNutritionLogs() {
+        logger.info("Fetching all nutrition logs");
         return ResponseEntity.ok(nutritionService.getAllNutritionLogs());
     }
 
     @GetMapping("/NutritionLogsByUserId/{userId}")
     @Operation(summary = "Get nutrition logs by user ID", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<List<NutritionLog>> getNutritionLogsByUserId(@PathVariable Long userId) {
+        logger.info("Fetching nutrition logs for user ID: {}", userId);
         return ResponseEntity.ok(nutritionService.getNutritionLogsByUserId(userId));
     }
 
     @GetMapping("/user/{userId}/MealTypes/{mealType}")
     @Operation(summary = "Get nutrition logs by meal type", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<List<NutritionLog>> getNutritionLogsByMealType(@RequestHeader("X-User-Id") Long userId, @PathVariable MealType mealType) {
+        logger.info("Fetching nutrition logs for user ID: {} and meal type: {}", userId, mealType);
         return ResponseEntity.ok(nutritionService.getNutritionLogsByMealType(userId, mealType));
     }
 
     @GetMapping("/today/summary")
     @Operation(summary = "Get today's nutrition intake summary for a user", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<DailyIntakeSummary> getTodayIntakeSummary(@RequestHeader("X-User-Id") Long userId) {
+        logger.info("Fetching today's nutrition intake summary for user ID: {}", userId);
         DailyIntakeSummary summary = nutritionService.getTodayIntakeSummary(userId);
         return ResponseEntity.ok(summary);
     }
@@ -83,6 +94,7 @@ public class NutritionController {
             @PathVariable Long logId,
             @RequestBody NutritionRequest request,
             @RequestHeader("X-User-Id") long userId) {
+        logger.info("Updating nutrition log ID: {} for user ID: {}", logId, userId);
         return ResponseEntity.ok(nutritionService.updateNutritionLog(logId, request, userId));
     }
 
@@ -91,6 +103,7 @@ public class NutritionController {
     public ResponseEntity<NutritionLog> patchNutritionLog(@PathVariable Long logId,
                                                           @RequestBody Map<String, Object> updates,
                                                           @RequestHeader("X-User-Id") Long userId) {
+        logger.info("Patching nutrition log ID: {} for user ID: {}", logId, userId);
         return ResponseEntity.ok(nutritionService.patchNutritionLog(logId, updates, userId));
     }
 
@@ -98,6 +111,7 @@ public class NutritionController {
     @Operation(summary = "Delete nutrition log", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Map<String, String>> deleteNutritionLog(@PathVariable Long logId,
                                                    @RequestHeader("X-User-Id") Long userId) {
+        logger.info("Deleting nutrition log ID: {} for user ID: {}", logId, userId);
         nutritionService.deleteNutritionLog(logId, userId);
         return ResponseEntity.ok(Map.of("message", "Nutrition log deleted successfully"));
     }

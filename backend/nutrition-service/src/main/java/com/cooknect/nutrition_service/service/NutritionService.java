@@ -13,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cooknect.nutrition_service.dto.*;
 
+import org.slf4j.*;
+
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
@@ -28,6 +30,8 @@ public class NutritionService {
     private final ExternalNutritionApiService externalApiService;
     private RecipeServiceClient recipeClient;
 
+    private static final Logger logger = LoggerFactory.getLogger(NutritionService.class);
+
     private record NutritionTotals(double totalFat, double saturatedFat, double sodium, double potassium, double cholestrol, double carbohydrates, double fiber, double sugar) {}
 
     public NutritionService(FoodItemRepository foodRepo, 
@@ -41,10 +45,12 @@ public class NutritionService {
     }
 
     public NutritionResponse analyzeIngredients(NutritionRequest request, Long userId) {
+        logger.debug("Starting nutrition analysis for user ID: {}", userId);
         List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
         String recipeName = request.getRecipeName();
 
         if (request.getRecipeId() != null){
+            logger.debug("Fetching recipe details for recipe ID: {}", request.getRecipeId());
             Optional<RecipeServiceClient.RecipeDto> maybe = recipeClient.getRecipeById(request.getRecipeId());
             if (maybe.isPresent()){
                 RecipeServiceClient.RecipeDto r = maybe.get();
@@ -56,6 +62,7 @@ public class NutritionService {
                             .collect(Collectors.toList());
                 }
             }
+            else{logger.error("Recipe with ID {} not found.", request.getRecipeId());}
         }
         
         // Use the refactored helper method
@@ -95,6 +102,7 @@ public class NutritionService {
                 .build();
 
         logRepo.save(log);
+        logger.info("Nutrition log saved with ID: {} for user ID: {}", log.getId(), userId);
         return response;
     }
 
@@ -105,11 +113,13 @@ public class NutritionService {
             String numeric = parts[0].replaceAll("[^0-9.]", "");
             return Double.parseDouble(numeric);
         } catch (Exception e) {
+            logger.warn("Failed to parse quantity '{}', defaulting to 1.0", quantity);
             return 1.0;
         }
     }
 
     private NutritionTotals calculateNutrition(List<Map<String, String>> ingredients) {
+        logger.debug("Calculating nutrition for ingredients: {}", ingredients);
         double totalFat = 0.0, totalSaturatedFat = 0.0, totalSodium = 0.0,
                totalPotassium = 0.0, totalCholestrol = 0.0, totalCarbohydrates = 0.0,
                totalFiber = 0.0, totalSugar = 0.0;
@@ -125,6 +135,7 @@ public class NutritionService {
             FoodItem food;
 
             if (foodOptional.isPresent()) {
+                logger.debug("Found food item in local DB: {}", name);
                 food = foodOptional.get();
             } else {
                 String apiQuery = (servingSize != null && !servingSize.isBlank())
@@ -157,6 +168,7 @@ public class NutritionService {
                     totalSugar += safeNullableDouble(food.getSugar()) * qty;
                 }
             } else {
+                logger.warn("Nutrition info not found for ingredient: {}", name);
                 totalFat += 2 * qty;
                 totalSaturatedFat += 0.5 * qty;
                 totalSodium += 150 * qty;
@@ -206,10 +218,14 @@ public class NutritionService {
 
     public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, Long userId) {
         NutritionLog log = logRepo.findById(logId)
-                .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
+                .orElseThrow(() -> {
+                    logger.error("Nutrition log not found");
+                    return new RuntimeException("Nutrition log not found");
+                });
 
         // Add authorization check
         if (!log.getUserId().equals(userId)) {
+            logger.error("User ID {} not authorized to update log ID {}", userId, logId);
             throw new RuntimeException("User not authorized to update this log");
         }
 
@@ -231,6 +247,7 @@ public class NutritionService {
         log.setAnalyzedAt(LocalDate.now());
 
         logRepo.save(log);
+        logger.info("Nutrition log with ID: {} updated by user ID: {}", log.getId(), userId);
 
         return new NutritionResponse(
                 log.getUserId(),
@@ -251,10 +268,14 @@ public class NutritionService {
 
     public NutritionLog patchNutritionLog(Long logId, Map<String, Object> updates, Long userId) {
         NutritionLog log = logRepo.findById(logId)
-                .orElseThrow(() -> new RuntimeException("Nutrition log not found"));
+                .orElseThrow(() -> {
+                    logger.error("Nutrition log not found");
+                    return new RuntimeException("Nutrition log not found");
+                });
 
         // Add authorization check
         if (!log.getUserId().equals(userId)) {
+            logger.error("User ID {} not authorized to patch log ID {}", userId, logId);
             throw new RuntimeException("User not authorized to patch this log");
         }
 
@@ -262,18 +283,22 @@ public class NutritionService {
             log.setMealType(MealType.valueOf((String) updates.get("mealType")));
         }
 
+        logger.info("Nutrition log with ID: {} patched by user ID: {}", log.getId(), userId);
         return logRepo.save(log);
     }
 
     public void deleteNutritionLog(Long logId, long userId) {
         NutritionLog log = logRepo.findById(logId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nutrition log not found with id: " + logId));
-        
+                .orElseThrow(() -> {
+                    logger.error("Nutrition log not found with id: {}", logId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Nutrition log not found with id: " + logId);
+                });
 
         if (!log.getUserId().equals(userId)) {
+            logger.error("User ID {} not authorized to delete log ID {}", userId, logId);
             throw new RuntimeException("User not authorized to delete this log");
         }
-        
+        logger.info("Nutrition log with ID: {} deleted by user ID: {}", log.getId(), userId);
         logRepo.delete(log);
     }
 
