@@ -228,6 +228,7 @@ const RecipeCard = ({ recipe }) => (
 const Profile = () => {
   const { id: userId } = useParams();
   const { user } = useAuth();
+  console.log("userId from params:", user.userData.id);
 
   const { token } = theme.useToken();
   const [form] = Form.useForm();
@@ -258,7 +259,7 @@ const Profile = () => {
     fetchUserProfile();
     fetchPostedRecipes();
     fetchSavedRecipes();
-  }, []);
+  }, [user]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [postedRecipes, setPostedRecipes] = useState([]);
   const [savedRecipes, setSavedRecipes] = useState([]);
@@ -291,8 +292,13 @@ const Profile = () => {
 
   const fetchPostedRecipes = async () => {
     try {
+      // Wait until user context is loaded before making API call
+      if (!user || !user.userData || !user.userData.id) return;
+
       const response = await fetch(
-        `http://localhost:8089/api/v1/recipes?userId=${userId}`,
+        userId
+          ? `http://localhost:8089/api/v1/recipes?userId=${userId}`
+          : `http://localhost:8089/api/v1/recipes?userId=${user.userData.id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -317,9 +323,12 @@ const Profile = () => {
   };
 
   const fetchSavedRecipes = async () => {
+    if (!user || !user.userData || !user.userData.id) return;
     try {
       const response = await fetch(
-        `http://localhost:8089/api/v1/recipes?userId=${userId}&saved=true`,
+        userId
+          ? `http://localhost:8089/api/v1/recipes?userId=${userId}&saved=true`
+          : `http://localhost:8089/api/v1/recipes?userId=${user?.userData?.id}&saved=true`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -567,13 +576,13 @@ const Profile = () => {
               <TabPane
                 tab={
                   <Space>
-                    <BookOpen /> Posted Recipes ({postedRecipes.length})
+                    <BookOpen /> Posted Recipes ({postedRecipes?.length})
                   </Space>
                 }
                 key="1"
               >
                 <div style={styles.recipeList}>
-                  {postedRecipes.map((recipe) => (
+                  {postedRecipes?.map((recipe) => (
                     <RecipeCard key={recipe.id} recipe={recipe} />
                   ))}
                 </div>
