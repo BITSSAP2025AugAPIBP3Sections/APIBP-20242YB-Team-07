@@ -136,17 +136,16 @@ public class RecipeController {
         pageRequestDTO.setDirection(direction);
         
         String userIdHeader = request.getHeader("X-User-Id");
-        Long id;
-        try {
-            id = Long.parseLong(userIdHeader);
-        } catch (NumberFormatException e) {
-            PageResponseDTO<GetRecipeDTO> emptyResponse = new PageResponseDTO<>();
-            emptyResponse.setContent(List.of());
-            emptyResponse.setPage(1); // Return 1-based page
-            emptyResponse.setSize(0);
-            emptyResponse.setTotalElements(0);
-            emptyResponse.setTotalPages(0);
-            return emptyResponse;
+        Long authenticatedUserId = null;
+        
+        // Try to parse the user ID from header, but allow null if not present or invalid
+        if (userIdHeader != null && !userIdHeader.trim().isEmpty()) {
+            try {
+                authenticatedUserId = Long.parseLong(userIdHeader);
+            } catch (NumberFormatException e) {
+                // Log warning but continue with null user ID
+                log.warn("Invalid X-User-Id header value: {}", userIdHeader);
+            }
         }
         
         PageResponseDTO<GetRecipeDTO> result;
@@ -156,7 +155,8 @@ public class RecipeController {
         } else if (userId != null) {
             result = svc.getRecipesByUserId(userId, pageRequestDTO);
         } else {
-            result = svc.getAllRecipes(id, pageRequestDTO);
+            // Use authenticatedUserId (can be null) for like/save status
+            result = svc.getAllRecipes(authenticatedUserId, pageRequestDTO);
         }
         
         result.setPage(result.getPage() + 1); // Convert back to 1-based for response
@@ -172,12 +172,16 @@ public class RecipeController {
             HttpServletRequest request
     ) {
         String userIdHeader = request.getHeader("X-User-Id");
-
-        Long userId;
-        try {
-            userId = Long.parseLong(userIdHeader);
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().build();
+        Long userId = null;
+        
+        // Try to parse the user ID from header, but allow null if not present or invalid
+        if (userIdHeader != null && !userIdHeader.trim().isEmpty()) {
+            try {
+                userId = Long.parseLong(userIdHeader);
+            } catch (NumberFormatException e) {
+                // Log warning but continue with null user ID
+                log.warn("Invalid X-User-Id header value: {}", userIdHeader);
+            }
         }
 
         GetRecipeDTO dto = svc.getById(recipeId, userId);
