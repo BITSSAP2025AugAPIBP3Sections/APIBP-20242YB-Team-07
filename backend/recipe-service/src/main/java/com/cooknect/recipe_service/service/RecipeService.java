@@ -3,6 +3,8 @@ package com.cooknect.recipe_service.service;
 import com.cooknect.recipe_service.dto.GetCommentDto;
 import com.cooknect.recipe_service.dto.GetRecipeDTO;
 import com.cooknect.recipe_service.dto.RecipeCreateDTO;
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 import com.cooknect.recipe_service.exception.ForbiddenException;
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.repository.RecipeLikeRepository;
@@ -120,7 +122,7 @@ public class RecipeService {
     }
 
     /* Get all recipes */
-    public List<GetRecipeDTO> getAllRecipes(Long userId) {
+    public PageResponseDTO<GetRecipeDTO> getAllRecipes(Long userId, PageRequestDTO pageRequestDTO) {
         List<Recipe> recipes = repo.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
         /*
@@ -145,8 +147,7 @@ public class RecipeService {
 
         Map<Long, String> userIdToUsername = response.getBody();
 
-
-        return recipes.stream().map(recipe -> {
+        List<GetRecipeDTO> recipeDTOs = recipes.stream().map(recipe -> {
             GetRecipeDTO dto = new GetRecipeDTO();
             dto.setId(recipe.getId());
             dto.setTitle(recipe.getTitle());
@@ -167,19 +168,47 @@ public class RecipeService {
             dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             // Set username from user-service
-            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            if (userIdToUsername != null) {
+                dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            }
             dto.setUserId(recipe.getUserId());
             dto.setCommentCount(recipe.getComments().size());
             return dto;
         }).toList();
+
+        // Apply pagination
+        int page = pageRequestDTO.getPage();
+        int size = pageRequestDTO.getSize();
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, recipeDTOs.size());
+        
+        List<GetRecipeDTO> paginatedRecipes = startIndex >= recipeDTOs.size() ? 
+            List.of() : recipeDTOs.subList(startIndex, endIndex);
+
+        // Create PageResponseDTO
+        PageResponseDTO<GetRecipeDTO> pageResponse = new PageResponseDTO<>();
+        pageResponse.setContent(paginatedRecipes);
+        pageResponse.setPage(page);
+        pageResponse.setSize(size);
+        pageResponse.setTotalElements(recipeDTOs.size());
+        pageResponse.setTotalPages((int) Math.ceil((double) recipeDTOs.size() / size));
+        pageResponse.setSort(pageRequestDTO.getSortBy() + "," + pageRequestDTO.getDirection());
+        
+        return pageResponse;
     }
 
     /* Get all Recipes based on user Id */
-    public List<GetRecipeDTO> getRecipesByUserId(Long userId) {
+    public PageResponseDTO<GetRecipeDTO> getRecipesByUserId(Long userId, PageRequestDTO pageRequestDTO) {
         List<Recipe> recipes = repo.findByUserId(userId);
 
         if(recipes.isEmpty()){
-            return List.of();
+            PageResponseDTO<GetRecipeDTO> emptyResponse = new PageResponseDTO<>();
+            emptyResponse.setContent(List.of());
+            emptyResponse.setPage(0);
+            emptyResponse.setSize(0);
+            emptyResponse.setTotalElements(0);
+            emptyResponse.setTotalPages(0);
+            return emptyResponse;
         }
 
         List<Long> userIds = List.of(userId);
@@ -194,7 +223,7 @@ public class RecipeService {
         );
         Map<Long, String> userIdToUsername = response.getBody();
 
-        return recipes.stream().map(recipe -> {
+        List<GetRecipeDTO> recipeDTOs = recipes.stream().map(recipe -> {
             GetRecipeDTO dto = new GetRecipeDTO();
             dto.setId(recipe.getId());
             dto.setTitle(recipe.getTitle());
@@ -208,7 +237,9 @@ public class RecipeService {
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setCommentCount(recipe.getComments().size());
             dto.setUserId(recipe.getUserId());
-            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            if (userIdToUsername != null) {
+                dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            }
             dto.setComments(
                     recipe.getComments().stream().map(comment -> {
                         GetCommentDto c = new GetCommentDto();
@@ -220,13 +251,39 @@ public class RecipeService {
 
             return dto;
         }).toList();
+
+        // Apply pagination
+        int page = pageRequestDTO.getPage();
+        int size = pageRequestDTO.getSize();
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, recipeDTOs.size());
+        
+        List<GetRecipeDTO> paginatedRecipes = startIndex >= recipeDTOs.size() ? 
+            List.of() : recipeDTOs.subList(startIndex, endIndex);
+
+        // Create PageResponseDTO
+        PageResponseDTO<GetRecipeDTO> pageResponse = new PageResponseDTO<>();
+        pageResponse.setContent(paginatedRecipes);
+        pageResponse.setPage(page);
+        pageResponse.setSize(size);
+        pageResponse.setTotalElements(recipeDTOs.size());
+        pageResponse.setTotalPages((int) Math.ceil((double) recipeDTOs.size() / size));
+        pageResponse.setSort(pageRequestDTO.getSortBy() + "," + pageRequestDTO.getDirection());
+        
+        return pageResponse;
     }
 
     /* Get all Recipes saved by User */
-    public List<GetRecipeDTO> getSavedRecipesByUserId(Long userId) {
+    public PageResponseDTO<GetRecipeDTO> getSavedRecipesByUserId(Long userId, PageRequestDTO pageRequestDTO) {
         List<SavedRecipe> savedRecipes = savedRepository.findByUserId(userId);
         if(savedRecipes.isEmpty()){
-            return List.of();
+            PageResponseDTO<GetRecipeDTO> emptyResponse = new PageResponseDTO<>();
+            emptyResponse.setContent(List.of());
+            emptyResponse.setPage(0);
+            emptyResponse.setSize(0);
+            emptyResponse.setTotalElements(0);
+            emptyResponse.setTotalPages(0);
+            return emptyResponse;
         }
         List<Long> recipeIds = savedRecipes.stream()
                 .map(SavedRecipe::getRecipeId)
@@ -248,7 +305,7 @@ public class RecipeService {
         );
         Map<Long, String> userIdToUsername = response.getBody();
 
-        return recipes.stream().map(recipe -> {
+        List<GetRecipeDTO> recipeDTOs = recipes.stream().map(recipe -> {
             GetRecipeDTO dto = new GetRecipeDTO();
             dto.setId(recipe.getId());
             dto.setTitle(recipe.getTitle());
@@ -262,9 +319,31 @@ public class RecipeService {
             dto.setSavedByUser(true); // Since these are saved recipes
             dto.setCommentCount(recipe.getComments().size());
             dto.setUserId(recipe.getUserId());
-            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            if (userIdToUsername != null) {
+                dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            }
             return dto;
         }).toList();
+
+        // Apply pagination
+        int page = pageRequestDTO.getPage();
+        int size = pageRequestDTO.getSize();
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, recipeDTOs.size());
+        
+        List<GetRecipeDTO> paginatedRecipes = startIndex >= recipeDTOs.size() ? 
+            List.of() : recipeDTOs.subList(startIndex, endIndex);
+
+        // Create PageResponseDTO
+        PageResponseDTO<GetRecipeDTO> pageResponse = new PageResponseDTO<>();
+        pageResponse.setContent(paginatedRecipes);
+        pageResponse.setPage(page);
+        pageResponse.setSize(size);
+        pageResponse.setTotalElements(recipeDTOs.size());
+        pageResponse.setTotalPages((int) Math.ceil((double) recipeDTOs.size() / size));
+        pageResponse.setSort(pageRequestDTO.getSortBy() + "," + pageRequestDTO.getDirection());
+        
+        return pageResponse;
     }
 
    /* Get Recipe by id based on User id */
