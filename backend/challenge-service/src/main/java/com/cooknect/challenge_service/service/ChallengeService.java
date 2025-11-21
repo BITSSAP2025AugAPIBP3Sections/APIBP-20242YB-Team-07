@@ -5,6 +5,7 @@ import com.cooknect.challenge_service.dto.ChallengeResponse;
 import com.cooknect.challenge_service.dto.UpdateChallengeRequest;
 import com.cooknect.common.dto.PageRequestDTO;
 import com.cooknect.common.dto.PageResponseDTO;
+import com.cooknect.challenge_service.event.ChallengeEventProducer;
 import com.cooknect.challenge_service.dto.ChallengeParticipationRequest;
 import com.cooknect.challenge_service.dto.RecipeSubmissionRequest;
 import com.cooknect.challenge_service.dto.LeaderboardEntry;
@@ -13,6 +14,7 @@ import com.cooknect.challenge_service.model.ChallengeStatus;
 import com.cooknect.challenge_service.model.ChallengeParticipant;
 import com.cooknect.challenge_service.model.ChallengeRecipeSubmission;
 import com.cooknect.challenge_service.repository.ChallengeRepository;
+import com.cooknect.common.events.ChallengeEvent;
 import com.cooknect.challenge_service.repository.ChallengeRecipeSubmissionRepository;
 import com.recipe.GetRecipeByIdRequest;
 import com.recipe.RecipeResponse;
@@ -27,8 +29,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,8 +43,9 @@ public class ChallengeService {
     @Value("${user.service.url}")
     private String userBaseUrl;
     @Autowired
+    private ChallengeEventProducer challengeEventProducer;
+    @Autowired
     private RecipeServiceGrpc.RecipeServiceBlockingStub recipeServiceStub;
-    
 
     @Autowired
     public ChallengeService(ChallengeRepository challengeRepository) {
@@ -186,6 +187,20 @@ public class ChallengeService {
                 .anyMatch(p -> Objects.equals(p.getUserId(), request.getUserId()));
 
         if (alreadyJoined) {
+            String userServiceUrl = userBaseUrl + request.getUserId();
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                userServiceUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> user = response.getBody();
+            ChallengeEvent event = new ChallengeEvent(
+                user.get("email").toString(),
+                "Challenge already joined",
+                String.format("Hi %s! \nYou have alraedy joined the challenge on Cooknect.", user.get("fullName").toString())
+            );
+            challengeEventProducer.sendChallengeEvent(event);
             return false; // Already joined
         }
 
@@ -203,12 +218,18 @@ public class ChallengeService {
         }
 
         ChallengeParticipant participant = new ChallengeParticipant();
-        participant.setUserId((Long) user.get("id"));
+        participant.setUserId(((Number) user.get("id")).longValue());
         participant.setUsername(user.get("username").toString());
         participant.setEmail(user.get("email").toString());
         participant.setRole(user.get("role").toString());
         challenge.getParticipants().add(participant);
         challengeRepository.save(challenge);
+        ChallengeEvent event = new ChallengeEvent(
+            user.get("email").toString(),
+            "Joined Challenge Successfully",
+            String.format("Hi %s! \nYou have joined challenge successfully on Cooknect.", user.get("fullName").toString())
+        );
+        challengeEventProducer.sendChallengeEvent(event);
         return true;
     }
 
@@ -222,6 +243,20 @@ public class ChallengeService {
                 .findFirst();
 
         if (participantOpt.isPresent()) {
+            String userServiceUrl = userBaseUrl + request.getUserId();
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                userServiceUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> user = response.getBody();
+            ChallengeEvent event = new ChallengeEvent(
+                user.get("email").toString(),
+                "Left Challenge Successfully",
+                String.format("Hi %s! \nYou have left challenge successfully on Cooknect.", user.get("fullName").toString())
+            );
+            challengeEventProducer.sendChallengeEvent(event);
             challenge.getParticipants().remove(participantOpt.get());
             challengeRepository.save(challenge);
             return true;
@@ -270,6 +305,20 @@ public class ChallengeService {
         boolean alreadySubmitted = !challengeRecipeSubmissionRepository
                 .findByChallengeIdAndRecipeId(challengeId, request.getRecipeId()).isEmpty();
         if (alreadySubmitted) {
+            String userServiceUrl = userBaseUrl + request.getUserId();
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                userServiceUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> user = response.getBody();
+            ChallengeEvent event = new ChallengeEvent(
+                user.get("email").toString(),
+                "Recipe already submitted to Challenge",
+                String.format("Hi %s! \nYou have already submitted this recipe to the challenge on Cooknect.", user.get("fullName").toString())
+            );
+            challengeEventProducer.sendChallengeEvent(event);
             throw new RuntimeException("Recipe already submitted to this challenge");
         }
         // Save submission
@@ -279,6 +328,20 @@ public class ChallengeService {
         submission.setUserId(String.valueOf(request.getUserId()));
         submission.setSubmissionTime(LocalDateTime.now());
         challengeRecipeSubmissionRepository.save(submission);
+        String userServiceUrl = userBaseUrl + request.getUserId();
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+            userServiceUrl,
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        Map<String, Object> user = response.getBody();
+        ChallengeEvent event = new ChallengeEvent(
+            user.get("email").toString(),
+            "Submitted Recipe to Challenge Successfully",
+            String.format("Hi %s! \nYou have successfully submitted a recipe to the challenge on Cooknect.", user.get("fullName").toString())
+        );
+        challengeEventProducer.sendChallengeEvent(event);
         return true;
     }
 
