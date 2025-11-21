@@ -466,7 +466,18 @@ public class RecipeService {
     }
 
     public List<Recipe> searchByTitle(String q) {
-        return repo.findByTitleContainingIgnoreCase(q);
+        List<Recipe> allMatches = repo.findByTitleContainingIgnoreCase(q);
+        
+        if (allMatches.isEmpty()) {
+            return allMatches;
+        }
+        
+        // Find the recipe with the maximum number of likes
+        Recipe mostLikedRecipe = allMatches.stream()
+            .max((r1, r2) -> Integer.compare(r1.getLikes(), r2.getLikes()))
+            .orElse(allMatches.get(0));
+        
+        return List.of(mostLikedRecipe);
     }
 
     public List<Recipe> findByCuisine(Cuisine cuisine) {

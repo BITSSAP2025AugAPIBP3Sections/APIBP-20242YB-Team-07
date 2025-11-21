@@ -226,10 +226,13 @@ public class RecipeController {
 
     /*
          * Searches for recipes whose titles match the given query string.
+         * Returns the recipe with the maximum number of likes among all matches.
      */
 
     @GetMapping("/search")
-    @Operation(summary = "Search a recipe by title", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Search for the most liked recipe by title", 
+               description = "Returns the recipe with the highest number of likes among all recipes matching the search query.",
+               security = @SecurityRequirement(name = "bearerAuth"))
     public List<Recipe> search(@RequestParam String q) {
         return svc.searchByTitle(q);
     }
