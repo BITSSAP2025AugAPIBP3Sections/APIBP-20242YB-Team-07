@@ -65,6 +65,30 @@ public class Routes {
     }
 
     @Bean
+    public RouterFunction<ServerResponse> recipeServiceHealthRoute() {
+        return GatewayRouterFunctions.route("recipe-service-health")
+                .route(RequestPredicates.path("/actuator/health/recipe-service"), HandlerFunctions.http("http://localhost:8082"))
+                .filter(setPath("/actuator/health"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> challengeServiceHealthRoute() {
+        return GatewayRouterFunctions.route("challenge-service-health")
+                .route(RequestPredicates.path("/actuator/health/challenge-service"), HandlerFunctions.http("http://localhost:8083"))
+                .filter(setPath("/actuator/health"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> nutritionServiceHealthRoute() {
+        return GatewayRouterFunctions.route("nutrition-service-health")
+                .route(RequestPredicates.path("/actuator/health/nutrition-service"), HandlerFunctions.http("http://localhost:8085"))
+                .filter(setPath("/actuator/health"))
+                .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> userServiceGraphQLRoute() {
         return GatewayRouterFunctions.route("user-service-graphql")
                 .route(RequestPredicates.path("/api/users/graphql"),
