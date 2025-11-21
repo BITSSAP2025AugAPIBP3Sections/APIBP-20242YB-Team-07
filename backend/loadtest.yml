@@ -1,0 +1,24 @@
+config:
+  target: "http://localhost:8089" # Change to your gateway service NodePort or minikube IP if needed
+  phases:
+    - duration: 60 # seconds
+      arrivalRate: 10 # requests per second
+scenarios:
+  - flow:
+      - post:
+          url: "/api/v1/users/login"
+          json:
+            email: "ritika@example.com"
+            password: "yourpassword"
+          capture:
+            json: "$.token"   # Adjust this path if your token is nested differently
+            as: "authToken"
+      - get:
+          url: "/api/v1/recipes"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/api/v1/challenges"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
