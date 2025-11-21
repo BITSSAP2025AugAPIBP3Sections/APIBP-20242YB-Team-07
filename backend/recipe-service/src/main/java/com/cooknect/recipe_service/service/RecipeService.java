@@ -138,14 +138,21 @@ public class RecipeService {
         HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
 
         // Call the usernames endpoint
-        ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
-                userBaseUrl + "/usernames",
-                HttpMethod.POST,
-                request,
-                new ParameterizedTypeReference<Map<Long, String>>() {}
-        );
-
-        Map<Long, String> userIdToUsername = response.getBody();
+        Map<Long, String> userIdToUsername = null;
+        try {
+            ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                    userBaseUrl + "/usernames",
+                    HttpMethod.POST,
+                    request,
+                    new ParameterizedTypeReference<Map<Long, String>>() {}
+            );
+            userIdToUsername = response.getBody();
+        } catch (Exception e) {
+            // If user service is not available or configured, continue without usernames
+            System.out.println("Warning: Could not fetch usernames from user service: " + e.getMessage());
+        }
+        
+        final Map<Long, String> finalUserIdToUsername = userIdToUsername;
 
         List<GetRecipeDTO> recipeDTOs = recipes.stream().map(recipe -> {
             GetRecipeDTO dto = new GetRecipeDTO();
@@ -168,8 +175,8 @@ public class RecipeService {
             dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             // Set username from user-service
-            if (userIdToUsername != null) {
-                dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            if (finalUserIdToUsername != null) {
+                dto.setUsername(finalUserIdToUsername.get(recipe.getUserId()));
             }
             dto.setUserId(recipe.getUserId());
             dto.setCommentCount(recipe.getComments().size());
@@ -214,14 +221,23 @@ public class RecipeService {
         List<Long> userIds = List.of(userId);
         // Build request body with all userIds
         HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
+        
         // Call the usernames endpoint
-        ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
-                userBaseUrl + "/usernames",
-                HttpMethod.POST,
-                request,
-                new ParameterizedTypeReference<Map<Long, String>>() {}
-        );
-        Map<Long, String> userIdToUsername = response.getBody();
+        Map<Long, String> userIdToUsername = null;
+        try {
+            ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                    userBaseUrl + "/usernames",
+                    HttpMethod.POST,
+                    request,
+                    new ParameterizedTypeReference<Map<Long, String>>() {}
+            );
+            userIdToUsername = response.getBody();
+        } catch (Exception e) {
+            // If user service is not available or configured, continue without usernames
+            System.out.println("Warning: Could not fetch usernames from user service: " + e.getMessage());
+        }
+        
+        final Map<Long, String> finalUserIdToUsername = userIdToUsername;
 
         List<GetRecipeDTO> recipeDTOs = recipes.stream().map(recipe -> {
             GetRecipeDTO dto = new GetRecipeDTO();
@@ -237,8 +253,8 @@ public class RecipeService {
             dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
             dto.setCommentCount(recipe.getComments().size());
             dto.setUserId(recipe.getUserId());
-            if (userIdToUsername != null) {
-                dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+            if (finalUserIdToUsername != null) {
+                dto.setUsername(finalUserIdToUsername.get(recipe.getUserId()));
             }
             dto.setComments(
                     recipe.getComments().stream().map(comment -> {
