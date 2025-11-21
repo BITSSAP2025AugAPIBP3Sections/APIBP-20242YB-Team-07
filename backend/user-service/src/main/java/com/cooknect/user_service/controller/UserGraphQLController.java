@@ -1,8 +1,9 @@
 package com.cooknect.user_service.controller;
 
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 import com.cooknect.user_service.dto.CreateUserDTO;
 import com.cooknect.user_service.dto.UsersDTO;
-import com.cooknect.user_service.model.UserModel;
 import com.cooknect.user_service.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -10,8 +11,6 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-
-import java.util.List;
 
 @Controller
 @RequestMapping("/graphql")
@@ -21,8 +20,18 @@ public class UserGraphQLController {
     private UserService userService;
 
     @QueryMapping
-    public List<UsersDTO> getAllUsers() {
-        return userService.getAllUsers();
+    public PageResponseDTO<UsersDTO> getAllUsers(@Argument Integer page, 
+                                                 @Argument Integer size,
+                                                 @Argument String sortBy,
+                                                 @Argument String direction) {
+        PageRequestDTO pageRequest = new PageRequestDTO();
+        pageRequest.setPage(page != null ? page - 1 : 0); // Convert to 0-based for internal processing
+        pageRequest.setSize(size != null ? size : 10);
+        pageRequest.setSortBy(sortBy != null ? sortBy : "id");
+        pageRequest.setDirection(direction != null ? direction : "asc");
+        PageResponseDTO<UsersDTO> result = userService.getAllUsers(pageRequest);
+        result.setPage(result.getPage() + 1); // Convert back to 1-based for response
+        return result;
     }
 
     @QueryMapping

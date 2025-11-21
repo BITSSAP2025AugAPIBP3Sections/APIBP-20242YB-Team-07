@@ -1,7 +1,8 @@
 package com.cooknect.user_service.service;
 
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 import com.cooknect.user_service.dto.*;
-import com.cooknect.user_service.model.UserModel;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,7 +14,7 @@ public interface UserService {
 
     public LoginResponseDTO verify(LoginRequestDTO loginRequestDTO);
 
-    public List<UsersDTO> getAllUsers();
+    public PageResponseDTO<UsersDTO> getAllUsers(PageRequestDTO pageRequestDTO);
 
     public UsersDTO getUserById(Long id);
 

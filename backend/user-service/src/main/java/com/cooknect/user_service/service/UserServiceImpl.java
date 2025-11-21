@@ -1,10 +1,13 @@
 package com.cooknect.user_service.service;
 
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 import com.cooknect.user_service.dto.*;
 import com.cooknect.user_service.model.*;
 import com.cooknect.user_service.repository.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -98,9 +101,16 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public List<UsersDTO> getAllUsers() {
-        List<UserModel> users = repository.findAll();
-        return users.stream().map(
+    public PageResponseDTO<UsersDTO> getAllUsers(PageRequestDTO pageRequestDTO) {
+        // Get sort direction
+        Sort.Direction sortDirection = pageRequestDTO.getDirection().equalsIgnoreCase("desc") 
+            ? Sort.Direction.DESC : Sort.Direction.ASC;
+        
+        // Get all users sorted
+        List<UserModel> users = repository.findAll(Sort.by(sortDirection, pageRequestDTO.getSortBy()));
+        
+        // Convert to DTOs
+        List<UsersDTO> userDTOs = users.stream().map(
                 u -> new UsersDTO(
                         u.getId(),
                         u.getEmail(),
@@ -111,7 +121,28 @@ public class UserServiceImpl implements UserService{
                         u.getAvatarUrl(),
                         u.getDietaryPreference() != null ? u.getDietaryPreference().getName() : null,
                         u.getHealthGoal() != null ? u.getHealthGoal().getName() : null,
-                        u.getCuisinePreferences() == null ? List.of() : u.getCuisinePreferences().stream().map(CuisinePreference::getName).toList())).toList();
+                        u.getCuisinePreferences() == null ? List.of() : u.getCuisinePreferences().stream().map(CuisinePreference::getName).toList()))
+                .toList();
+        
+        // Apply pagination
+        int page = pageRequestDTO.getPage();
+        int size = pageRequestDTO.getSize();
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, userDTOs.size());
+        
+        List<UsersDTO> paginatedUsers = startIndex >= userDTOs.size() ? 
+            List.of() : userDTOs.subList(startIndex, endIndex);
+
+        // Create PageResponseDTO
+        PageResponseDTO<UsersDTO> pageResponse = new PageResponseDTO<>();
+        pageResponse.setContent(paginatedUsers);
+        pageResponse.setPage(page);
+        pageResponse.setSize(size);
+        pageResponse.setTotalElements(userDTOs.size());
+        pageResponse.setTotalPages((int) Math.ceil((double) userDTOs.size() / size));
+        pageResponse.setSort(pageRequestDTO.getSortBy() + "," + pageRequestDTO.getDirection());
+        
+        return pageResponse;
     }
 
     @Override

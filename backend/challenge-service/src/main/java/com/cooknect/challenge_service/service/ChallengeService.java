@@ -3,6 +3,8 @@ package com.cooknect.challenge_service.service;
 import com.cooknect.challenge_service.dto.CreateChallengeRequest;
 import com.cooknect.challenge_service.dto.ChallengeResponse;
 import com.cooknect.challenge_service.dto.UpdateChallengeRequest;
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 import com.cooknect.challenge_service.dto.ChallengeParticipationRequest;
 import com.cooknect.challenge_service.dto.RecipeSubmissionRequest;
 import com.cooknect.challenge_service.dto.LeaderboardEntry;
@@ -73,10 +75,76 @@ public class ChallengeService {
         return response;
     }
     
-    public List<ChallengeResponse> getAllChallenges() {
-        return challengeRepository.findAll().stream()
+    public PageResponseDTO<ChallengeResponse> getAllChallenges(PageRequestDTO pageRequestDTO) {
+        // Get all challenges
+        List<Challenge> allChallenges = challengeRepository.findAll();
+        
+        // Apply sorting
+        String sortBy = pageRequestDTO.getSortBy();
+        String direction = pageRequestDTO.getDirection();
+        
+        Comparator<Challenge> comparator;
+        switch (sortBy.toLowerCase()) {
+            case "name":
+                comparator = Comparator.comparing(Challenge::getName);
+                break;
+            case "description":
+                comparator = Comparator.comparing(Challenge::getDescription);
+                break;
+            case "status":
+                comparator = Comparator.comparing(Challenge::getStatus);
+                break;
+            case "startdate":
+                comparator = Comparator.comparing(Challenge::getStartDate);
+                break;
+            case "enddate":
+                comparator = Comparator.comparing(Challenge::getEndDate);
+                break;
+            case "type":
+                comparator = Comparator.comparing(Challenge::getType);
+                break;
+            case "id":
+            default:
+                comparator = Comparator.comparing(Challenge::getId);
+                break;
+        }
+        
+        if ("desc".equalsIgnoreCase(direction)) {
+            comparator = comparator.reversed();
+        }
+        
+        List<Challenge> sortedChallenges = allChallenges.stream()
+                .sorted(comparator)
+                .collect(Collectors.toList());
+        
+        // Apply pagination
+        int page = pageRequestDTO.getPage();
+        int size = pageRequestDTO.getSize();
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, sortedChallenges.size());
+        
+        List<Challenge> paginatedChallenges;
+        if (startIndex >= sortedChallenges.size()) {
+            paginatedChallenges = new ArrayList<>();
+        } else {
+            paginatedChallenges = sortedChallenges.subList(startIndex, endIndex);
+        }
+        
+        // Convert to response DTOs
+        List<ChallengeResponse> challengeResponses = paginatedChallenges.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+        
+        // Create paginated response
+        PageResponseDTO<ChallengeResponse> response = new PageResponseDTO<>();
+        response.setContent(challengeResponses);
+        response.setPage(page);
+        response.setSize(size);
+        response.setTotalElements(allChallenges.size());
+        response.setTotalPages((int) Math.ceil((double) allChallenges.size() / size));
+        response.setSort(sortBy + ":" + direction);
+        
+        return response;
     }
 
     public ChallengeResponse getChallengeById(Long id) {

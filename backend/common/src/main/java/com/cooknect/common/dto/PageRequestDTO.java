@@ -2,7 +2,7 @@ package com.cooknect.common.dto;
 
 public class PageRequestDTO {
 
-    private int page = 0;
+    private int page = 1;
     private int size = 10;
     private String sortBy = "id";
     private String direction = "asc";
