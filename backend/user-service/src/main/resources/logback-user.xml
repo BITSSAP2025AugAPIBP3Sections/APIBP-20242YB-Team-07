@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <springProperty scope="context" name="solarWindsToken" source="solarwinds.log.token"/>
+
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <appender name="SOLARWINDS" class="com.cooknect.user_service.logging.SolarWindsHttpAppender">
+        <url>https://logs.collector.ap-01.cloud.solarwinds.com/v1/logs</url>
+        <token>${solarWindsToken}</token>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdc>true</includeMdc>
+            <pattern>%-5level [%thread] [user_id:%X{user_id}] %logger{35} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="SOLARWINDS"/>
+    </root>
+
+</configuration>
