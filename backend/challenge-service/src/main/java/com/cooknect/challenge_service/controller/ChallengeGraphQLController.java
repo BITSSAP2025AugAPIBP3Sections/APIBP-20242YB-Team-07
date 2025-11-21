@@ -3,6 +3,8 @@ package com.cooknect.challenge_service.controller;
 import com.cooknect.challenge_service.dto.*;
 import com.cooknect.challenge_service.model.ChallengeParticipant;
 import com.cooknect.challenge_service.service.ChallengeService;
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -26,8 +28,21 @@ public class ChallengeGraphQLController {
     }
     
     @QueryMapping
-    public List<ChallengeResponse> challenges() {
-        return challengeService.getAllChallenges();
+    public PageResponseDTO<ChallengeResponse> challenges(
+            @Argument Integer page,
+            @Argument Integer size,
+            @Argument String sortBy,
+            @Argument String direction
+    ) {
+        PageRequestDTO pageRequestDTO = new PageRequestDTO();
+        pageRequestDTO.setPage((page != null ? page : 1) - 1); // Convert to 0-based for internal processing
+        pageRequestDTO.setSize(size != null ? size : 10);
+        pageRequestDTO.setSortBy(sortBy != null ? sortBy : "id");
+        pageRequestDTO.setDirection(direction != null ? direction : "asc");
+        
+        PageResponseDTO<ChallengeResponse> result = challengeService.getAllChallenges(pageRequestDTO);
+        result.setPage(result.getPage() + 1); // Convert back to 1-based for response
+        return result;
     }
 
     @QueryMapping

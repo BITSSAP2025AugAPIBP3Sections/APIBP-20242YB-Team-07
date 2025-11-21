@@ -3,6 +3,8 @@ package com.cooknect.challenge_service.controller;
 import com.cooknect.challenge_service.dto.*;
 import com.cooknect.challenge_service.model.ChallengeParticipant;
 import com.cooknect.challenge_service.service.ChallengeService;
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -16,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/challenges")
+@RequestMapping("/api/v1/challenges")
 public class ChallengeController {
     private final ChallengeService challengeService;
 
@@ -33,10 +35,22 @@ public class ChallengeController {
     }
     
     @GetMapping
-    @Operation(summary = "Get all challenges", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<List<ChallengeResponse>> getAllChallenges() {
-        List<ChallengeResponse> challenges = challengeService.getAllChallenges();
-        return ResponseEntity.ok(challenges);
+    @Operation(summary = "Get all challenges with pagination", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<PageResponseDTO<ChallengeResponse>> getAllChallenges(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction
+    ) {
+        PageRequestDTO pageRequestDTO = new PageRequestDTO();
+        pageRequestDTO.setPage(page - 1); // Convert to 0-based for internal processing
+        pageRequestDTO.setSize(size);
+        pageRequestDTO.setSortBy(sortBy);
+        pageRequestDTO.setDirection(direction);
+        
+        PageResponseDTO<ChallengeResponse> result = challengeService.getAllChallenges(pageRequestDTO);
+        result.setPage(result.getPage() + 1); // Convert back to 1-based for response
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}")
