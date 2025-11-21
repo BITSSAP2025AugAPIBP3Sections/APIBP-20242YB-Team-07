@@ -1,6 +1,8 @@
 package com.cooknect.user_service.controller;
 
 import com.cooknect.common.events.UserEvent;
+import com.cooknect.common.dto.PageRequestDTO;
+import com.cooknect.common.dto.PageResponseDTO;
 import com.cooknect.user_service.dto.*;
 import com.cooknect.user_service.event.UserEventProducer;
 import com.cooknect.user_service.service.UserService;
@@ -26,9 +28,19 @@ public class UserController {
     UserEventProducer userEventProducer;
 
     @GetMapping("/")
-    @Operation(summary = "Get all users", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<List<UsersDTO>> getAllUsers() {
-        List<UsersDTO> users = service.getAllUsers();
+    @Operation(summary = "Get all users with pagination", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<PageResponseDTO<UsersDTO>> getAllUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
+        PageRequestDTO pageRequestDTO = new PageRequestDTO();
+        pageRequestDTO.setPage(page - 1); // Convert to 0-based for internal processing
+        pageRequestDTO.setSize(size);
+        pageRequestDTO.setSortBy(sortBy);
+        pageRequestDTO.setDirection(direction);
+        PageResponseDTO<UsersDTO> users = service.getAllUsers(pageRequestDTO);
+        users.setPage(users.getPage() + 1); // Convert back to 1-based for response
         return ResponseEntity.ok(users);
     }
 

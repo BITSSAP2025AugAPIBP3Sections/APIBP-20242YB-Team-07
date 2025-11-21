@@ -99,8 +99,17 @@ public class RecipeController {
             HttpServletRequest request,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Boolean saved,
-            PageRequestDTO pageRequestDTO
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction
     ) {
+        PageRequestDTO pageRequestDTO = new PageRequestDTO();
+        pageRequestDTO.setPage(page - 1); // Convert to 0-based for internal processing
+        pageRequestDTO.setSize(size);
+        pageRequestDTO.setSortBy(sortBy);
+        pageRequestDTO.setDirection(direction);
+        
         String userIdHeader = request.getHeader("X-User-Id");
         Long id;
         try {
@@ -108,19 +117,25 @@ public class RecipeController {
         } catch (NumberFormatException e) {
             PageResponseDTO<GetRecipeDTO> emptyResponse = new PageResponseDTO<>();
             emptyResponse.setContent(List.of());
-            emptyResponse.setPage(0);
+            emptyResponse.setPage(1); // Return 1-based page
             emptyResponse.setSize(0);
             emptyResponse.setTotalElements(0);
             emptyResponse.setTotalPages(0);
             return emptyResponse;
         }
+        
+        PageResponseDTO<GetRecipeDTO> result;
         if (userId != null && Boolean.TRUE.equals(saved)) {
             // Fetch only saved recipes for the user
-            return svc.getSavedRecipesByUserId(userId,pageRequestDTO);
+            result = svc.getSavedRecipesByUserId(userId, pageRequestDTO);
         } else if (userId != null) {
-            return svc.getRecipesByUserId(userId,pageRequestDTO);
+            result = svc.getRecipesByUserId(userId, pageRequestDTO);
+        } else {
+            result = svc.getAllRecipes(id, pageRequestDTO);
         }
-        return svc.getAllRecipes(id,pageRequestDTO);
+        
+        result.setPage(result.getPage() + 1); // Convert back to 1-based for response
+        return result;
     }
 
 
