@@ -21,4 +21,48 @@ scenarios:
           url: "/api/v1/challenges"
           headers:
             Authorization: "Bearer {{ authToken }}"
+#      - post:
+#          url: "/api/v1/users/register"
+#          json:
+#            email: "user{{ $randomInt(1000,9999) }}@example.com"
+#            username: "user{{ $randomInt(1000,9999) }}"
+#            fullName: "Test User"
+#            password: "testpassword"
+#            role: "USER"
+#          beforeRequest: |
+#            function(req, ctx, ee, next) {
+#              ctx.vars.userEmail = req.json.email;
+#              return next();
+#            }
+#      - post:
+#          url: "/api/v1/recipes"
+#          headers:
+#            Authorization: "Bearer {{ authToken }}"
+#          json:
+#            title: "Test Recipe {{ $randomInt(1000,9999) }}"
+#            description: "A test recipe"
+#            ingredients:
+#              - name: "Flour"
+#                quantity: "2 cups"
+#              - name: "Sugar"
+#                quantity: "1 cup"
+#              - name: "Eggs"
+#                quantity: "3"
+#            preparation:
+#              - step: "Mix the flour and sugar"
+#              - step: "Add eggs and whisk well"
+#              - step: "Pour the batter into a pan"
+#              - step: "Bake for 30 minutes at 180°C"
+#            cuisine: "AMERICAN"
+#            language: "en" 
 
+#      - put:
+#          url: "/api/v1/users/profile"
+#          headers:
+#            Authorization: "Bearer {{ authToken }}"
+#          json:
+#            name: "Updated Name"
+#      - get:
+#          url: "/api/v1/notifications/user/{{ userEmail }}"
+#          headers:
+#            Authorization: "Bearer {{ authToken }}"
