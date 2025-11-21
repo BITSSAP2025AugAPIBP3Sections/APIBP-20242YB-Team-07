@@ -2,6 +2,8 @@ package com.cooknect.notification_service.service;
 
 import org.springframework.stereotype.Service;
 
+import com.cooknect.common.events.ChallengeEvent;
+import com.cooknect.common.events.RecipeEvent;
 import com.cooknect.common.events.UserEvent;
 import com.cooknect.notification_service.Repository.NotificationRepository;
 import com.cooknect.notification_service.model.Notification;
@@ -28,9 +30,21 @@ public class NotificationService {
         this.repository = repository;
     }
 
-    @KafkaListener(topics = {"recipe-topic", "user-topic", "challenge-topic"}, groupId = "notification-group")
+    @KafkaListener(topics = "user-topic", groupId = "notification-group")
     public void handleUserEvent(UserEvent event) {
         System.out.println("Received user created event: " + event);
+        sendEmail(event.getEmail(), event.getMessageSubject(), event.getMessageBody());
+    }
+
+    @KafkaListener(topics = "challenge-topic", groupId = "notification-group")
+    public void handleChallengeEvent(ChallengeEvent event) {
+        System.out.println("Received challenge created event: " + event);
+        sendEmail(event.getEmail(), event.getMessageSubject(), event.getMessageBody());
+    }
+
+    @KafkaListener(topics = "recipe-topic", groupId = "notification-group")
+    public void handleRecipeEvent(RecipeEvent event) {
+        System.out.println("Received recipe created event: " + event);
         sendEmail(event.getEmail(), event.getMessageSubject(), event.getMessageBody());
     }
     
