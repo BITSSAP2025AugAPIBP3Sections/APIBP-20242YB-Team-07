@@ -16,6 +16,7 @@ import {
   Tag,
   Select,
   Upload,
+  Pagination,
 } from "antd";
 import { HeartOutlined, MessageFilled, HeartFilled } from "@ant-design/icons";
 import {
@@ -38,6 +39,9 @@ const Home = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [allRecipes, setAllRecipes] = useState([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [myCookbook, setMyCookbook] = useState(false);
   const [createRecipeForm, setCreateRecipeForm] = useState({
     title: "",
     description: "",
@@ -106,11 +110,14 @@ const Home = () => {
     }
   };
 
-  const fetchAllRecipes = async (userId) => {
+  const fetchAllRecipes = async (userId, pageNumber) => {
+    if (pageNumber === undefined || pageNumber === null) {
+      pageNumber = 1;
+    }
     try {
       const url = userId
-        ? `http://localhost:8089/api/v1/recipes?userId=${userId}`
-        : "http://localhost:8089/api/v1/recipes";
+        ? `http://localhost:8089/api/v1/recipes?userId=${userId}&page=${pageNumber}&size=10&sortBy=id&direction=asc`
+        : `http://localhost:8089/api/v1/recipes?page=${pageNumber}&size=10&sortBy=id&direction=asc`;
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -127,13 +134,14 @@ const Home = () => {
         throw new Error("Failed to fetch recipes");
       }
       const data = await response.json();
-      console.log("Fetched Recipes:", data);
-      setAllRecipes(data);
+      console.log("Fetched Recipes:", data.content);
+      setAllRecipes(data.content || []);
+      setPage(data.page);
+      setTotalPages(data.totalPages);
     } catch (error) {
       console.error("Error fetching recipes:", error);
     }
   };
-  console.log("All Recipes:", allRecipes);
 
   const likeAndUnlikeRecipe = async (recipeId) => {
     try {
@@ -155,8 +163,19 @@ const Home = () => {
       if (!response.ok) {
         throw new Error("Failed to like/unlike recipe");
       }
-      // Refresh recipes after liking/unliking
-      fetchAllRecipes();
+      setAllRecipes((prevRecipes) =>
+        prevRecipes.map((recipe) =>
+          recipe.id === recipeId
+            ? {
+                ...recipe,
+                likedByUser: !recipe.likedByUser,
+                likesCount: recipe.likedByUser
+                  ? recipe.likesCount - 1
+                  : recipe.likesCount + 1,
+              }
+            : recipe
+        )
+      );
     } catch (error) {
       console.error("Error liking/unliking recipe:", error);
     }
@@ -187,15 +206,17 @@ const Home = () => {
       if (!response.ok) {
         throw new Error("Failed to save/unsave recipe");
       }
-      // Refresh recipes after saving/unsaving
-      fetchAllRecipes();
+      setAllRecipes((prevRecipes) =>
+        prevRecipes.map((recipe) =>
+          recipe.id === recipeId
+            ? { ...recipe, savedByUser: !recipe.savedByUser }
+            : recipe
+        )
+      );
     } catch (error) {
       console.error("Error saving/unsaving recipe:", error);
     }
   };
-
-  //   console the form data
-  console.log("Form Data:", form.getFieldsValue());
 
   const normFile = (e) => {
     if (Array.isArray(e)) {
@@ -203,8 +224,6 @@ const Home = () => {
     }
     return e?.fileList;
   };
-
-  console.log("User profile in Home:", userProfile);
 
   const uploadPhoto = async (file) => {
     const formData = new FormData();
@@ -225,6 +244,7 @@ const Home = () => {
     console.log(data);
     return data.data.url;
   };
+
   const onFinish = async () => {
     const avatarFile = form.getFieldValue("avatar")?.[0]?.originFileObj;
     const uploadPromise = avatarFile
@@ -315,14 +335,20 @@ const Home = () => {
                 <a
                   href="#"
                   className="profile-link"
-                  onClick={() => fetchAllRecipes(userProfile.id)}
+                  onClick={() => {
+                    fetchAllRecipes(userProfile.id);
+                    setMyCookbook(true);
+                  }}
                 >
                   My Cookbook
                 </a>
                 <a
                   href="#"
                   className="profile-link"
-                  onClick={() => fetchAllRecipes()}
+                  onClick={() => {
+                    fetchAllRecipes();
+                    setMyCookbook(false);
+                  }}
                 >
                   All Recipes
                 </a>
@@ -350,103 +376,119 @@ const Home = () => {
 
             <h2>Latest Community Recipes</h2>
 
-            {allRecipes.map((recipe) => (
-              <div className="recipe-card" key={recipe.id}>
-                <img
-                  src={
-                    recipe?.recipeImageUrl ||
-                    "https://placehold.co/800x600/ff7f50/ffffff?text=Vibrant+Salmon+Recipe"
-                  }
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src =
-                      "https://placehold.co/800x600/ccc/333?text=Image+Load+Failed";
-                  }}
-                  alt={recipe.title || "Recipe Image"}
-                  className="recipe-image"
-                />
-                <div className="card-content">
-                  <div className="card-author-info">
-                    <div className="author-avatar">
-                      {recipe?.username?.charAt(0).toUpperCase() || "U"}
-                    </div>
-                    <div>
-                      <h3>{recipe?.title}</h3>
-                      <div className="author-name">
-                        Posted by{" "}
-                        <a
-                          href="#"
-                          onClick={() =>
-                            navigate(`/profile/${recipe.userId}`, {
-                              state: { loggedInUserId: userProfile.id },
-                            })
-                          }
-                        >
-                          @{recipe?.username}
-                        </a>
+            {allRecipes.length === 0 ? (
+              <p>No recipes found. Be the first to share a recipe!</p>
+            ) : (
+              allRecipes.map((recipe) => (
+                <div className="recipe-card" key={recipe.id}>
+                  <img
+                    src={
+                      recipe?.recipeImageUrl ||
+                      "https://placehold.co/800x600/ff7f50/ffffff?text=Vibrant+Salmon+Recipe"
+                    }
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src =
+                        "https://placehold.co/800x600/ccc/333?text=Image+Load+Failed";
+                    }}
+                    alt={recipe.title || "Recipe Image"}
+                    className="recipe-image"
+                  />
+                  <div className="card-content">
+                    <div className="card-author-info">
+                      <div className="author-avatar">
+                        {recipe?.username?.charAt(0).toUpperCase() || "U"}
+                      </div>
+                      <div>
+                        <h3>{recipe?.title}</h3>
+                        <div className="author-name">
+                          Posted by{" "}
+                          <a
+                            href="#"
+                            onClick={() =>
+                              navigate(`/profile/${recipe.userId}`, {
+                                state: { loggedInUserId: userProfile.id },
+                              })
+                            }
+                          >
+                            @{recipe?.username}
+                          </a>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <p className="recipe-description">
-                    {recipe?.description}
-                    <br />
-                    <a
-                      href="#"
-                      onClick={() => navigate(`/recipe/${recipe.id}`)}
-                    >
-                      {" "}
-                      Read more
-                    </a>
-                  </p>
-                  <div>
-                    <Tag color="#f50">{recipe?.cuisine}</Tag>
-                  </div>
-                  <div className="card-divider"></div>
-                  <div className="card-actions">
-                    <button
-                      className="action-button like-button"
-                      onClick={() => likeAndUnlikeRecipe(recipe.id)}
-                    >
-                      {recipe?.likedByUser ? (
-                        <HeartFilled style={{ color: "red" }} />
-                      ) : (
-                        <HeartOutlined />
-                      )}
-                      <span style={{ marginLeft: "5px", fontWeight: "500" }}>
-                        {recipe?.likesCount}
-                      </span>
-                    </button>
-                    <button
-                      className="action-button"
-                      onClick={() => navigate(`/recipe/${recipe.id}`)}
-                    >
-                      <MessageFilled />
-                      <span style={{ marginLeft: "5px", fontWeight: "500" }}>
-                        {recipe?.commentCount}
-                      </span>
-                    </button>
-                    <button
-                      className="action-button"
-                      onClick={() => handleSaveUnsave(recipe.id)}
-                    >
-                      {recipe?.savedByUser ? (
-                        <Bookmark
-                          style={{
-                            color: "#1890ff",
-                            fill: "#1890ff",
-                          }}
-                        />
-                      ) : (
-                        <Bookmark />
-                      )}
-                      <span style={{ marginLeft: "5px", fontWeight: "500" }}>
-                        {recipe?.savedByUser ? "Saved" : "Save"}
-                      </span>
-                    </button>
+                    <p className="recipe-description">
+                      {recipe?.description}
+                      <br />
+                      <a
+                        href="#"
+                        onClick={() => navigate(`/recipe/${recipe.id}`)}
+                      >
+                        {" "}
+                        Read more
+                      </a>
+                    </p>
+                    <div>
+                      <Tag color="#f50">{recipe?.cuisine}</Tag>
+                    </div>
+                    <div className="card-divider"></div>
+                    <div className="card-actions">
+                      <button
+                        className="action-button like-button"
+                        onClick={() => likeAndUnlikeRecipe(recipe.id)}
+                      >
+                        {recipe?.likedByUser ? (
+                          <HeartFilled style={{ color: "red" }} />
+                        ) : (
+                          <HeartOutlined />
+                        )}
+                        <span style={{ marginLeft: "5px", fontWeight: "500" }}>
+                          {recipe?.likesCount}
+                        </span>
+                      </button>
+                      <button
+                        className="action-button"
+                        onClick={() => navigate(`/recipe/${recipe.id}`)}
+                      >
+                        <MessageFilled />
+                        <span style={{ marginLeft: "5px", fontWeight: "500" }}>
+                          {recipe?.commentCount}
+                        </span>
+                      </button>
+                      <button
+                        className="action-button"
+                        onClick={() => handleSaveUnsave(recipe.id)}
+                      >
+                        {recipe?.savedByUser ? (
+                          <Bookmark
+                            style={{
+                              color: "#1890ff",
+                              fill: "#1890ff",
+                            }}
+                          />
+                        ) : (
+                          <Bookmark />
+                        )}
+                        <span style={{ marginLeft: "5px", fontWeight: "500" }}>
+                          {recipe?.savedByUser ? "Saved" : "Save"}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
+            <Pagination
+              current={page}
+              total={totalPages * 10}
+              onChange={(pageNumber) => {
+                fetchAllRecipes(myCookbook ? userProfile.id : null, pageNumber);
+              }}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: "20px",
+              }}
+            />
           </div>
           {/* -----------------------------Challenge Column------------------------- */}
           <div class="right-sidebar-column">
