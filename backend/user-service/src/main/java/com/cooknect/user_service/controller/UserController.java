@@ -14,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +24,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/users")
 public class UserController {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+    
     @Autowired
     UserService service;
 
@@ -41,6 +46,7 @@ public class UserController {
         pageRequestDTO.setDirection(direction);
         PageResponseDTO<UsersDTO> users = service.getAllUsers(pageRequestDTO);
         users.setPage(users.getPage() + 1); // Convert back to 1-based for response
+        logger.info("All users fetched successfully for page: {}, size: {}", page, size);
         return ResponseEntity.ok(users);
     }
 
@@ -48,6 +54,7 @@ public class UserController {
     @Operation(summary = "Get user by ID", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<UsersDTO> getUserById(@PathVariable Long id) {
         UsersDTO users = service.getUserById(id);
+        logger.info("User fetched successfully with ID: {}", id);
         return ResponseEntity.ok(users);
     }
     // Bulk fetch usernames by IDs
@@ -55,6 +62,7 @@ public class UserController {
     @Operation(summary = "Get user by ID", security = @SecurityRequirement(name = "bearerAuth"), hidden = true)
     public ResponseEntity<Map<Long, String>> getUsernamesByIds(@RequestBody List<Long> userIds) {
         Map<Long, String> usernames = service.getUsernamesByIds(userIds);
+        logger.info("Usernames fetched successfully for IDs: {}", userIds);
         return ResponseEntity.ok(usernames);
     }
 
@@ -72,6 +80,7 @@ public class UserController {
             return ResponseEntity.badRequest().body(null);
         }
         UsersDTO users = service.getUserById(id);
+        logger.info("User details fetched successfully from header for ID: {}", id);
         return ResponseEntity.ok(users);
     }
 
@@ -79,6 +88,7 @@ public class UserController {
     @Operation(summary = "Get user health goal", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Map<String, String>> getHealthGoal(@PathVariable Long id){
         Map<String, String> health = service.getHealthGoal(id);
+        logger.info("Health goal fetched successfully for user ID: {}", id);
         return ResponseEntity.ok(health);
     }
 
@@ -86,6 +96,7 @@ public class UserController {
     @Operation(summary = "Get user dietary preference", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Map<String, String>> getDietaryPreference(@PathVariable Long id){
         Map<String, String> diet = service.getDietaryPreference(id);
+        logger.info("Dietary preference fetched successfully for user ID: {}", id);
         return ResponseEntity.ok(diet);
     }
 
@@ -93,6 +104,7 @@ public class UserController {
     @Operation(summary = "Get user cuisine preference", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Map<String, Object>> getCuisinePreference(@PathVariable Long id){
         Map<String, Object> cuisine = service.getUserCuisinePreferences(id);
+        logger.info("Cuisine preference fetched successfully for user ID: {}", id);
         return ResponseEntity.ok(cuisine);
     }
 
@@ -106,6 +118,7 @@ public class UserController {
         String.format("Hi %s! \nYou have been successfully logged into Cooknect.", user.getFullName())
         );
         userEventProducer.sendUserEvent(event);
+        logger.info("User logged in successfully with email: {}", loginRequestDTO.getEmail());
         return service.verify(loginRequestDTO);
     }
 
@@ -113,15 +126,19 @@ public class UserController {
     @Operation(summary = "User registration", description = "Register a new user", security = {})
     public ResponseEntity<?> createUser(@RequestBody CreateUserDTO user) {
         if(user.getPassword() == null || user.getPassword().isEmpty()){
+            logger.error("Password cannot be empty during registration");
             return ResponseEntity.badRequest().body(Map.of("error", "Password cannot be empty"));
         }
         if(user.getEmail() == null || user.getEmail().isEmpty()){
+            logger.error("Email cannot be empty during registration");
             return ResponseEntity.badRequest().body(Map.of("error", "Email cannot be empty"));
         }
         if(user.getFullName()== null || user.getFullName().isEmpty()){
+            logger.error("Full name cannot be empty during registration");
             return ResponseEntity.badRequest().body(Map.of("error", "Full name cannot be empty"));
         }
         if(user.getUsername() == null || user.getUsername().isEmpty()){
+            logger.error("username cannot be empty during registration");
             return ResponseEntity.badRequest().body(Map.of("error", "Username cannot be empty"));
         }
         CreateUserDTO newUser = service.createUser(user);
@@ -131,6 +148,7 @@ public class UserController {
         String.format("Hi %s! \nWelcome to Cooknect. Your account has been created successfully with username %s.", newUser.getFullName(), newUser.getUsername())
         );
         userEventProducer.sendUserEvent(event);
+        logger.info("User registered successfully with email: {}", newUser.getEmail());
         return ResponseEntity.ok(newUser);
     }
 
@@ -157,6 +175,7 @@ public class UserController {
         String.format("Hi %s! \nYour query has been submitted successfully on Cooknect.", user.getFullName())
         );
         userEventProducer.sendUserEvent(event);
+        logger.info("General query submitted successfully by email: {}", queryDTO.getEmail());
         return ResponseEntity.ok(savedQuery);
     }
 
@@ -166,18 +185,23 @@ public class UserController {
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody UsersDTO userDTO,HttpServletRequest request) {
         String userEmailHeader = request.getHeader("X-User-Email");
         if (userDTO.getEmail() == null || userDTO.getEmail().isEmpty()){
+            logger.error("Email cannot be empty during user update");
             return ResponseEntity.badRequest().body(Map.of("error", "Email cannot be empty"));
         }
         if (userDTO.getFullName() == null || userDTO.getFullName().isEmpty()){
+            logger.error("Full name cannot be empty during user update");
             return ResponseEntity.badRequest().body(Map.of("error", "Full name cannot be empty"));
         }
         if (userDTO.getUsername() == null || userDTO.getUsername().isEmpty()){
+            logger.error("Username cannot be empty during user update");
             return ResponseEntity.badRequest().body(Map.of("error", "Username cannot be empty"));
         }
         if(userDTO.getBio() == null || userDTO.getBio().isEmpty()){
+            logger.error("Bio cannot be empty during user update");
             return ResponseEntity.badRequest().body(Map.of("error", "Bio cannot be null"));
         }
         if(userDTO.getAvatarUrl() == null || userDTO.getAvatarUrl().isEmpty()){
+            logger.error("Avatar URL cannot be empty during user update");
             return ResponseEntity.badRequest().body(Map.of("error", "Avatar URL cannot be null"));
         }
         if(userDTO.getDietaryPreference() == null || userDTO.getDietaryPreference().isEmpty()){
@@ -210,6 +234,7 @@ public class UserController {
         String.format("Hi %s! \nYour preferences have been updated successfully on Cooknect.", updatedUser.getFullName())
         );
         userEventProducer.sendUserEvent(event);
+        logger.info("User preferences updated successfully for user ID: {}", id);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -224,6 +249,7 @@ public class UserController {
         String.format("Hi %s! \nYour health goal has been updated successfully on Cooknect.", updatedUser.getFullName())
         );
         userEventProducer.sendUserEvent(event);
+        logger.info("Health goal updated successfully for user ID: {}", id);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -267,6 +293,7 @@ public class UserController {
         String.format("Hi %s! \nYour account has been deleted successfully from Cooknect.", user.getFullName())
         );
         userEventProducer.sendUserEvent(event);
+        logger.info("User deleted successfully with ID: {}", id);
         return ResponseEntity.noContent().build();
     }
 }
