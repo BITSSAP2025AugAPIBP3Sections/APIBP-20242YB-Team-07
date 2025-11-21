@@ -266,6 +266,39 @@ public class Routes {
     }
 
     @Bean
+    public RouterFunction<ServerResponse> notificationServiceRoute() {
+        return GatewayRouterFunctions.route("notification-service")
+                .route(RequestPredicates.path("/api/v1/notifications/**"),
+                        request -> {
+                            String authHeader = request.headers().firstHeader("Authorization");
+                            String userEmail;
+
+                            var authentication = SecurityContextHolder.getContext().getAuthentication();
+                            if (authentication != null && authentication.isAuthenticated()) {
+                                userEmail = (String) authentication.getPrincipal();
+                            } else {
+                                userEmail = null;
+                            }
+                            ServerRequest newRequest = ServerRequest.from(request)
+                                    .headers(headers -> {
+                                        if (authHeader != null) {
+                                            headers.set("Authorization", authHeader);
+                                            String role = jwtService.extractRole(authHeader.substring(7));
+                                            Long userId = jwtService.extractUserIdField(authHeader.substring(7));
+                                            headers.set("X-User-Role", role);
+                                            headers.set("X-User-Id", String.valueOf(userId));
+                                        }
+                                        if (userEmail != null) {
+                                            headers.set("X-User-Email", userEmail);
+                                        }
+                                    })
+                                    .build();
+                            return HandlerFunctions.http("http://localhost:8084").handle(newRequest);
+                        })
+                .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> nutritionServiceRoute() {
         return GatewayRouterFunctions.route("nutrition-service")
                 .route(RequestPredicates.path("/api/v1/nutrition/**"),
@@ -355,6 +388,14 @@ public class Routes {
     public RouterFunction<ServerResponse> challengeServiceSwaggerRoute() {
         return GatewayRouterFunctions.route("challenge-service-swagger")
             .route(RequestPredicates.path("/aggregate/challenge-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8083"))
+            .filter(setPath("/api-docs"))
+            .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> notificationServiceSwaggerRoute() {
+        return GatewayRouterFunctions.route("notification-service-swagger")
+            .route(RequestPredicates.path("/aggregate/notification-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8084"))
             .filter(setPath("/api-docs"))
             .build();
     }
