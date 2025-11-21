@@ -46,12 +46,6 @@ public class NutritionController {
         return ResponseEntity.ok(nutritionService.analyzeIngredients(req, userId));
     }
 
-    @GetMapping("/health")
-    @Operation(summary = "Health check", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<String> healthCheck() {
-        return ResponseEntity.ok("Nutrition Service is up and running!");
-    }
-
     @GetMapping("/allNutritionLogs")
     @Operation(summary = "Get all nutrition logs", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<List<NutritionLog>> getAllNutritionLogs() {
