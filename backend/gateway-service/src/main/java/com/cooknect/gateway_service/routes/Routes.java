@@ -57,6 +57,14 @@ public class Routes {
     }
 
     @Bean
+    public RouterFunction<ServerResponse> userServiceHealthRoute() {
+        return GatewayRouterFunctions.route("user-service-health")
+                .route(RequestPredicates.path("/actuator/health/user-service"), HandlerFunctions.http("http://localhost:8081"))
+                .filter(setPath("/actuator/health"))
+                .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> userServiceGraphQLRoute() {
         return GatewayRouterFunctions.route("user-service-graphql")
                 .route(RequestPredicates.path("/api/users/graphql"),
