@@ -1,11 +1,12 @@
 package com.cooknect.recipe_service.controller;
 
+import com.cooknect.common.events.RecipeEvent;
 import com.cooknect.recipe_service.dto.CreateCommentDto;
 import com.cooknect.recipe_service.dto.GetRecipeDTO;
 import com.cooknect.recipe_service.dto.RecipeCreateDTO;
 import com.cooknect.common.dto.PageRequestDTO;
 import com.cooknect.common.dto.PageResponseDTO;
-
+import com.cooknect.recipe_service.event.RecipeEventProducer;
 import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.service.RecipeService;
 import com.cooknect.recipe_service.service.SpeechSynthService;
@@ -14,7 +15,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 
@@ -35,6 +35,9 @@ public class RecipeController {
     private final SpeechSynthService speechSynth;
     private static final Logger log = LoggerFactory.getLogger(RecipeController.class);
 
+    @Autowired
+    private RecipeEventProducer recipeEventProducer;
+
     public RecipeController(RecipeService svc, SpeechSynthService speechSynth) {
         this.svc = svc;
         this.speechSynth = speechSynth;
@@ -54,6 +57,14 @@ public class RecipeController {
         }
 
         Recipe saved = svc.create(recipe, id);
+
+        Map<String, Object> user = svc.getUserDetailsById(id);
+        RecipeEvent event = new RecipeEvent(
+            user.get("email").toString(),
+            "New Recipe Created Successfully",
+            String.format("Hi %s! \nYou have successfully created a new recipe on Cooknect.", user.get("fullName").toString())
+        );
+        recipeEventProducer.sendRecipeEvent(event);
         return ResponseEntity.ok(saved);
     }
 
@@ -71,6 +82,13 @@ public class RecipeController {
         }
 
         svc.likeAndUnlike(recipeId, id);
+        Map<String, Object> user = svc.getUserDetailsById(id);
+        RecipeEvent event = new RecipeEvent(
+            user.get("email").toString(),
+            "Recipe Liked/Unliked Successfully",
+            String.format("Hi %s! \nYou have successfully liked/unliked a recipe on Cooknect.", user.get("fullName").toString())
+        );
+        recipeEventProducer.sendRecipeEvent(event);
         return ResponseEntity.noContent().build();
     }
 
@@ -88,6 +106,13 @@ public class RecipeController {
         }
 
         svc.saveAndUnsave(recipeId, userId);
+        Map<String, Object> user = svc.getUserDetailsById(userId);
+        RecipeEvent event = new RecipeEvent(
+            user.get("email").toString(),
+            "Saved/Unsaved Recipe Successfully",
+            String.format("Hi %s! \nYou have successfully saved/unsaved a recipe on Cooknect.", user.get("fullName").toString())
+        );
+        recipeEventProducer.sendRecipeEvent(event);
         return ResponseEntity.noContent().build();
     }
 
@@ -184,22 +209,15 @@ public class RecipeController {
         comment.setText(dto.getText());
 
         svc.addComment(recipeId, comment);
+        Map<String, Object> user = svc.getUserDetailsById(userId);
+        RecipeEvent event = new RecipeEvent(
+            user.get("email").toString(),
+            "New Comment Added Successfully",
+            String.format("Hi %s! \nYou have successfully added a new comment on Cooknect.", user.get("fullName").toString())
+        );
+        recipeEventProducer.sendRecipeEvent(event);
 
         return ResponseEntity.noContent().build();
-    }
-
-    private static final String TOPIC = "recipe-topic";
-
-    @Autowired
-    private KafkaTemplate<String, String> kafkaTemplate;
-
-    // Publish a recipe message to Kafka topic
-    @PostMapping("/publish")
-    @Operation(summary = "Publish a recipe", security = @SecurityRequirement(name = "bearerAuth"))
-    public String publishRecipe(@RequestParam String recipeId) {
-        String message = "Recipe Published: " + recipeId;
-        kafkaTemplate.send(TOPIC, message);
-        return "Published: " + message;
     }
 
     /*
@@ -293,7 +311,7 @@ public class RecipeController {
         meta.put("service", "recipe-service");
         String version = this.getClass().getPackage().getImplementationVersion();
         meta.put("version", version != null ? version : "unknown");
-        meta.put("kafkaTopic", TOPIC);
+        meta.put("kafkaTopic", "recipe-topic");
         // lightweight runtime info
         meta.put("availableProcessors", Runtime.getRuntime().availableProcessors());
         meta.put("freeMemory", Runtime.getRuntime().freeMemory());
@@ -322,6 +340,13 @@ public class RecipeController {
         }
 
         Recipe updated = svc.patchUpdate(id, recipe, userId);
+        Map<String, Object> user = svc.getUserDetailsById(id);
+        RecipeEvent event = new RecipeEvent(
+            user.get("email").toString(),
+            "Recipe Updated Successfully",
+            String.format("Hi %s! \nYou have successfully updated a recipe on Cooknect.", user.get("fullName").toString())
+        );
+        recipeEventProducer.sendRecipeEvent(event);
         speechSynth.deleteAudioForRecipe(id);
         return ResponseEntity.ok(updated);
     }
@@ -346,6 +371,13 @@ public class RecipeController {
             return ResponseEntity.badRequest().build();
         }
 
+        Map<String, Object> user = svc.getUserDetailsById(userId);
+        RecipeEvent event = new RecipeEvent(
+            user.get("email").toString(),
+            "Recipe Deleted Successfully",
+            String.format("Hi %s! \nYou have successfully deleted a recipe on Cooknect.", user.get("fullName").toString())
+        );
+        recipeEventProducer.sendRecipeEvent(event);
         // Call service method to delete the recipe
         svc.deleteRecipeByUser(userId, recipeId);
 
@@ -372,6 +404,13 @@ public class RecipeController {
             return ResponseEntity.status(403).build(); // Forbidden
         }
 
+        Map<String, Object> user = svc.getUserDetailsById(userIdHeaderLong);
+        RecipeEvent event = new RecipeEvent(
+            user.get("email").toString(),
+            "Recipes Deleted Successfully",
+            String.format("Hi %s! \nYou have successfully deleted all your recipes on Cooknect.", user.get("fullName").toString())
+        );
+        recipeEventProducer.sendRecipeEvent(event);
         // Call service method to delete all recipes for this user
         svc.deleteAllByUser(userId);
 
