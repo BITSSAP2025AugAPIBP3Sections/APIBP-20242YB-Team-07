@@ -42,6 +42,11 @@
         	<groupId>org.springframework.kafka</groupId>
         	<artifactId>spring-kafka</artifactId>
     	</dependency>
+		<dependency>
+			<groupId>com.cooknect</groupId>
+			<artifactId>common</artifactId>
+			<version>1.0.0</version>
+		</dependency>
 <!--		<dependency>-->
 <!--			<groupId>org.springframework.boot</groupId>-->
 <!--			<artifactId>spring-boot-devtools</artifactId>-->

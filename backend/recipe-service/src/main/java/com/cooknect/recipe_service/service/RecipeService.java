@@ -467,6 +467,19 @@ public class RecipeService {
                 .toList();
     }
 
-
+    public Map<String, Object> getUserDetailsById(Long userId) {
+        String userServiceUrl = userBaseUrl + userId;
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                userServiceUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        Map<String, Object> user = response.getBody();
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        return user;
+    }
 
 }
