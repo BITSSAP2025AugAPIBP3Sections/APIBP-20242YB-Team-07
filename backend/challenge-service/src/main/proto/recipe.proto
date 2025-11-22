@@ -30,6 +30,7 @@ message RecipeResponse {
     string cuisine = 7;
     string language = 8;
     repeated Comment comments = 9;
+    int64 userId = 10;
 }
 
 service RecipeService {
