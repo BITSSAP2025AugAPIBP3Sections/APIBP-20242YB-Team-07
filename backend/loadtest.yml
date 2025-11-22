@@ -1,0 +1,63 @@
+config:
+  target: "http://localhost:8089" # Change to your gateway service NodePort or minikube IP if needed
+  phases:
+    - duration: 60 # seconds
+      arrivalRate: 10 # requests per second
+scenarios:
+  - flow:
+      - post:
+          url: "/api/v1/users/login"
+          json:
+            email: "ritika@example.com"
+            password: "yourpassword"
+          capture:
+            json: "$.token"   # Adjust this path if your token is nested differently
+            as: "authToken"
+      - get:
+          url: "/api/v1/recipes"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/api/v1/challenges"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/api/v1/users/register"
+          json:
+            email: "user{{ $randomInt(1000,9999) }}@example.com"
+            username: "user{{ $randomInt(1000,9999) }}"
+            fullName: "Test User"
+            password: "testpassword"
+            role: "USER"
+            
+      - post:
+          url: "/api/v1/recipes"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            title: "Test Recipe {{ $randomInt(1000,9999) }}"
+            description: "A test recipe"
+            ingredients:
+              - name: "Flour"
+                quantity: "2 cups"
+              - name: "Sugar"
+                quantity: "1 cup"
+              - name: "Eggs"
+                quantity: "3"
+            preparation:
+              - step: "Mix the flour and sugar"
+              - step: "Add eggs and whisk well"
+              - step: "Pour the batter into a pan"
+              - step: "Bake for 30 minutes at 180°C"
+            cuisine: "AMERICAN"
+            language: "en" 
+#      - put:
+#          url: "/api/v1/users/profile"
+#          headers:
+#            Authorization: "Bearer {{ authToken }}"
+#          json:
+#            name: "Updated Name"
+      - get:
+          url: "/api/v1/notifications/user/ritika@example.com"
+          headers:
+            Authorization: "Bearer {{ authToken }}"

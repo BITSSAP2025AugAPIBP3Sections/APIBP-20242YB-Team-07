@@ -2,20 +2,19 @@
 
 **Cooknect** is a full-featured recipe and nutrition platform that enables users to create, browse, listen to, and track recipes while managing their dietary preferences and nutrition goals.
 
----
-
 ## Features
 
 ### Recipe Creator
-- Create, Update and Delete Recipes.
-- Tag recipes with categories (vegan, keto, high-protein, etc.)
-- Enrich recipes with nutritional data and serving details
+- Create, update, and delete recipes
+- Tag recipes with dietary categories (vegan, keto, high-protein, etc.)
+- Add ingredient and step-by-step recipe instructions
+- Listen to recipe steps via integrated Text-to-Speech (TTS) for hands-free cooking
 
 ### Everyday User
-- Discover recipes by ingredients
+- Discover recipes by ingredients, tags, or nutritional needs
 - Save favorites and build personal recipe collections
-- Listen to recipes hands-free with **Text-to-Speech (TTS)**
-- Track calories and nutrition goals via logged meals
+- Enjoy hands-free cooking with **TTS-powered** audio instructions
+- Track calories and nutrition goals using logged meals
 
 ### Community Challenges
 - Participate in **recipe challenges** by submitting your creations
@@ -36,13 +35,12 @@ Cooknect follows a modular, service-oriented backend architecture:
 
 | Service | Responsibility |
 |----------|----------------|
-| **Recipe Service** | CRUD operations for recipes, categorization, and external recipe fetch (Spoonacular/Edamam). |
-| **User Service** | Handles registration, authentication, dietary preferences, and health goals. |
-| **Audio Service** | Converts recipe steps into speech for hands-free cooking. |
-| **Nutrition Service** | Analyzes calories and macros, tracks meal logs, and generates nutrition dashboards. |
-| **Challenge Service** | Hosts recipe challenges where users submit recipes, vote, and view results. |
-| **Notification Service** | Sends alerts, reminders, and updates (e.g., new challenges, meal reminders). |
-| **Meal Planner Service** | Generates personalized weekly meal plans based on user preferences and nutrition goals. |
+| **Recipe Service** | Manages recipe CRUD, dietary tagging, and provides audio-based recipe instruction playback via TTS integration. |
+| **User Service** | Handles registration, authentication (JWT), authorization (RBAC), and user health goals/preferences. |
+| **Nutrition Service** | Performs nutritional analysis, meal logging, and generates analytical dashboards. |
+| **Challenge Service** | Manages gamification: challenge creation, recipe submissions, community voting, leaderboard scoring.|
+| **Notification Service** | Uses Apache Kafka for asynchronous alerts, reminders, and challenge/meal updates. |
+| **Gateway Service** | Public entry point; routes requests to microservices and handles cross-cutting concerns. |
 
 ---
 

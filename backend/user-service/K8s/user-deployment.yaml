@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: peytonpeaceful/user-service:latest # Change to your DockerHub image if needed
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://dpg-d4e76p8gjchc73fbd6dg-a.oregon-postgres.render.com:5432/user_service_baoy"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "user_service_baoy_user"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "swOLtPmLusWZVCt5laf6mesnherBcNuZ"
