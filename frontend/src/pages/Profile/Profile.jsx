@@ -17,6 +17,7 @@ import {
   Tag,
   Select,
   notification,
+  Pagination,
 } from "antd";
 import {
   Edit,
@@ -242,6 +243,10 @@ const Profile = () => {
       type,
     });
   };
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [savePage, setSavePage] = useState(0);
+  const [saveTotalPages, setSaveTotalPages] = useState(0);
 
   // --- State ---
   const [fetchedUserProfile, setFetchedUserProfile] = useState({
@@ -290,15 +295,18 @@ const Profile = () => {
   };
   console.log(user);
 
-  const fetchPostedRecipes = async () => {
+  const fetchPostedRecipes = async (pageNumber) => {
+    if (pageNumber === undefined || pageNumber === null) {
+      pageNumber = 1;
+    }
     try {
       // Wait until user context is loaded before making API call
       if (!user || !user.userData || !user.userData.id) return;
 
       const response = await fetch(
         userId
-          ? `http://localhost:8089/api/v1/recipes?userId=${userId}`
-          : `http://localhost:8089/api/v1/recipes?userId=${user.userData.id}`,
+          ? `http://localhost:8089/api/v1/recipes?userId=${userId}&page=${pageNumber}&size=10&sortBy=id&direction=asc`
+          : `http://localhost:8089/api/v1/recipes?userId=${user.userData.id}&page=${pageNumber}&size=10&sortBy=id&direction=asc`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -312,23 +320,28 @@ const Profile = () => {
         localStorage.removeItem("role");
         window.location.reload();
       }
-      if (data.length === 0) {
+      if (data.content.length === 0) {
         setPostedRecipes([]);
       } else {
-        setPostedRecipes(data);
+        setPostedRecipes(data.content || []);
+        setPage(data.page);
+        setTotalPages(data.totalPages);
       }
     } catch (error) {
       console.error("Error fetching posted recipes:", error);
     }
   };
 
-  const fetchSavedRecipes = async () => {
+  const fetchSavedRecipes = async (pageNumber) => {
     if (!user || !user.userData || !user.userData.id) return;
+    if (pageNumber === undefined || pageNumber === null) {
+      pageNumber = 1;
+    }
     try {
       const response = await fetch(
         userId
-          ? `http://localhost:8089/api/v1/recipes?userId=${userId}&saved=true`
-          : `http://localhost:8089/api/v1/recipes?userId=${user?.userData?.id}&saved=true`,
+          ? `http://localhost:8089/api/v1/recipes?userId=${userId}&saved=true&page=${pageNumber}&size=10&sortBy=id&direction=asc`
+          : `http://localhost:8089/api/v1/recipes?userId=${user?.userData?.id}&saved=true&page=${pageNumber}&size=10&sortBy=id&direction=asc`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -342,10 +355,12 @@ const Profile = () => {
         localStorage.removeItem("role");
         window.location.reload();
       }
-      if (data.length === 0) {
+      if (data.content === 0) {
         setSavedRecipes([]);
       } else {
-        setSavedRecipes(data);
+        setSavedRecipes(data.content || []);
+        setSavePage(data.page);
+        setSaveTotalPages(data.totalPages);
       }
     } catch (error) {
       console.error("Error fetching saved recipes:", error);
@@ -582,9 +597,28 @@ const Profile = () => {
                 key="1"
               >
                 <div style={styles.recipeList}>
-                  {postedRecipes?.map((recipe) => (
-                    <RecipeCard key={recipe.id} recipe={recipe} />
-                  ))}
+                  {postedRecipes.length > 0 ? (
+                    postedRecipes.map((recipe) => (
+                      <RecipeCard key={recipe.id} recipe={recipe} />
+                    ))
+                  ) : (
+                    <Text>No recipes posted yet.</Text>
+                  )}
+                </div>
+                <div>
+                  {postedRecipes.length > 0 && (
+                    <Pagination
+                      current={page}
+                      total={totalPages * 10}
+                      pageSize={10}
+                      onChange={(page) => fetchPostedRecipes(page)}
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        marginTop: 24,
+                      }}
+                    />
+                  )}
                 </div>
               </TabPane>
 
@@ -598,9 +632,28 @@ const Profile = () => {
                 key="2"
               >
                 <div style={styles.recipeList}>
-                  {savedRecipes.map((recipe) => (
-                    <RecipeCard key={recipe.id} recipe={recipe} />
-                  ))}
+                  {savedRecipes.length > 0 ? (
+                    savedRecipes.map((recipe) => (
+                      <RecipeCard key={recipe.id} recipe={recipe} />
+                    ))
+                  ) : (
+                    <Text>No saved recipes yet.</Text>
+                  )}
+                </div>
+                <div>
+                  {savedRecipes.length > 0 && (
+                    <Pagination
+                      current={savePage}
+                      total={saveTotalPages * 10}
+                      pageSize={10}
+                      onChange={(page) => fetchSavedRecipes(page)}
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        marginTop: 24,
+                      }}
+                    />
+                  )}
                 </div>
               </TabPane>
 

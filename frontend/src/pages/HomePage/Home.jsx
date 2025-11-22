@@ -17,6 +17,7 @@ import {
   Select,
   Upload,
   Pagination,
+  AutoComplete,
 } from "antd";
 import { HeartOutlined, MessageFilled, HeartFilled } from "@ant-design/icons";
 import {
@@ -358,13 +359,29 @@ const Home = () => {
           <div className="feed-column">
             <div className="feed-controls">
               <div className="search-container">
-                <input
-                  type="text"
-                  placeholder="Search recipes, users, or tags..."
-                  className="search-bar"
+                <AutoComplete
+                  // className="search-bar"
+                  style={{
+                    minWidth: 625,
+                    borderRadius: "8px",
+                    minHeight: "40px",
+                  }}
+                  showSearch={{
+                    filter: (inputValue, option) =>
+                      option.value
+                        .toUpperCase()
+                        .includes(inputValue.toUpperCase()),
+                  }}
+                  options={[
+                    { value: "Spaghetti Carbonara" },
+                    { value: "Vegan Tacos" },
+                    { value: "Chocolate Lava Cake" },
+                    { value: "Sushi Rolls" },
+                    { value: "Mediterranean Salad" },
+                  ]}
                   // Replace onfocus with React event
                   onFocus={() => console.log("Mock search activated.")}
-                />
+                ></AutoComplete>
               </div>
               <button
                 className="feed-post-btn"
