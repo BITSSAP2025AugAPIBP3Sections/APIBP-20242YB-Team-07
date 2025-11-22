@@ -33,7 +33,8 @@ public class RecipeGrpcServiceImpl extends RecipeServiceGrpc.RecipeServiceImplBa
 //                .setUsername(recipe.getUsername())
                 .setLikes(recipe.getLikes())
                 .setCuisine(String.valueOf(recipe.getCuisine()))
-                .setLanguage(recipe.getLanguage());
+                .setLanguage(recipe.getLanguage())
+                .setUserId(recipe.getUserId() != null ? recipe.getUserId() : 0L); // Set userId
 
             // Add ingredients
             if (recipe.getIngredients() != null) {
@@ -61,4 +62,3 @@ public class RecipeGrpcServiceImpl extends RecipeServiceGrpc.RecipeServiceImplBa
         responseObserver.onCompleted();
     }
 }
-

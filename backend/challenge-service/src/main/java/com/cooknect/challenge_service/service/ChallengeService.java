@@ -259,6 +259,11 @@ public class ChallengeService {
             challengeEventProducer.sendChallengeEvent(event);
             challenge.getParticipants().remove(participantOpt.get());
             challengeRepository.save(challenge);
+            // Delete all recipe submissions for this user in this challenge
+            List<ChallengeRecipeSubmission> submissions = challengeRecipeSubmissionRepository.findByChallengeIdAndUserId(challengeId, String.valueOf(request.getUserId()));
+            if (submissions != null && !submissions.isEmpty()) {
+                challengeRecipeSubmissionRepository.deleteAll(submissions);
+            }
             return true;
         }
         return false;
@@ -298,7 +303,7 @@ public class ChallengeService {
         if (grpcResponse == null || grpcResponse.getId() == 0) {
             throw new RuntimeException("Recipe does not exist");
         }
-        if (!Objects.equals(grpcResponse.getUsername(), request.getUserName())) {
+        if (!Objects.equals(grpcResponse.getUserId(), request.getUserId())) {
             throw new RuntimeException("Recipe does not belong to user");
         }
         // Prevent duplicate submissions
@@ -361,7 +366,7 @@ public class ChallengeService {
             });
             entry.setRecipeCount(entry.getRecipeCount() + 1);
             // Fetch likes from recipe-service (REST)
-            String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/id/" + submission.getRecipeId();
+            String recipeServiceUrl = recipeServiceBaseUrl + "/recipes/" + submission.getRecipeId();
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
                 recipeServiceUrl,
                 HttpMethod.GET,
