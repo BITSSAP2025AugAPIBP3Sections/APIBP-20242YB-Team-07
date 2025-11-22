@@ -50,7 +50,6 @@ Cooknect follows a modular, service-oriented backend architecture:
 - **Database:** PostgreSQL  
 - **API Layers:** REST + GraphQL  
 - **Authentication:** JWT with Role-Based Access Control  
-- **External APIs:** Spoonacular / Edamam  
 - **Documentation:** Swagger UI  
 - **Containerization:** Docker (optional)
 
