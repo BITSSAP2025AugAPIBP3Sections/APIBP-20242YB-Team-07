@@ -123,7 +123,18 @@ public class RecipeService {
 
     /* Get all recipes */
     public PageResponseDTO<GetRecipeDTO> getAllRecipes(Long userId, PageRequestDTO pageRequestDTO) {
-        List<Recipe> recipes = repo.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        String[] sortFields = pageRequestDTO.getSortBy().split(",");
+        String[] directions = pageRequestDTO.getDirection().split(",");
+        Sort sort = Sort.unsorted();
+        for (int i = 0; i < sortFields.length; i++) {
+            String field = sortFields[i].trim();
+            Sort.Direction dir = Sort.Direction.ASC;
+            if (i < directions.length) {
+                dir = Sort.Direction.fromString(directions[i].trim());
+            }
+            sort = sort.and(Sort.by(dir, field));
+        }
+        List<Recipe> recipes = repo.findAll(sort);
 
         /*
          * Collect unique userIds.

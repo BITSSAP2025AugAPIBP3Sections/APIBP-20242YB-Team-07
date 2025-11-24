@@ -51,7 +51,9 @@ const Home = () => {
     cuisine: "",
     recipeImageUrl: "",
   });
-  console.log("Create Recipe Form State:", createRecipeForm);
+  // const [searchTitle, setSearchTitle] = useState("");
+  // const [searchResults, setSearchResults] = useState([]);
+  // const [searchLoading, setSearchLoading] = useState(false);
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
@@ -294,6 +296,76 @@ const Home = () => {
     }
   };
 
+  // const handleSearch = async (searchValue) => {
+  //   setSearchTitle(searchValue);
+
+  //   // Don't search if input is empty or less than 2 characters
+  //   if (!searchValue || searchValue.trim().length < 2) {
+  //     setSearchResults([]);
+  //     return;
+  //   }
+
+  //   try {
+  //     setSearchLoading(true);
+  //     const response = await fetch(
+  //       `http://localhost:8089/api/v1/recipes/search?q=${encodeURIComponent(
+  //         searchValue
+  //       )}`,
+  //       {
+  //         method: "GET",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //         },
+  //       }
+  //     );
+
+  //     if (response.status === 401 || response.status === 403) {
+  //       localStorage.removeItem("token");
+  //       localStorage.removeItem("role");
+  //       window.location.reload();
+  //       return;
+  //     }
+
+  //     if (!response.ok) {
+  //       throw new Error("Failed to search recipes");
+  //     }
+
+  //     const data = await response.json();
+
+  //     // Map the results to show only titles in dropdown
+  //     const titles = data.map((recipe) => ({
+  //       value: recipe.title,
+  //       label: recipe.title,
+  //       id: recipe.id, // Store ID for navigation
+  //     }));
+
+  //     setSearchResults(titles);
+  //   } catch (error) {
+  //     console.error("Error searching recipes:", error);
+  //     setSearchResults([]);
+  //   } finally {
+  //     setSearchLoading(false);
+  //   }
+  // };
+
+  // // Handle when user selects a recipe from dropdown
+  // const handleSelect = (value, option) => {
+  //   // Navigate to the selected recipe
+  //   navigate(`/recipe/${option.id}`);
+  // };
+
+  // // Debounce search to avoid too many API calls
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     if (searchTitle) {
+  //       handleSearch(searchTitle);
+  //     }
+  //   }, 500); // Wait 500ms after user stops typing
+
+  //   return () => clearTimeout(timer);
+  // }, [searchTitle]);
+
   return (
     <>
       <LoggedInNavbar activeKey="1" />
@@ -359,29 +431,26 @@ const Home = () => {
           <div className="feed-column">
             <div className="feed-controls">
               <div className="search-container">
-                <AutoComplete
-                  // className="search-bar"
+                {/* <AutoComplete
                   style={{
                     minWidth: 625,
                     borderRadius: "8px",
                     minHeight: "40px",
                   }}
-                  showSearch={{
-                    filter: (inputValue, option) =>
-                      option.value
-                        .toUpperCase()
-                        .includes(inputValue.toUpperCase()),
+                  placeholder="Search recipes by title..."
+                  value={searchTitle}
+                  onChange={handleSearch}
+                  onSelect={handleSelect}
+                  options={searchResults}
+                  notFoundContent={
+                    searchLoading ? "Searching..." : "No recipes found"
+                  }
+                  allowClear
+                  onClear={() => {
+                    setSearchTitle("");
+                    setSearchResults([]);
                   }}
-                  options={[
-                    { value: "Spaghetti Carbonara" },
-                    { value: "Vegan Tacos" },
-                    { value: "Chocolate Lava Cake" },
-                    { value: "Sushi Rolls" },
-                    { value: "Mediterranean Salad" },
-                  ]}
-                  // Replace onfocus with React event
-                  onFocus={() => console.log("Mock search activated.")}
-                ></AutoComplete>
+                /> */}
               </div>
               <button
                 className="feed-post-btn"
@@ -820,18 +889,12 @@ const Home = () => {
             >
               <Form.Item name="cuisine" label="Cuisine">
                 <Select placeholder="Select cuisine type" allowClear>
-                  <Select.Option value="Italian">Italian</Select.Option>
-                  <Select.Option value="Chinese">Chinese</Select.Option>
-                  <Select.Option value="Indian">Indian</Select.Option>
-                  <Select.Option value="Mexican">Mexican</Select.Option>
-                  <Select.Option value="French">French</Select.Option>
-                  <Select.Option value="Japanese">Japanese</Select.Option>
-                  <Select.Option value="Mediterranean">
-                    Mediterranean
-                  </Select.Option>
-                  <Select.Option value="Thai">Thai</Select.Option>
-                  <Select.Option value="Spanish">Spanish</Select.Option>
-                  <Select.Option value="American">American</Select.Option>
+                  <Select.Option value="ITALIAN">Italian</Select.Option>
+                  <Select.Option value="MEXICAN">Mexican</Select.Option>
+                  <Select.Option value="INDIAN">Indian</Select.Option>
+                  <Select.Option value="CHINESE">Indian</Select.Option>
+                  <Select.Option value="AMERICAN">American</Select.Option>
+                  <Select.Option value="OTHER">Other</Select.Option>
                 </Select>
               </Form.Item>
 
@@ -854,9 +917,9 @@ const Home = () => {
                 </Upload>
               </Form.Item>
 
-              <Form.Item name="authorName" label="Your Chef Name">
+              {/* <Form.Item name="authorName" label="Your Chef Name">
                 <Input placeholder="e.g., Chef Alex" />
-              </Form.Item>
+              </Form.Item> */}
             </Card>
             <Form.Item style={{ marginTop: "30px" }}>
               <Button

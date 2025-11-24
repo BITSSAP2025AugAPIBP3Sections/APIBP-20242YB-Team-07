@@ -11,6 +11,8 @@ import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.service.RecipeService;
 import com.cooknect.recipe_service.service.SpeechSynthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,10 +127,19 @@ public class RecipeController {
             HttpServletRequest request,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Boolean saved,
+            @Parameter(
+                    name = "title",
+                    description = "Recipe title"
+            )
             @RequestParam(required = false) String title,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(
+                    name = "sortBy",
+                    description = "Sort field",
+                    schema = @Schema(allowableValues = {"id", "title", "description", "cuisine"})
+            )
+            @RequestParam(defaultValue = "id", name = "sortBy", required = false) String sortBy,
             @RequestParam(defaultValue = "asc") String direction
     ) {
         PageRequestDTO pageRequestDTO = new PageRequestDTO();

@@ -293,7 +293,6 @@ const Profile = () => {
       console.error("Error fetching user profile:", error);
     }
   };
-  console.log(user);
 
   const fetchPostedRecipes = async (pageNumber) => {
     if (pageNumber === undefined || pageNumber === null) {
@@ -418,7 +417,7 @@ const Profile = () => {
       .then(async (values) => {
         try {
           const token = localStorage.getItem("token");
-          const response = await fetch("http://localhost:8089/api/v1/users/4", {
+          const response = await fetch(`http://localhost:8089/api/v1/users/${user.userData.id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -776,9 +775,7 @@ const Profile = () => {
                 { value: "Vegan", label: "Vegan" },
                 { value: "Vegetarian", label: "Vegetarian" },
                 { value: "Keto", label: "Keto" },
-                { value: "Paleo", label: "Paleo" },
-                { value: "Gluten-Free", label: "Gluten-Free" },
-                { value: "None", label: "None" },
+                { value: "Non-Vegetarian", label: "Non-Vegetarian" },
               ]}
             />
           </Form.Item>
@@ -790,9 +787,7 @@ const Profile = () => {
               options={[
                 { value: "Weight Loss", label: "Weight Loss" },
                 { value: "Muscle Gain", label: "Muscle Gain" },
-                { value: "General Wellness", label: "General Wellness" },
-                { value: "Endurance", label: "Endurance" },
-                { value: "None", label: "None" },
+                { value: "Maintain Weight", label: "Maintain Weight" },
               ]}
             />
           </Form.Item>
@@ -804,11 +799,8 @@ const Profile = () => {
               allowClear
               options={[
                 { value: "Italian", label: "Italian" },
-                { value: "Mexican", label: "Mexican" },
                 { value: "Indian", label: "Indian" },
-                { value: "Chinese", label: "Chinese" },
-                { value: "Thai", label: "Thai" },
-                { value: "French", label: "French" },
+                { value: "Mexican", label: "Mexican" },
                 { value: "Japanese", label: "Japanese" },
                 { value: "Mediterranean", label: "Mediterranean" },
               ]}
