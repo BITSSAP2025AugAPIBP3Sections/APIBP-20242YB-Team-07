@@ -34,9 +34,9 @@ public class NutritionService {
 
     private record NutritionTotals(double totalFat, double saturatedFat, double sodium, double potassium, double cholestrol, double carbohydrates, double fiber, double sugar) {}
 
-    public NutritionService(FoodItemRepository foodRepo, 
-                            NutritionLogRepository logRepo, 
-                            ExternalNutritionApiService externalApiService, 
+    public NutritionService(FoodItemRepository foodRepo,
+                            NutritionLogRepository logRepo,
+                            ExternalNutritionApiService externalApiService,
                             RecipeServiceClient recipeClient) {
         this.foodRepo = foodRepo;
         this.logRepo = logRepo;
@@ -66,28 +66,28 @@ public class NutritionService {
                 logger.warn("Recipe not found for ID: {}", request.getRecipeId());
             }
         }
-        
+
         // Use the refactored helper method
         NutritionTotals totals = calculateNutrition(ingredients);
 
         NutritionResponse response = new NutritionResponse(
-                 userId,
-                 request.getRecipeId(),
-                 recipeName,
-                 totals.totalFat(),
-                 totals.saturatedFat(),
-                 totals.sodium(),
-                 totals.potassium(),
-                 totals.cholestrol(),
-                 totals.carbohydrates(),
-                 totals.fiber(),
-                 totals.sugar(),
-                 ingredients.stream().map(i -> i.get("name")).collect(Collectors.toList()),
-                 request.getMealType()
-         );
-        
+                userId,
+                request.getRecipeId(),
+                recipeName,
+                totals.totalFat(),
+                totals.saturatedFat(),
+                totals.sodium(),
+                totals.potassium(),
+                totals.cholestrol(),
+                totals.carbohydrates(),
+                totals.fiber(),
+                totals.sugar(),
+                ingredients.stream().map(i -> i.get("name")).collect(Collectors.toList()),
+                request.getMealType()
+        );
+
         NutritionLog log = NutritionLog.builder()
-                .userId(userId) 
+                .userId(userId)
                 .recipeId(request.getRecipeId())
                 .foodName(request.getRecipeName())
                 .ingredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()))
@@ -124,15 +124,15 @@ public class NutritionService {
     private NutritionTotals calculateNutrition(List<Map<String, String>> ingredients) {
         logger.debug("Calculating nutrition for ingredients: {}", ingredients);
         double totalFat = 0.0, totalSaturatedFat = 0.0, totalSodium = 0.0,
-               totalPotassium = 0.0, totalCholestrol = 0.0, totalCarbohydrates = 0.0,
-               totalFiber = 0.0, totalSugar = 0.0;
+                totalPotassium = 0.0, totalCholestrol = 0.0, totalCarbohydrates = 0.0,
+                totalFiber = 0.0, totalSugar = 0.0;
 
         for (Map<String, String> ingredientMap : ingredients) {
             String name = ingredientMap.get("name");
             String quantityStr = ingredientMap.get("quantity");
             String servingSize = ingredientMap.getOrDefault("servingSize", quantityStr);
             double qty = extractNumericQuantity(quantityStr);
-            
+
             boolean isFromExternalApi = false;
             Optional<FoodItem> foodOptional = foodRepo.findByFoodItemIgnoreCase(name);
             FoodItem food;
@@ -146,8 +146,8 @@ public class NutritionService {
                         ? servingSize + " " + name
                         : name;
                 food = externalApiService.fetchNutritionInfo(apiQuery)
-                    .map(foodRepo::save)
-                    .orElse(null);
+                        .map(foodRepo::save)
+                        .orElse(null);
                 isFromExternalApi = (food != null);
             }
 
@@ -206,10 +206,9 @@ public class NutritionService {
         return logRepo.findByUserIdAndMealType(userId, mealType);
     }
 
-    public DailyIntakeSummary getTodayIntakeSummary(Long userId) {
-        LocalDate today = LocalDate.now();
-        logger.debug("Calculating today's intake summary for user ID: {} on date: {}", userId, today);
-        List<NutritionLog> todayLogs = logRepo.findByUserIdAndAnalyzedAt(userId, today);
+    public DailyIntakeSummary getTodayIntakeSummary(Long userId, LocalDate date) {
+        logger.debug("Calculating intake summary for user ID: {} on date: {}", userId, date);
+        List<NutritionLog> todayLogs = logRepo.findByUserIdAndAnalyzedAt(userId, date);
         double totalFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalFat).sum();
         double totalSaturatedFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalSaturatedFat).sum();
         double totalSodium = todayLogs.stream().mapToDouble(NutritionLog::getTotalSodium).sum();
@@ -218,7 +217,7 @@ public class NutritionService {
         double totalCarbohydrates = todayLogs.stream().mapToDouble(NutritionLog::getTotalCarbohydrates).sum();
         double totalFiber = todayLogs.stream().mapToDouble(NutritionLog::getTotalFiber).sum();
         double totalSugar = todayLogs.stream().mapToDouble(NutritionLog::getTotalSugar).sum();
-        return new DailyIntakeSummary(totalFat, totalSaturatedFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar); 
+        return new DailyIntakeSummary(totalFat, totalSaturatedFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar);
     }
 
     public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, Long userId) {
@@ -305,7 +304,7 @@ public class NutritionService {
             logger.error("User ID: {} not authorized to delete log ID: {}", userId, logId);
             throw new RuntimeException("User not authorized to delete this log");
         }
-        
+
         logRepo.delete(log);
         logger.info("Nutrition log ID: {} deleted successfully by user ID: {}", logId, userId);
     }

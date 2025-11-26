@@ -12,6 +12,7 @@ import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,8 +42,9 @@ public class NutritionGraphqlController {
     }
 
     @QueryMapping
-    public DailyIntakeSummary todayIntakeSummary(@Argument Long userId) {
-        return nutritionService.getTodayIntakeSummary(userId);
+    public DailyIntakeSummary todayIntakeSummary(@Argument Long userId, @Argument String date) {
+        LocalDate targetDate = (date != null && !date.isEmpty()) ? LocalDate.parse(date) : LocalDate.now();
+        return nutritionService.getTodayIntakeSummary(userId, targetDate);
     }
 
     // --- MUTATIONS ---
@@ -52,7 +54,7 @@ public class NutritionGraphqlController {
         request.setUserId((Long) requestMap.get("userId"));
         request.setRecipeId(requestMap.get("recipeId") != null ? Long.parseLong(requestMap.get("recipeId").toString()) : null);
         request.setRecipeName((String) requestMap.get("recipeName"));
-        
+
         if (requestMap.get("mealType") != null) {
             request.setMealType(MealType.valueOf(requestMap.get("mealType").toString().toUpperCase()));
         }
@@ -73,10 +75,10 @@ public class NutritionGraphqlController {
         } else {
             request.setIngredients(Collections.emptyList());
         }
-        
+
         return request;
     }
-    
+
     @MutationMapping
     public NutritionResponse analyzeIngredients(@Argument("request") Map<String, Object> requestMap) {
         NutritionRequest request = buildRequestFromMap(requestMap);
