@@ -33,10 +33,9 @@ public class SecurityConfig {
             "/api/v1/users/login",
             "/api/v1/users/register",
             "/api/v1/users/query",
-            "/actuator/health/user-service",
-            "/actuator/health/recipe-service",
-            "/actuator/health/challenge-service",
-            "/actuator/health/nutrition-service"
+            "/actuator/health",              // Add this line
+            "/actuator/health/**",           // Add this line
+            "/actuator/info" 
     };
     @Bean
     public AuthenticationManager authenticationManager() {

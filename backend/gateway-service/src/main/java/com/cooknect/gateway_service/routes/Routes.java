@@ -346,42 +346,178 @@ import org.springframework.web.client.RestTemplate;
 // }
 
 
+// @RestController
+// public class Routes {
+
+//     private final JWTService jwtService;
+//     private final RestTemplate restTemplate;
+
+//     @Autowired
+//     public Routes(JWTService jwtService) {
+//         this.jwtService = jwtService;
+//         this.restTemplate = new RestTemplate();
+//     }
+
+//     @GetMapping("/api/v1/users/**")
+//     public ResponseEntity<String> proxyUsersGET(HttpServletRequest request) {
+//         return forwardRequest(request, null, HttpMethod.GET);
+//     }
+
+//     @PostMapping("/api/v1/users/**")
+//     public ResponseEntity<String> proxyUsersPOST(HttpServletRequest request, @RequestBody(required = false) String body) {
+//         return forwardRequest(request, body, HttpMethod.POST);
+//     }
+
+//     @PutMapping("/api/v1/users/**")
+//     public ResponseEntity<String> proxyUsersPUT(HttpServletRequest request, @RequestBody(required = false) String body) {
+//         return forwardRequest(request, body, HttpMethod.PUT);
+//     }
+
+//     @DeleteMapping("/api/v1/users/**")
+//     public ResponseEntity<String> proxyUsersDELETE(HttpServletRequest request) {
+//         return forwardRequest(request, null, HttpMethod.DELETE);
+//     }
+
+//     private ResponseEntity<String> forwardRequest(HttpServletRequest request, String body, HttpMethod method) {
+//         String originalPath = request.getRequestURI();
+//         String queryString = request.getQueryString();
+//         String url = "http://localhost:8081" + originalPath;
+//         if (queryString != null) {
+//             url += "?" + queryString;
+//         }
+
+//         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+//         headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+//         String authHeader = request.getHeader("Authorization");
+//         if (authHeader != null && authHeader.startsWith("Bearer ")) {
+//             String token = authHeader.substring(7);
+//             headers.set("Authorization", authHeader);
+//             headers.set("X-User-Role", jwtService.extractRole(token));
+//             headers.set("X-User-Id", String.valueOf(jwtService.extractUserIdField(token)));
+//             headers.set("X-User-Email", jwtService.extractUserName(token));
+//         }
+
+//         org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(body, headers);
+
+//         try {
+//             return restTemplate.exchange(url, method, entity, String.class);
+//         } catch (org.springframework.web.client.HttpClientErrorException | org.springframework.web.client.HttpServerErrorException e) {
+//             return ResponseEntity
+//                     .status(e.getStatusCode())
+//                     .body(e.getResponseBodyAsString());
+//         } catch (Exception e) {
+//             return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+//                     .body("{\"error\": \"Error forwarding request: " + e.getMessage() + "\"}");
+//         }
+//     }
+// }
+
+import org.springframework.beans.factory.annotation.Value;
+
 @RestController
 public class Routes {
 
     private final JWTService jwtService;
     private final RestTemplate restTemplate;
+    
+    // Service URLs - use environment variables for flexibility
+    private final String USER_SERVICE_URL;
+    private final String RECIPE_SERVICE_URL;
+    private final String CHALLENGE_SERVICE_URL;
+    private final String NUTRITION_SERVICE_URL;
 
     @Autowired
-    public Routes(JWTService jwtService) {
+    public Routes(JWTService jwtService, 
+                  @Value("${services.user.url:http://localhost:8081}") String userServiceUrl,
+                  @Value("${services.recipe.url:http://localhost:8082}") String recipeServiceUrl,
+                  @Value("${services.challenge.url:http://localhost:8083}") String challengeServiceUrl,
+                  @Value("${services.nutrition.url:http://localhost:8085}") String nutritionServiceUrl) {
         this.jwtService = jwtService;
         this.restTemplate = new RestTemplate();
+        this.USER_SERVICE_URL = userServiceUrl;
+        this.RECIPE_SERVICE_URL = recipeServiceUrl;
+        this.CHALLENGE_SERVICE_URL = challengeServiceUrl;
+        this.NUTRITION_SERVICE_URL = nutritionServiceUrl;
     }
 
     @GetMapping("/api/v1/users/**")
     public ResponseEntity<String> proxyUsersGET(HttpServletRequest request) {
-        return forwardRequest(request, null, HttpMethod.GET);
+        return forwardRequest(request, null, HttpMethod.GET, USER_SERVICE_URL);
     }
 
     @PostMapping("/api/v1/users/**")
     public ResponseEntity<String> proxyUsersPOST(HttpServletRequest request, @RequestBody(required = false) String body) {
-        return forwardRequest(request, body, HttpMethod.POST);
+        return forwardRequest(request, body, HttpMethod.POST, USER_SERVICE_URL);
     }
 
     @PutMapping("/api/v1/users/**")
     public ResponseEntity<String> proxyUsersPUT(HttpServletRequest request, @RequestBody(required = false) String body) {
-        return forwardRequest(request, body, HttpMethod.PUT);
+        return forwardRequest(request, body, HttpMethod.PUT, USER_SERVICE_URL);
     }
 
     @DeleteMapping("/api/v1/users/**")
     public ResponseEntity<String> proxyUsersDELETE(HttpServletRequest request) {
-        return forwardRequest(request, null, HttpMethod.DELETE);
+        return forwardRequest(request, null, HttpMethod.DELETE, USER_SERVICE_URL);
     }
 
-    private ResponseEntity<String> forwardRequest(HttpServletRequest request, String body, HttpMethod method) {
+    // Recipe service routes
+    @GetMapping("/api/v1/recipes/**")
+    public ResponseEntity<String> proxyRecipesGET(HttpServletRequest request) {
+        return forwardRequest(request, null, HttpMethod.GET, RECIPE_SERVICE_URL);
+    }
+
+    @PostMapping("/api/v1/recipes/**")
+    public ResponseEntity<String> proxyRecipesPOST(HttpServletRequest request, @RequestBody(required = false) String body) {
+        return forwardRequest(request, body, HttpMethod.POST, RECIPE_SERVICE_URL);
+    }
+
+    @PutMapping("/api/v1/recipes/**")
+    public ResponseEntity<String> proxyRecipesPUT(HttpServletRequest request, @RequestBody(required = false) String body) {
+        return forwardRequest(request, body, HttpMethod.PUT, RECIPE_SERVICE_URL);
+    }
+
+    @DeleteMapping("/api/v1/recipes/**")
+    public ResponseEntity<String> proxyRecipesDELETE(HttpServletRequest request) {
+        return forwardRequest(request, null, HttpMethod.DELETE, RECIPE_SERVICE_URL);
+    }
+
+    // Challenge service routes
+    @GetMapping("/api/v1/challenges/**")
+    public ResponseEntity<String> proxyChallengesGET(HttpServletRequest request) {
+        return forwardRequest(request, null, HttpMethod.GET, CHALLENGE_SERVICE_URL);
+    }
+
+    @PostMapping("/api/v1/challenges/**")
+    public ResponseEntity<String> proxyChallengesPOST(HttpServletRequest request, @RequestBody(required = false) String body) {
+        return forwardRequest(request, body, HttpMethod.POST, CHALLENGE_SERVICE_URL);
+    }
+
+    @PutMapping("/api/v1/challenges/**")
+    public ResponseEntity<String> proxyChallengesPUT(HttpServletRequest request, @RequestBody(required = false) String body) {
+        return forwardRequest(request, body, HttpMethod.PUT, CHALLENGE_SERVICE_URL);
+    }
+
+    @DeleteMapping("/api/v1/challenges/**")
+    public ResponseEntity<String> proxyChallengesDELETE(HttpServletRequest request) {
+        return forwardRequest(request, null, HttpMethod.DELETE, CHALLENGE_SERVICE_URL);
+    }
+
+    // Nutrition service routes
+    @GetMapping("/api/v1/nutrition/**")
+    public ResponseEntity<String> proxyNutritionGET(HttpServletRequest request) {
+        return forwardRequest(request, null, HttpMethod.GET, NUTRITION_SERVICE_URL);
+    }
+
+    @PostMapping("/api/v1/nutrition/**")
+    public ResponseEntity<String> proxyNutritionPOST(HttpServletRequest request, @RequestBody(required = false) String body) {
+        return forwardRequest(request, body, HttpMethod.POST, NUTRITION_SERVICE_URL);
+    }
+
+    private ResponseEntity<String> forwardRequest(HttpServletRequest request, String body, HttpMethod method, String serviceUrl) {
         String originalPath = request.getRequestURI();
         String queryString = request.getQueryString();
-        String url = "http://localhost:8081" + originalPath;
+        String url = serviceUrl + originalPath;
         if (queryString != null) {
             url += "?" + queryString;
         }
