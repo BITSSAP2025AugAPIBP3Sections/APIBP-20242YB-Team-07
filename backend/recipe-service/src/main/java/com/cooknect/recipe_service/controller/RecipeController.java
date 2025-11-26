@@ -11,6 +11,8 @@ import com.cooknect.recipe_service.model.*;
 import com.cooknect.recipe_service.service.RecipeService;
 import com.cooknect.recipe_service.service.SpeechSynthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,50 +120,63 @@ public class RecipeController {
 
 
     /* Get all recipes */
+    // Add title as an optional query parameter
     @GetMapping
-    @Operation(summary = "Get all recipes optionally by userId and saved status", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Get all recipes optionally by userId, saved status, and title", security = @SecurityRequirement(name = "bearerAuth"))
     public PageResponseDTO<GetRecipeDTO> listAll(
             HttpServletRequest request,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Boolean saved,
+            @Parameter(
+                    name = "title",
+                    description = "Recipe title"
+            )
+            @RequestParam(required = false) String title,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(
+                    name = "sortBy",
+                    description = "Sort field",
+                    schema = @Schema(allowableValues = {"id", "title", "description", "cuisine"})
+            )
+            @RequestParam(defaultValue = "id", name = "sortBy", required = false) String sortBy,
             @RequestParam(defaultValue = "asc") String direction
     ) {
         PageRequestDTO pageRequestDTO = new PageRequestDTO();
-        pageRequestDTO.setPage(page - 1); // Convert to 0-based for internal processing
+        pageRequestDTO.setPage(page - 1);
         pageRequestDTO.setSize(size);
         pageRequestDTO.setSortBy(sortBy);
         pageRequestDTO.setDirection(direction);
-        
+
         String userIdHeader = request.getHeader("X-User-Id");
         Long authenticatedUserId = null;
-        
-        // Try to parse the user ID from header, but allow null if not present or invalid
         if (userIdHeader != null && !userIdHeader.trim().isEmpty()) {
             try {
                 authenticatedUserId = Long.parseLong(userIdHeader);
             } catch (NumberFormatException e) {
-                // Log warning but continue with null user ID
                 log.warn("Invalid X-User-Id header value: {}", userIdHeader);
             }
         }
-        
+
         PageResponseDTO<GetRecipeDTO> result;
-        if (userId != null && Boolean.TRUE.equals(saved)) {
-            // Fetch only saved recipes for the user
+        if (title != null && !title.trim().isEmpty()) {
+            // Filter by title (and optionally userId/saved)
+            if(userId == null) {
+                userId = authenticatedUserId;
+            }
+            result = svc.getRecipesByTitle(title, userId, saved, pageRequestDTO);
+        } else if (userId != null && Boolean.TRUE.equals(saved)) {
             result = svc.getSavedRecipesByUserId(userId, pageRequestDTO);
         } else if (userId != null) {
             result = svc.getRecipesByUserId(userId, pageRequestDTO);
         } else {
-            // Use authenticatedUserId (can be null) for like/save status
             result = svc.getAllRecipes(authenticatedUserId, pageRequestDTO);
         }
-        
-        result.setPage(result.getPage() + 1); // Convert back to 1-based for response
+
+        result.setPage(result.getPage() + 1);
         return result;
     }
+
 
 
     /* Get recipe by ID */
@@ -304,26 +319,13 @@ public class RecipeController {
 
     //Translate Recipe into target language
     @GetMapping("/{id}/translate/{targetLanguage}")
-    @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"), hidden = true )
     public String translateRecipe(
             @PathVariable Long id,
             @PathVariable String targetLanguage) {
         return speechSynth.translateText(id, targetLanguage);
     }
 
-    @GetMapping("/metadata")
-    @Operation(summary = "Get service metadata", security = @SecurityRequirement(name = "bearerAuth"))
-    public Map<String, Object> serviceMetadata() {
-        Map<String, Object> meta = new HashMap<>();
-        meta.put("service", "recipe-service");
-        String version = this.getClass().getPackage().getImplementationVersion();
-        meta.put("version", version != null ? version : "unknown");
-        meta.put("kafkaTopic", "recipe-topic");
-        // lightweight runtime info
-        meta.put("availableProcessors", Runtime.getRuntime().availableProcessors());
-        meta.put("freeMemory", Runtime.getRuntime().freeMemory());
-        return meta;
-    }
     /*
         * Updates an existing recipe.
         * This endpoint accepts a PATCH request with only the fields that need to be updated.
