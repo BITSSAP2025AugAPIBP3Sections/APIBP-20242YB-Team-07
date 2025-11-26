@@ -162,9 +162,9 @@
       			<artifactId>protobuf-maven-plugin</artifactId>
      			<version>0.6.1</version>
       			<configuration>
-        			<protocArtifact>com.google.protobuf:protoc:3.25.0:exe:osx-aarch_64</protocArtifact>
+        			<protocArtifact>com.google.protobuf:protoc:3.25.0:exe:${os.detected.classifier}</protocArtifact>
         			<pluginId>grpc-java</pluginId>
-        			<pluginArtifact>io.grpc:protoc-gen-grpc-java:1.58.0:exe:osx-aarch_64</pluginArtifact>
+        			<pluginArtifact>io.grpc:protoc-gen-grpc-java:1.58.0:exe:${os.detected.classifier}</pluginArtifact>
       			</configuration>
 				<executions>
         			<execution>
@@ -178,42 +178,4 @@
 		</plugins>
 	</build>
 
-	<profiles>
-        <profile>
-            <id>os-macos</id>
-            <activation>
-                <os>
-                    <family>mac</family>
-                </os>
-            </activation>
-            <properties>
-                <!-- classifier used by protoc binary for macOS -->
-                <os.detected.classifier>osx-x86_64</os.detected.classifier>
-            </properties>
-        </profile>
-
-        <profile>
-            <id>os-linux</id>
-            <activation>
-                <os>
-                    <family>unix</family>
-                </os>
-            </activation>
-            <properties>
-                <os.detected.classifier>linux-x86_64</os.detected.classifier>
-            </properties>
-        </profile>
-
-        <profile>
-            <id>os-windows</id>
-            <activation>
-                <os>
-                    <family>windows</family>
-                </os>
-            </activation>
-            <properties>
-                <os.detected.classifier>windows-x86_64</os.detected.classifier>
-            </properties>
-        </profile>
-    </profiles>
 </project>
