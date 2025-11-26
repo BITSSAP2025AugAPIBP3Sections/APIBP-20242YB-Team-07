@@ -31,7 +31,6 @@ public class NutritionLog {
     private String ingredients;
 
     private double totalFat;
-    private double totalSaturatedFat;
     private double totalSodium;
     private double totalPotassium;
     private double totalCholestrol;
