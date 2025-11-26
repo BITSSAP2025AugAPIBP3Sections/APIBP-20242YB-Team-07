@@ -32,7 +32,7 @@ public class NutritionService {
 
     private Logger logger = LoggerFactory.getLogger(NutritionService.class);
 
-    private record NutritionTotals(double totalFat, double saturatedFat, double sodium, double potassium, double cholestrol, double carbohydrates, double fiber, double sugar) {}
+    private record NutritionTotals(double totalFat, double sodium, double potassium, double cholestrol, double carbohydrates, double fiber, double sugar) {}
 
     public NutritionService(FoodItemRepository foodRepo,
                             NutritionLogRepository logRepo,
@@ -75,7 +75,6 @@ public class NutritionService {
                 request.getRecipeId(),
                 recipeName,
                 totals.totalFat(),
-                totals.saturatedFat(),
                 totals.sodium(),
                 totals.potassium(),
                 totals.cholestrol(),
@@ -92,7 +91,6 @@ public class NutritionService {
                 .foodName(request.getRecipeName())
                 .ingredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()))
                 .totalFat(totals.totalFat())
-                .totalSaturatedFat(totals.saturatedFat())
                 .totalSodium(totals.sodium())
                 .totalPotassium(totals.potassium())
                 .totalCholestrol(totals.cholestrol())
@@ -123,8 +121,8 @@ public class NutritionService {
 
     private NutritionTotals calculateNutrition(List<Map<String, String>> ingredients) {
         logger.debug("Calculating nutrition for ingredients: {}", ingredients);
-        double totalFat = 0.0, totalSaturatedFat = 0.0, totalSodium = 0.0,
-                totalPotassium = 0.0, totalCholestrol = 0.0, totalCarbohydrates = 0.0,
+        double totalFat = 0.0, totalSodium = 0.0, totalPotassium = 0.0,
+                totalCholestrol = 0.0, totalCarbohydrates = 0.0,
                 totalFiber = 0.0, totalSugar = 0.0;
 
         for (Map<String, String> ingredientMap : ingredients) {
@@ -154,7 +152,6 @@ public class NutritionService {
             if (food != null) {
                 if (isFromExternalApi) {
                     totalFat += safeNullableDouble(food.getTotalFat());
-                    totalSaturatedFat += safeNullableDouble(food.getSaturatedFat());
                     totalSodium += safeNullableDouble(food.getSodium());
                     totalPotassium += safeNullableDouble(food.getPotassium());
                     totalCholestrol += safeNullableDouble(food.getCholestrol());
@@ -163,7 +160,6 @@ public class NutritionService {
                     totalSugar += safeNullableDouble(food.getSugar());
                 } else {
                     totalFat += safeNullableDouble(food.getTotalFat()) * qty;
-                    totalSaturatedFat += safeNullableDouble(food.getSaturatedFat()) * qty;
                     totalSodium += safeNullableDouble(food.getSodium()) * qty;
                     totalPotassium += safeNullableDouble(food.getPotassium()) * qty;
                     totalCholestrol += safeNullableDouble(food.getCholestrol()) * qty;
@@ -174,7 +170,6 @@ public class NutritionService {
             } else {
                 logger.warn("Nutrition data not found for ingredient: {}", name);
                 totalFat += 2 * qty;
-                totalSaturatedFat += 0.5 * qty;
                 totalSodium += 150 * qty;
                 totalPotassium += 100 * qty;
                 totalCholestrol += 30 * qty;
@@ -183,7 +178,7 @@ public class NutritionService {
                 totalSugar += 5 * qty;
             }
         }
-        return new NutritionTotals(totalFat, totalSaturatedFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar);
+        return new NutritionTotals(totalFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar);
     }
 
     public List<NutritionLog> getAllNutritionLogs() {
@@ -210,14 +205,13 @@ public class NutritionService {
         logger.debug("Calculating intake summary for user ID: {} on date: {}", userId, date);
         List<NutritionLog> todayLogs = logRepo.findByUserIdAndAnalyzedAt(userId, date);
         double totalFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalFat).sum();
-        double totalSaturatedFat = todayLogs.stream().mapToDouble(NutritionLog::getTotalSaturatedFat).sum();
         double totalSodium = todayLogs.stream().mapToDouble(NutritionLog::getTotalSodium).sum();
         double totalPotassium = todayLogs.stream().mapToDouble(NutritionLog::getTotalPotassium).sum();
         double totalCholestrol = todayLogs.stream().mapToDouble(NutritionLog::getTotalCholestrol).sum();
         double totalCarbohydrates = todayLogs.stream().mapToDouble(NutritionLog::getTotalCarbohydrates).sum();
         double totalFiber = todayLogs.stream().mapToDouble(NutritionLog::getTotalFiber).sum();
         double totalSugar = todayLogs.stream().mapToDouble(NutritionLog::getTotalSugar).sum();
-        return new DailyIntakeSummary(totalFat, totalSaturatedFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar);
+        return new DailyIntakeSummary(totalFat, totalSodium, totalPotassium, totalCholestrol, totalCarbohydrates, totalFiber, totalSugar);
     }
 
     public NutritionResponse updateNutritionLog(Long logId, NutritionRequest request, Long userId) {
@@ -240,7 +234,6 @@ public class NutritionService {
         log.setFoodName(request.getRecipeName());
         log.setIngredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()));
         log.setTotalFat(totals.totalFat());
-        log.setTotalSaturatedFat(totals.saturatedFat());
         log.setTotalSodium(totals.sodium());
         log.setTotalPotassium(totals.potassium());
         log.setTotalCholestrol(totals.cholestrol());
@@ -258,7 +251,6 @@ public class NutritionService {
                 log.getRecipeId(),
                 log.getFoodName(),
                 log.getTotalFat(),
-                log.getTotalSaturatedFat(),
                 log.getTotalSodium(),
                 log.getTotalPotassium(),
                 log.getTotalCholestrol(),

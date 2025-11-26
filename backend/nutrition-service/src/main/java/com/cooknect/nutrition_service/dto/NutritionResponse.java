@@ -10,7 +10,6 @@ public class NutritionResponse {
     private Long recipeId;
     private String recipeName;
     private double totalFat;
-    private double totalSaturatedFat;
     private double totalSodium;
     private double totalPotassium;
     private double totalCholestrol;
@@ -28,7 +27,6 @@ public class NutritionResponse {
                             Long recipeId, 
                             String recipeName, 
                             double totalFat,
-                            double totalSaturatedFat,
                             double totalSodium,
                             double totalPotassium,
                             double totalCholestrol,
@@ -41,7 +39,6 @@ public class NutritionResponse {
         this.recipeId = recipeId;
         this.recipeName = recipeName;
         this.totalFat = totalFat;
-        this.totalSaturatedFat = totalSaturatedFat;
         this.totalSodium = totalSodium;
         this.totalPotassium = totalPotassium;
         this.totalCholestrol = totalCholestrol;
@@ -61,9 +58,6 @@ public class NutritionResponse {
 
     public double getTotalFat() { return totalFat; }
     public void setTotalFat(double totalFat) { this.totalFat = totalFat; }
-
-    public double getTotalSaturatedFat() { return totalSaturatedFat; }
-    public void setTotalSaturatedFat(double totalSaturatedFat) { this.totalSaturatedFat = totalSaturatedFat; }
 
     public double getTotalSodium() { return totalSodium; }
     public void setTotalSodium(double totalSodium) { this.totalSodium = totalSodium; }

@@ -41,7 +41,6 @@ public class ExternalNutritionApiService {
             foodItem.setFoodItem(safeToString(data.get("name")));
             foodItem.setServingSize(safeToString(data.get("serving_size_g")));
             foodItem.setTotalFat(safeToDouble(data.get("fat_total_g")));
-            foodItem.setSaturatedFat(safeToDouble(data.get("fat_saturated_g")));
             foodItem.setSodium(safeToDouble(data.get("sodium_mg")));
             foodItem.setPotassium(safeToDouble(data.get("potassium_mg")));
             foodItem.setCholestrol(safeToDouble(data.get("cholesterol_mg")));
