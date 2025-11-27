@@ -24,13 +24,17 @@ public class RecipeAudio {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "Language", nullable = false)
+    private String language;
+
     public RecipeAudio() {}
 
-    public RecipeAudio(Long recipeId, byte[] audioData, String contentType) {
+    public RecipeAudio(Long recipeId, byte[] audioData, String contentType, String language) {
         this.recipeId = recipeId;
         this.audioData = audioData;
         this.contentType = contentType;
         this.createdAt = Instant.now();
+        this.language = "en";
     }
 
     // getters / setters
@@ -43,4 +47,6 @@ public class RecipeAudio {
     public void setContentType(String contentType) { this.contentType = contentType; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
 }

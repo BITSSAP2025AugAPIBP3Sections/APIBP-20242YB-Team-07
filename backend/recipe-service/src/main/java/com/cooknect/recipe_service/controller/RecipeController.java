@@ -281,7 +281,7 @@ public class RecipeController {
 
     @GetMapping(value = "/{id}/speak", produces = "audio/wav")
     public ResponseEntity<byte[]> speakRecipe(@PathVariable Long id,
-                                            @RequestParam(required = false) String voice ) {
+                                            @RequestParam(required = false) String voice, @PathVariable (required = false) String language) {
         try {
             Recipe recipe = svc.getRecipeById(id);
 
@@ -302,7 +302,7 @@ public class RecipeController {
             }
 
             // use service that checks DB, generates, saves
-            byte[] wav = speechSynth.getOrCreateAudio(text, voice, id);
+            byte[] wav = speechSynth.getOrCreateAudio(text, voice, id, language);
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("audio/wav"))
@@ -320,10 +320,15 @@ public class RecipeController {
     //Translate Recipe into target language
     @GetMapping("/{id}/translate/{targetLanguage}")
     @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"), hidden = true )
-    public String translateRecipe(
+    public ResponseEntity<byte[]> translateRecipe(
             @PathVariable Long id,
             @PathVariable String targetLanguage) {
-        return speechSynth.translateText(id, targetLanguage);
+        String translated_text = speechSynth.translateText(id, targetLanguage);
+        byte[] wav = speechSynth.getOrCreateAudio(translated_text, "Kore", id, targetLanguage);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("audio/wav"))
+                .header("Content-Disposition", "inline; filename=\"recipe-" + id + ".wav\"")
+                .body(wav);
     }
 
     /*
