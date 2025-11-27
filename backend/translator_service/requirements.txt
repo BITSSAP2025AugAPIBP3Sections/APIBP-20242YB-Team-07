@@ -1,6 +1,0 @@
-fastapi
-uvicorn[standard]
-transformers
-sentencepiece
-torch
-gtts
