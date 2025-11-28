@@ -12,15 +12,82 @@ spec:
       labels:
         app: notification-service
     spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z kafka-bootstrap.kafka.svc.cluster.local 9092; do echo waiting for kafka; sleep 2; done;']
+
       containers:
         - name: notification-service
-          image: peytonpeaceful/notification-service:latest # Change to your DockerHub image if needed
+          image: sachittarway/notification-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8084
           env:
+            - name: SERVER_PORT
+              value: "8084"
+
+            # Shared Database Configuration
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://dpg-d4e76p8gjchc73fbd6dg-a.oregon-postgres.render.com:5432/user_service_baoy"
+              value: "jdbc:postgresql://postgres-notification-service:5432/notification_service_db"
             - name: SPRING_DATASOURCE_USERNAME
-              value: "user_service_baoy_user"
+              value: "postgres"
             - name: SPRING_DATASOURCE_PASSWORD
-              value: "swOLtPmLusWZVCt5laf6mesnherBcNuZ"
+              value: "admin"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: SPRING_JPA_SHOW_SQL
+              value: "true"
+
+            # Email Configuration
+            - name: SPRING_MAIL_HOST
+              value: "smtp.gmail.com"
+            - name: SPRING_MAIL_PORT
+              value: "587"
+            - name: SPRING_MAIL_USERNAME
+              value: "cooknect123@gmail.com"
+            - name: SPRING_MAIL_PASSWORD
+              value: "ikqsvjyzxffdszdo"
+
+            # Kafka Configuration - USE SERVICE NAME!
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: SPRING_KAFKA_CONSUMER_GROUP_ID
+              value: "notification-group"
+            - name: SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET
+              value: "earliest"
+
+            # Override internal Kafka advertised addresses
+            - name: SPRING_KAFKA_PROPERTIES_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: SPRING_KAFKA_ADMIN_PROPERTIES_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            failureThreshold: 5
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - protocol: TCP
+      port: 8084
+      targetPort: 8084
+  type: ClusterIP
