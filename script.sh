@@ -116,45 +116,27 @@ echo -e "${YELLOW}╚═══════════════════�
 cd backend/recipe-service
 
 # Step 1: Complete nuclear cleanup
-echo -e "\n${BLUE}Step 1/10: Complete cleanup...${NC}"
+echo -e "\n${BLUE}Step 1/6: Complete cleanup...${NC}"
 rm -rf target 2>/dev/null || true
 rm -rf .mvn 2>/dev/null || true
 find . -name "*.class" -delete 2>/dev/null || true
 echo -e "${GREEN}✓ Cleanup complete${NC}"
 
 # Step 2: Maven clean with force update
-echo -e "\n${BLUE}Step 2/10: Maven clean...${NC}"
+echo -e "\n${BLUE}Step 2/6: Maven clean...${NC}"
 mvn clean -U
 echo -e "${GREEN}✓ Maven clean complete${NC}"
 
-# Step 3: Generate protobuf Java classes
-echo -e "\n${BLUE}Step 3/10: Generating protobuf Java classes...${NC}"
-mvn protobuf:compile || {
-    echo -e "${RED}✗ Protobuf generation failed${NC}"
+# Step 3: Generate sources using Maven lifecycle (this will trigger build-helper too)
+echo -e "\n${BLUE}Step 3/6: Generating protobuf and gRPC sources...${NC}"
+mvn generate-sources || {
+    echo -e "${RED}✗ Source generation failed${NC}"
     exit 1
 }
-echo -e "${GREEN}✓ Protobuf classes generated${NC}"
+echo -e "${GREEN}✓ All sources generated${NC}"
 
-# Step 4: Wait for file system
-echo -e "\n${BLUE}Step 4/10: Waiting for file system to settle...${NC}"
-sleep 3
-echo -e "${GREEN}✓ File system ready${NC}"
-
-# Step 5: Generate gRPC stubs
-echo -e "\n${BLUE}Step 5/10: Generating gRPC stubs...${NC}"
-mvn protobuf:compile-custom || {
-    echo -e "${RED}✗ gRPC generation failed${NC}"
-    exit 1
-}
-echo -e "${GREEN}✓ gRPC stubs generated${NC}"
-
-# Step 6: Wait again
-echo -e "\n${BLUE}Step 6/10: Waiting for gRPC files to be ready...${NC}"
-sleep 3
-echo -e "${GREEN}✓ Files ready${NC}"
-
-# Step 7: Verify all generated files
-echo -e "\n${BLUE}Step 7/10: Verifying generated files...${NC}"
+# Step 4: Verify generated files exist
+echo -e "\n${BLUE}Step 4/6: Verifying generated files...${NC}"
 REQUIRED_FILES=(
     "target/generated-sources/protobuf/java/com/recipe/Comment.java"
     "target/generated-sources/protobuf/java/com/recipe/Ingredient.java"
@@ -183,23 +165,16 @@ fi
 
 echo -e "${GREEN}✓ All required files verified${NC}"
 
-# Step 8: Compile Java sources separately
-echo -e "\n${BLUE}Step 8/10: Compiling Java sources...${NC}"
-mvn compiler:compile || {
-    echo -e "${RED}✗ Compilation failed${NC}"
-    echo -e "${YELLOW}Last 50 lines of a generated file:${NC}"
-    tail -50 target/generated-sources/protobuf/java/com/recipe/Comment.java || true
+# Step 5: Compile and package in one go
+echo -e "\n${BLUE}Step 5/6: Compiling and packaging...${NC}"
+mvn package -DskipTests || {
+    echo -e "${RED}✗ Build failed${NC}"
     exit 1
 }
-echo -e "${GREEN}✓ Compilation successful${NC}"
-
-# Step 9: Package the application
-echo -e "\n${BLUE}Step 9/10: Packaging application...${NC}"
-mvn package -DskipTests
 echo -e "${GREEN}✓ Package created${NC}"
 
-# Step 10: Build Docker image
-echo -e "\n${BLUE}Step 10/10: Building Docker image...${NC}"
+# Step 6: Build Docker image
+echo -e "\n${BLUE}Step 6/6: Building Docker image...${NC}"
 docker build -t sachittarway/recipe-service:latest .
 echo -e "${GREEN}✓ Docker image built${NC}"
 
@@ -217,45 +192,27 @@ echo -e "${YELLOW}╚═══════════════════�
 cd backend/challenge-service
 
 # Step 1: Complete nuclear cleanup
-echo -e "\n${BLUE}Step 1/10: Complete cleanup...${NC}"
+echo -e "\n${BLUE}Step 1/6: Complete cleanup...${NC}"
 rm -rf target 2>/dev/null || true
 rm -rf .mvn 2>/dev/null || true
 find . -name "*.class" -delete 2>/dev/null || true
 echo -e "${GREEN}✓ Cleanup complete${NC}"
 
 # Step 2: Maven clean with force update
-echo -e "\n${BLUE}Step 2/10: Maven clean...${NC}"
+echo -e "\n${BLUE}Step 2/6: Maven clean...${NC}"
 mvn clean -U
 echo -e "${GREEN}✓ Maven clean complete${NC}"
 
-# Step 3: Generate protobuf Java classes
-echo -e "\n${BLUE}Step 3/10: Generating protobuf Java classes...${NC}"
-mvn protobuf:compile || {
-    echo -e "${RED}✗ Protobuf generation failed${NC}"
+# Step 3: Generate sources using Maven lifecycle (this will trigger build-helper too)
+echo -e "\n${BLUE}Step 3/6: Generating protobuf and gRPC sources...${NC}"
+mvn generate-sources || {
+    echo -e "${RED}✗ Source generation failed${NC}"
     exit 1
 }
-echo -e "${GREEN}✓ Protobuf classes generated${NC}"
+echo -e "${GREEN}✓ All sources generated${NC}"
 
-# Step 4: Wait for file system
-echo -e "\n${BLUE}Step 4/10: Waiting for file system to settle...${NC}"
-sleep 3
-echo -e "${GREEN}✓ File system ready${NC}"
-
-# Step 5: Generate gRPC stubs
-echo -e "\n${BLUE}Step 5/10: Generating gRPC stubs...${NC}"
-mvn protobuf:compile-custom || {
-    echo -e "${RED}✗ gRPC generation failed${NC}"
-    exit 1
-}
-echo -e "${GREEN}✓ gRPC stubs generated${NC}"
-
-# Step 6: Wait again
-echo -e "\n${BLUE}Step 6/10: Waiting for gRPC files to be ready...${NC}"
-sleep 3
-echo -e "${GREEN}✓ Files ready${NC}"
-
-# Step 7: Verify all generated files
-echo -e "\n${BLUE}Step 7/10: Verifying generated files...${NC}"
+# Step 4: Verify generated files exist
+echo -e "\n${BLUE}Step 4/6: Verifying generated files...${NC}"
 REQUIRED_FILES=(
     "target/generated-sources/protobuf/java/com/recipe/Comment.java"
     "target/generated-sources/protobuf/java/com/recipe/Ingredient.java"
@@ -284,23 +241,16 @@ fi
 
 echo -e "${GREEN}✓ All required files verified${NC}"
 
-# Step 8: Compile Java sources separately
-echo -e "\n${BLUE}Step 8/10: Compiling Java sources...${NC}"
-mvn compiler:compile || {
-    echo -e "${RED}✗ Compilation failed${NC}"
-    echo -e "${YELLOW}Last 50 lines of a generated file:${NC}"
-    tail -50 target/generated-sources/protobuf/java/com/recipe/Comment.java || true
+# Step 5: Compile and package in one go
+echo -e "\n${BLUE}Step 5/6: Compiling and packaging...${NC}"
+mvn package -DskipTests || {
+    echo -e "${RED}✗ Build failed${NC}"
     exit 1
 }
-echo -e "${GREEN}✓ Compilation successful${NC}"
-
-# Step 9: Package the application
-echo -e "\n${BLUE}Step 9/10: Packaging application...${NC}"
-mvn package -DskipTests
 echo -e "${GREEN}✓ Package created${NC}"
 
-# Step 10: Build Docker image
-echo -e "\n${BLUE}Step 10/10: Building Docker image...${NC}"
+# Step 6: Build Docker image
+echo -e "\n${BLUE}Step 6/6: Building Docker image...${NC}"
 docker build -t sachittarway/challenge-service:latest .
 echo -e "${GREEN}✓ Docker image built${NC}"
 
@@ -316,39 +266,24 @@ echo -e "${YELLOW}║  Building nutrition-service (ROBUST MODE)  ║${NC}"
 echo -e "${YELLOW}╚════════════════════════════════════════════╝${NC}"
 cd backend/nutrition-service
 
-echo -e "\n${BLUE}Step 1/10: Complete cleanup...${NC}"
+echo -e "\n${BLUE}Step 1/6: Complete cleanup...${NC}"
 rm -rf target 2>/dev/null || true
 rm -rf .mvn 2>/dev/null || true
 find . -name "*.class" -delete 2>/dev/null || true
 echo -e "${GREEN}✓ Cleanup complete${NC}"
 
-echo -e "\n${BLUE}Step 2/10: Maven clean...${NC}"
+echo -e "\n${BLUE}Step 2/6: Maven clean...${NC}"
 mvn clean -U
 echo -e "${GREEN}✓ Maven clean complete${NC}"
 
-echo -e "\n${BLUE}Step 3/10: Generating protobuf Java classes...${NC}"
-mvn protobuf:compile || {
-    echo -e "${RED}✗ Protobuf generation failed${NC}"
+echo -e "\n${BLUE}Step 3/6: Generating protobuf and gRPC sources...${NC}"
+mvn generate-sources || {
+    echo -e "${RED}✗ Source generation failed${NC}"
     exit 1
 }
-echo -e "${GREEN}✓ Protobuf classes generated${NC}"
+echo -e "${GREEN}✓ All sources generated${NC}"
 
-echo -e "\n${BLUE}Step 4/10: Waiting for file system to settle...${NC}"
-sleep 3
-echo -e "${GREEN}✓ File system ready${NC}"
-
-echo -e "\n${BLUE}Step 5/10: Generating gRPC stubs...${NC}"
-mvn protobuf:compile-custom || {
-    echo -e "${RED}✗ gRPC generation failed${NC}"
-    exit 1
-}
-echo -e "${GREEN}✓ gRPC stubs generated${NC}"
-
-echo -e "\n${BLUE}Step 6/10: Waiting for gRPC files to be ready...${NC}"
-sleep 3
-echo -e "${GREEN}✓ Files ready${NC}"
-
-echo -e "\n${BLUE}Step 7/10: Verifying generated files...${NC}"
+echo -e "\n${BLUE}Step 4/6: Verifying generated files...${NC}"
 REQUIRED_FILES=(
     "target/generated-sources/protobuf/java/com/recipe/Comment.java"
     "target/generated-sources/protobuf/java/com/recipe/Ingredient.java"
@@ -377,20 +312,14 @@ fi
 
 echo -e "${GREEN}✓ All required files verified${NC}"
 
-echo -e "\n${BLUE}Step 8/10: Compiling Java sources...${NC}"
-mvn compiler:compile || {
-    echo -e "${RED}✗ Compilation failed${NC}"
-    echo -e "${YELLOW}Last 50 lines of a generated file:${NC}"
-    tail -50 target/generated-sources/protobuf/java/com/recipe/Comment.java || true
+echo -e "\n${BLUE}Step 5/6: Compiling and packaging...${NC}"
+mvn package -DskipTests || {
+    echo -e "${RED}✗ Build failed${NC}"
     exit 1
 }
-echo -e "${GREEN}✓ Compilation successful${NC}"
-
-echo -e "\n${BLUE}Step 9/10: Packaging application...${NC}"
-mvn package -DskipTests
 echo -e "${GREEN}✓ Package created${NC}"
 
-echo -e "\n${BLUE}Step 10/10: Building Docker image...${NC}"
+echo -e "\n${BLUE}Step 6/6: Building Docker image...${NC}"
 docker build -t sachittarway/nutrition-service:latest .
 echo -e "${GREEN}✓ Docker image built${NC}"
 
@@ -412,6 +341,15 @@ echo -e "${GREEN}✅ All services built${NC}"
 echo -e "\n${BLUE}🔟 Deploying microservices...${NC}"
 kubectl delete deployment user-service notification-service gateway-service recipe-service 2>/dev/null || true
 sleep 5
+
+#push image to docker hub for all microservice
+docker push sachittarway/user-service:latest
+docker push sachittarway/notification-service:latest
+docker push sachittarway/recipe-service:latest
+docker push sachittarway/challenge-service:latest
+docker push sachittarway/nutrition-service:latest
+docker push sachittarway/gateway-service:latest
+
 
 kubectl apply -f backend/user-service/K8s/user-deployment.yaml
 kubectl apply -f backend/gateway-service/K8s/gateway-deployment.yaml
