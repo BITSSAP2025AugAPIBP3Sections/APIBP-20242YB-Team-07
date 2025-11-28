@@ -41,6 +41,12 @@ public class Challenge {
     @CollectionTable(name = "challenge_participants", joinColumns = @JoinColumn(name = "challenge_id"))
     private Set<ChallengeParticipant> participants = new HashSet<>();
 
+    @Column(nullable = false)
+    private Boolean isPaid;
+
+    @Column(nullable = true)
+    private Integer entryFee;
+
     public ChallengeStatus getCurrentStatus() {
         LocalDateTime now = LocalDateTime.now();
         if (status == ChallengeStatus.CANCELLED) {
