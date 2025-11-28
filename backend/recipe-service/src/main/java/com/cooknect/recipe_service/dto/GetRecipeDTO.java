@@ -2,6 +2,7 @@ package com.cooknect.recipe_service.dto;
 
 import com.cooknect.recipe_service.model.Ingredient;
 import com.cooknect.recipe_service.model.PreparationStep;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,4 +29,11 @@ public class GetRecipeDTO {
     private String username;
     private int commentCount;
     private Long userId;
+    
+    // Tribute fields
+    @JsonProperty("isTribute")
+    private boolean isTribute;
+    private String authorName;
+    private String tributeDescription;
+    private String tributeImageUrl;
 }

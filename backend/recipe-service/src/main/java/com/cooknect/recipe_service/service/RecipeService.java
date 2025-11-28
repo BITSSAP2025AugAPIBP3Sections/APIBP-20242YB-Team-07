@@ -62,6 +62,15 @@ public class RecipeService {
         }
         newRecipe.setUserId(userId);
         newRecipe.setRecipeImageUrl(recipe.getRecipeImageUrl());
+        
+        // Handle tribute fields
+        newRecipe.setTribute(recipe.isTribute());
+        if (recipe.isTribute()) {
+            newRecipe.setAuthorName(recipe.getAuthorName());
+            newRecipe.setTributeDescription(recipe.getTributeDescription());
+            newRecipe.setTributeImageUrl(recipe.getTributeImageUrl());
+        }
+        
         return repo.save(newRecipe);
     }
 
@@ -293,6 +302,15 @@ public class RecipeService {
                         return c;
                     }).toList()
             );
+            
+            // Set tribute fields
+            dto.setTribute(recipe.isTribute());
+            if (recipe.isTribute()) {
+                dto.setAuthorName(recipe.getAuthorName());
+                dto.setTributeDescription(recipe.getTributeDescription());
+                dto.setTributeImageUrl(recipe.getTributeImageUrl());
+            }
+            
             return dto;
         }).toList();
 
@@ -376,6 +394,14 @@ public class RecipeService {
                         return c;
                     }).toList()
             );
+            
+            // Set tribute fields
+            dto.setTribute(recipe.isTribute());
+            if (recipe.isTribute()) {
+                dto.setAuthorName(recipe.getAuthorName());
+                dto.setTributeDescription(recipe.getTributeDescription());
+                dto.setTributeImageUrl(recipe.getTributeImageUrl());
+            }
 
             return dto;
         }).toList();
@@ -450,6 +476,15 @@ public class RecipeService {
             if (userIdToUsername != null) {
                 dto.setUsername(userIdToUsername.get(recipe.getUserId()));
             }
+            
+            // Set tribute fields
+            dto.setTribute(recipe.isTribute());
+            if (recipe.isTribute()) {
+                dto.setAuthorName(recipe.getAuthorName());
+                dto.setTributeDescription(recipe.getTributeDescription());
+                dto.setTributeImageUrl(recipe.getTributeImageUrl());
+            }
+            
             return dto;
         }).toList();
 
@@ -519,8 +554,18 @@ public class RecipeService {
                 savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent()
         );
         // Set username from user-service
-        dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+        if (userIdToUsername != null) {
+            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+        }
         dto.setCommentCount(recipe.getComments().size());
+        
+        // Set tribute fields
+        dto.setTribute(recipe.isTribute());
+        if (recipe.isTribute()) {
+            dto.setAuthorName(recipe.getAuthorName());
+            dto.setTributeDescription(recipe.getTributeDescription());
+            dto.setTributeImageUrl(recipe.getTributeImageUrl());
+        }
 
         return dto;
     }
@@ -556,6 +601,22 @@ public class RecipeService {
             existing.setCuisine(updates.getCuisine());
         if (updates.getLanguage() != null)
             existing.setLanguage(updates.getLanguage());
+            
+        // Handle tribute field updates
+        existing.setTribute(updates.isTribute());
+        if (updates.isTribute()) {
+            if (updates.getAuthorName() != null)
+                existing.setAuthorName(updates.getAuthorName());
+            if (updates.getTributeDescription() != null)
+                existing.setTributeDescription(updates.getTributeDescription());
+            if (updates.getTributeImageUrl() != null)
+                existing.setTributeImageUrl(updates.getTributeImageUrl());
+        } else {
+            // Clear tribute fields if isTribute is set to false
+            existing.setAuthorName(null);
+            existing.setTributeDescription(null);
+            existing.setTributeImageUrl(null);
+        }
 
         return repo.save(existing);
     }

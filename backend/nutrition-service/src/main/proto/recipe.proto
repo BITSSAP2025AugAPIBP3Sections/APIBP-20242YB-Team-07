@@ -31,6 +31,12 @@ message RecipeResponse {
     string language = 8;
     repeated Comment comments = 9;
     int64 userId = 10;
+    
+    // Tribute fields
+    bool is_tribute = 11;
+    string author_name = 12;
+    string tribute_description = 13;
+    string photo = 14;
 }
 
 service RecipeService {
