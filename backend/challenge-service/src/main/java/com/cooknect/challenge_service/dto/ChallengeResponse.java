@@ -18,5 +18,7 @@ public class ChallengeResponse {
     private LocalDateTime endDate;
     private ChallengeType type;
     private ChallengeStatus status;
+    private Boolean isPaid;
+    private Integer entryFee;
 
 }

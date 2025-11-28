@@ -15,5 +15,6 @@ public class CreateChallengeRequest {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private ChallengeType type;
-
+    private Boolean isPaid;
+    private Integer entryFee;
 }
