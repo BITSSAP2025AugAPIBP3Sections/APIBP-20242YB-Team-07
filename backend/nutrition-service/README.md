@@ -139,7 +139,7 @@ git push origin feat/add-nutrition-logs
 |**docs**|**Documentation Updates**|
 |**refactor**|**Non-breaking improvements**|
 |**test**|**Add/updating tests**|
-|**chore**|**Maintenance**|
+
 ### Examples
 - feat(nutrition-service): Integrate external nutrition API for macro analysis.
 - fix(nutrition-service): correct calculation formula
