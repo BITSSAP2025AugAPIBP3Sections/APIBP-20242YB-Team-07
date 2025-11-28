@@ -34,7 +34,21 @@ public class RecipeGrpcServiceImpl extends RecipeServiceGrpc.RecipeServiceImplBa
                 .setLikes(recipe.getLikes())
                 .setCuisine(String.valueOf(recipe.getCuisine()))
                 .setLanguage(recipe.getLanguage())
-                .setUserId(recipe.getUserId() != null ? recipe.getUserId() : 0L); // Set userId
+                .setUserId(recipe.getUserId() != null ? recipe.getUserId() : 0L) // Set userId
+                .setIsTribute(recipe.isTribute());
+                
+            // Set tribute fields if it's a tribute
+            if (recipe.isTribute()) {
+                if (recipe.getAuthorName() != null) {
+                    responseBuilder.setAuthorName(recipe.getAuthorName());
+                }
+                if (recipe.getTributeDescription() != null) {
+                    responseBuilder.setTributeDescription(recipe.getTributeDescription());
+                }
+                if (recipe.getTributeImageUrl() != null) {
+                    responseBuilder.setPhoto(recipe.getTributeImageUrl());
+                }
+            }
 
             // Add ingredients
             if (recipe.getIngredients() != null) {
