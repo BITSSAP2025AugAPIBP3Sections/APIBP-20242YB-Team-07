@@ -62,6 +62,15 @@ public class RecipeService {
         }
         newRecipe.setUserId(userId);
         newRecipe.setRecipeImageUrl(recipe.getRecipeImageUrl());
+        
+        // Handle tribute fields
+        newRecipe.setTribute(recipe.isTribute());
+        if (recipe.isTribute()) {
+            newRecipe.setAuthorName(recipe.getAuthorName());
+            newRecipe.setTributeDescription(recipe.getTributeDescription());
+            newRecipe.setTributeImageUrl(recipe.getTributeImageUrl());
+        }
+        
         return repo.save(newRecipe);
     }
 
@@ -123,7 +132,18 @@ public class RecipeService {
 
     /* Get all recipes */
     public PageResponseDTO<GetRecipeDTO> getAllRecipes(Long userId, PageRequestDTO pageRequestDTO) {
-        List<Recipe> recipes = repo.findAll(Sort.by(Sort.Direction.DESC, "id"));
+        String[] sortFields = pageRequestDTO.getSortBy().split(",");
+        String[] directions = pageRequestDTO.getDirection().split(",");
+        Sort sort = Sort.unsorted();
+        for (int i = 0; i < sortFields.length; i++) {
+            String field = sortFields[i].trim();
+            Sort.Direction dir = Sort.Direction.ASC;
+            if (i < directions.length) {
+                dir = Sort.Direction.fromString(directions[i].trim());
+            }
+            sort = sort.and(Sort.by(dir, field));
+        }
+        List<Recipe> recipes = repo.findAll(sort);
 
         /*
          * Collect unique userIds.
@@ -204,6 +224,116 @@ public class RecipeService {
         return pageResponse;
     }
 
+    /* Get all Recipes based on title search */
+    public PageResponseDTO<GetRecipeDTO> getRecipesByTitle(String title, Long userId, Boolean saved, PageRequestDTO pageRequestDTO) {
+        List<Recipe> recipes = repo.findByTitleContainingIgnoreCase(title);
+
+        if(recipes.isEmpty()){
+            PageResponseDTO<GetRecipeDTO> emptyResponse = new PageResponseDTO<>();
+            emptyResponse.setContent(List.of());
+            emptyResponse.setPage(0);
+            emptyResponse.setSize(0);
+            emptyResponse.setTotalElements(0);
+            emptyResponse.setTotalPages(0);
+            return emptyResponse;
+        }
+
+//        if saved is true, filter this reveived recipes from the indByTitleContainingIgnoreCase to only those saved by the user
+        if(saved != null && saved){
+            List<Recipe> savedRecipes = recipes.stream()
+                    .filter(recipe -> savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent())
+                    .toList();
+            recipes = savedRecipes;
+            if(recipes.isEmpty()) {
+                PageResponseDTO<GetRecipeDTO> emptyResponse = new PageResponseDTO<>();
+                emptyResponse.setContent(List.of());
+                emptyResponse.setPage(0);
+                emptyResponse.setSize(0);
+                emptyResponse.setTotalElements(0);
+                emptyResponse.setTotalPages(0);
+                return emptyResponse;
+            }
+        }
+
+
+        List<Long> userIds = recipes.stream()
+                .map(Recipe::getUserId)
+                .distinct()
+                .toList();
+        HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
+
+        Map<Long, String> userIdToUsername = null;
+        try {
+            ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
+                    userBaseUrl + "/usernames",
+                    HttpMethod.POST,
+                    request,
+                    new ParameterizedTypeReference<Map<Long, String>>() {}
+            );
+            userIdToUsername = response.getBody();
+        } catch (Exception e) {
+            System.out.println("Warning: Could not fetch usernames from user service: " + e.getMessage());
+        }
+
+        final Map<Long, String> finalUserIdToUsername = userIdToUsername;
+
+        List<GetRecipeDTO> recipeDTOs = recipes.stream().map(recipe -> {
+            GetRecipeDTO dto = new GetRecipeDTO();
+            dto.setId(recipe.getId());
+            dto.setTitle(recipe.getTitle());
+            dto.setDescription(recipe.getDescription());
+            dto.setCuisine(recipe.getCuisine().toString());
+            dto.setRecipeImageUrl(recipe.getRecipeImageUrl());
+            dto.setIngredients(recipe.getIngredients());
+            dto.setPreparation(recipe.getPreparation());
+            dto.setLikesCount(recipe.getLikes());
+            dto.setLikedByUser(likeRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
+            dto.setSavedByUser(savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent());
+            dto.setCommentCount(recipe.getComments().size());
+            dto.setUserId(recipe.getUserId());
+            if (finalUserIdToUsername != null) {
+                dto.setUsername(finalUserIdToUsername.get(recipe.getUserId()));
+            }
+            dto.setComments(
+                    recipe.getComments().stream().map(comment -> {
+                        GetCommentDto c = new GetCommentDto();
+                        c.setAuthor(comment.getAuthor());
+                        c.setText(comment.getText());
+                        return c;
+                    }).toList()
+            );
+            
+            // Set tribute fields
+            dto.setTribute(recipe.isTribute());
+            if (recipe.isTribute()) {
+                dto.setAuthorName(recipe.getAuthorName());
+                dto.setTributeDescription(recipe.getTributeDescription());
+                dto.setTributeImageUrl(recipe.getTributeImageUrl());
+            }
+            
+            return dto;
+        }).toList();
+
+        int page = pageRequestDTO.getPage();
+        int size = pageRequestDTO.getSize();
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, recipeDTOs.size());
+
+        List<GetRecipeDTO> paginatedRecipes = startIndex >= recipeDTOs.size() ?
+                List.of() : recipeDTOs.subList(startIndex, endIndex);
+
+        PageResponseDTO<GetRecipeDTO> pageResponse = new PageResponseDTO<>();
+        pageResponse.setContent(paginatedRecipes);
+        pageResponse.setPage(page);
+        pageResponse.setSize(size);
+        pageResponse.setTotalElements(recipeDTOs.size());
+        pageResponse.setTotalPages((int) Math.ceil((double) recipeDTOs.size() / size));
+        pageResponse.setSort(pageRequestDTO.getSortBy() + "," + pageRequestDTO.getDirection());
+
+        return pageResponse;
+    }
+
+
     /* Get all Recipes based on user Id */
     public PageResponseDTO<GetRecipeDTO> getRecipesByUserId(Long userId, PageRequestDTO pageRequestDTO) {
         List<Recipe> recipes = repo.findByUserId(userId);
@@ -264,6 +394,14 @@ public class RecipeService {
                         return c;
                     }).toList()
             );
+            
+            // Set tribute fields
+            dto.setTribute(recipe.isTribute());
+            if (recipe.isTribute()) {
+                dto.setAuthorName(recipe.getAuthorName());
+                dto.setTributeDescription(recipe.getTributeDescription());
+                dto.setTributeImageUrl(recipe.getTributeImageUrl());
+            }
 
             return dto;
         }).toList();
@@ -338,6 +476,15 @@ public class RecipeService {
             if (userIdToUsername != null) {
                 dto.setUsername(userIdToUsername.get(recipe.getUserId()));
             }
+            
+            // Set tribute fields
+            dto.setTribute(recipe.isTribute());
+            if (recipe.isTribute()) {
+                dto.setAuthorName(recipe.getAuthorName());
+                dto.setTributeDescription(recipe.getTributeDescription());
+                dto.setTributeImageUrl(recipe.getTributeImageUrl());
+            }
+            
             return dto;
         }).toList();
 
@@ -407,8 +554,18 @@ public class RecipeService {
                 savedRepository.getByRecipeIdAndUserId(recipe.getId(), userId).isPresent()
         );
         // Set username from user-service
-        dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+        if (userIdToUsername != null) {
+            dto.setUsername(userIdToUsername.get(recipe.getUserId()));
+        }
         dto.setCommentCount(recipe.getComments().size());
+        
+        // Set tribute fields
+        dto.setTribute(recipe.isTribute());
+        if (recipe.isTribute()) {
+            dto.setAuthorName(recipe.getAuthorName());
+            dto.setTributeDescription(recipe.getTributeDescription());
+            dto.setTributeImageUrl(recipe.getTributeImageUrl());
+        }
 
         return dto;
     }
@@ -444,6 +601,22 @@ public class RecipeService {
             existing.setCuisine(updates.getCuisine());
         if (updates.getLanguage() != null)
             existing.setLanguage(updates.getLanguage());
+            
+        // Handle tribute field updates
+        existing.setTribute(updates.isTribute());
+        if (updates.isTribute()) {
+            if (updates.getAuthorName() != null)
+                existing.setAuthorName(updates.getAuthorName());
+            if (updates.getTributeDescription() != null)
+                existing.setTributeDescription(updates.getTributeDescription());
+            if (updates.getTributeImageUrl() != null)
+                existing.setTributeImageUrl(updates.getTributeImageUrl());
+        } else {
+            // Clear tribute fields if isTribute is set to false
+            existing.setAuthorName(null);
+            existing.setTributeDescription(null);
+            existing.setTributeImageUrl(null);
+        }
 
         return repo.save(existing);
     }

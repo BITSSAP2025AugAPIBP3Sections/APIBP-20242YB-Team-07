@@ -50,4 +50,17 @@ public class Recipe {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "recipe_id")
     private List<Comment> comments = new ArrayList<>();
+    
+    // Tribute fields
+    @Column(name = "is_tribute", columnDefinition = "boolean default false", nullable = false)
+    private boolean isTribute = false;
+    
+    @Column(name = "author_name")
+    private String authorName;  // Available only when isTribute is true
+    
+    @Column(name = "tribute_description", columnDefinition = "TEXT")
+    private String tributeDescription;  // Additional description for tribute
+    
+    @Column(name = "tribute_image_url")
+    private String tributeImageUrl;  // Photo URL for tribute
 }

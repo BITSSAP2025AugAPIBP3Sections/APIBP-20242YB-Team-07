@@ -31,6 +31,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,12 +62,13 @@ public class SpeechSynthService {
      * persists the result (if recipeId provided) and returns the bytes.
      */
     @Transactional
-    public byte[] getOrCreateAudio(String text, String voiceName, Long recipeId) {
+    public byte[] getOrCreateAudio(String text, String voiceName, Long recipeId, String language) {
         try {
-            if (recipeId != null) {
-                Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeId(recipeId);
+            if (recipeId != null && language != null) {
+                // Check for existing audio with matching recipeId AND language
+                Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, language);
                 if (opt.isPresent()) {
-                    log.info("Returning cached audio for recipeId={}", recipeId);
+                    log.info("Returning cached audio for recipeId={} language={}", recipeId, language);
                     return opt.get().getAudioData();
                 }
             }
@@ -74,17 +77,17 @@ public class SpeechSynthService {
             byte[] wav = synthesizeAudio(text, voiceName, recipeId);
 
             // Save only if recipeId provided and no existing row (avoid duplicates)
-            if (recipeId != null) {
+            if (recipeId != null && language != null) {
                 try {
-                    if (!recipeAudioRepository.findByRecipeId(recipeId).isPresent()) {
-                        RecipeAudio audioEntity = new RecipeAudio(recipeId, wav, "audio/wav");
+                    if (!recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, language).isPresent()) {
+                        RecipeAudio audioEntity = new RecipeAudio(recipeId, wav, "audio/wav", language);
                         RecipeAudio saved = recipeAudioRepository.save(audioEntity);
-                        log.info("Saved TTS WAV to database for recipeId={} audioId={}", recipeId, saved.getId());
+                        log.info("Saved TTS WAV to database for recipeId={} language={} audioId={}", recipeId, language, saved.getId());
                     } else {
-                        log.info("Audio already saved concurrently for recipeId={}", recipeId);
+                        log.info("Audio already saved concurrently for recipeId={} language={}", recipeId, language);
                     }
                 } catch (Exception dbEx) {
-                    log.warn("Failed to save TTS WAV to DB for recipeId={}: {}", recipeId, dbEx.getMessage());
+                    log.warn("Failed to save TTS WAV to DB for recipeId={} language={}: {}", recipeId, language, dbEx.getMessage());
                 }
             }
 
@@ -176,17 +179,6 @@ public class SpeechSynthService {
                 System.out.println("Failed to save TTS WAV to /tmp: " + ioe.getMessage());
             }
 
-            // Persist to Postgres
-            try {
-                if (recipeId != null) {
-                    RecipeAudio audio = new RecipeAudio(recipeId, wav, "audio/wav");
-                    recipeAudioRepository.save(audio);
-                    System.out.println("Saved TTS WAV to database for recipeId=" + recipeId);
-                }
-            } catch (Exception dbEx) {
-                System.out.println("Failed to save TTS WAV to DB: " + dbEx.getMessage());
-            }
-
           return wav;
         } catch (Exception e) {
             e.printStackTrace();
@@ -198,12 +190,11 @@ public class SpeechSynthService {
     public void deleteAudioForRecipe(Long recipeId) {
         if(recipeId == null) return;
         try {
-            Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeId(recipeId);
-            if (opt.isPresent()) {
-                recipeAudioRepository.delete(opt.get());
-                log.info("Deleted audio for recipeId={}", recipeId);
-            }
-            else {
+            List<RecipeAudio> audioList = recipeAudioRepository.findAllByRecipeId(recipeId);
+            if (!audioList.isEmpty()) {
+                recipeAudioRepository.deleteAllByRecipeId(recipeId);
+                log.info("Deleted {} audio record(s) for recipeId={} (all languages)", audioList.size(), recipeId);
+            } else {
                 log.info("No cached audio found to delete for recipeId={}", recipeId);
             }
         } catch (Exception e) {

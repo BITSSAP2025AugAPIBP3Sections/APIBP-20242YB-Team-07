@@ -32,10 +32,6 @@ public class FoodItem {
     @JsonProperty("fat_total_g")
     private Double totalFat;
 
-    @Column(name = "saturated_fat")
-    @JsonProperty("fat_saturated_g")
-    private Double saturatedFat;
-
     @Column(name = "sodium")
     @JsonProperty("sodium_mg")
     private Double sodium;
