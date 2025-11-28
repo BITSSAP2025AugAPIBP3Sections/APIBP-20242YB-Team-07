@@ -210,25 +210,6 @@ echo -e "${GREEN}║  ✅ Recipe-service build SUCCESS!         ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════╝${NC}"
 
 
-## Generate protobuf/gRPC code first
-#echo -e "${YELLOW}Generating protobuf/gRPC files...${NC}"
-#mvn protobuf:compile protobuf:compile-custom || {
-#    echo -e "${RED}Failed to generate gRPC files. Retrying with full clean...${NC}"
-#    rm -rf target
-#    mvn clean
-#    mvn protobuf:compile protobuf:compile-custom
-#}
-
-## Verify generated files exist
-#if [ ! -f "target/generated-sources/protobuf/grpc-java/com/challenge/ChallengeServiceGrpc.java" ]; then
-#    echo -e "${RED}ERROR: gRPC files were not generated!${NC}"
-#    echo -e "${YELLOW}Checking proto file location...${NC}"
-#    find src/main -name "*.proto"
-#    exit 1
-#fi
-
-#echo -e "${GREEN}✅ gRPC files generated successfully${NC}"
-
 # ROBUST CHALLENGE-SERVICE BUILD
 echo -e "\n${YELLOW}╔════════════════════════════════════════════╗${NC}"
 echo -e "${YELLOW}║  Building challenge-service (ROBUST MODE)  ║${NC}"
@@ -329,6 +310,96 @@ echo -e "\n${GREEN}╔═══════════════════�
 echo -e "${GREEN}║  ✅ Challenge-service build SUCCESS!      ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════╝${NC}"
 
+# ROBUST NUTRITION-SERVICE BUILD
+echo -e "\n${YELLOW}╔════════════════════════════════════════════╗${NC}"
+echo -e "${YELLOW}║  Building nutrition-service (ROBUST MODE)  ║${NC}"
+echo -e "${YELLOW}╚════════════════════════════════════════════╝${NC}"
+cd backend/nutrition-service
+
+echo -e "\n${BLUE}Step 1/10: Complete cleanup...${NC}"
+rm -rf target 2>/dev/null || true
+rm -rf .mvn 2>/dev/null || true
+find . -name "*.class" -delete 2>/dev/null || true
+echo -e "${GREEN}✓ Cleanup complete${NC}"
+
+echo -e "\n${BLUE}Step 2/10: Maven clean...${NC}"
+mvn clean -U
+echo -e "${GREEN}✓ Maven clean complete${NC}"
+
+echo -e "\n${BLUE}Step 3/10: Generating protobuf Java classes...${NC}"
+mvn protobuf:compile || {
+    echo -e "${RED}✗ Protobuf generation failed${NC}"
+    exit 1
+}
+echo -e "${GREEN}✓ Protobuf classes generated${NC}"
+
+echo -e "\n${BLUE}Step 4/10: Waiting for file system to settle...${NC}"
+sleep 3
+echo -e "${GREEN}✓ File system ready${NC}"
+
+echo -e "\n${BLUE}Step 5/10: Generating gRPC stubs...${NC}"
+mvn protobuf:compile-custom || {
+    echo -e "${RED}✗ gRPC generation failed${NC}"
+    exit 1
+}
+echo -e "${GREEN}✓ gRPC stubs generated${NC}"
+
+echo -e "\n${BLUE}Step 6/10: Waiting for gRPC files to be ready...${NC}"
+sleep 3
+echo -e "${GREEN}✓ Files ready${NC}"
+
+echo -e "\n${BLUE}Step 7/10: Verifying generated files...${NC}"
+REQUIRED_FILES=(
+    "target/generated-sources/protobuf/java/com/recipe/Comment.java"
+    "target/generated-sources/protobuf/java/com/recipe/Ingredient.java"
+    "target/generated-sources/protobuf/java/com/recipe/RecipeProto.java"
+    "target/generated-sources/protobuf/grpc-java/com/recipe/RecipeServiceGrpc.java"
+)
+
+ALL_FILES_OK=true
+for FILE in "${REQUIRED_FILES[@]}"; do
+    if [ ! -f "$FILE" ]; then
+        echo -e "${RED}✗ Missing: $FILE${NC}"
+        ALL_FILES_OK=false
+    elif [ ! -s "$FILE" ]; then
+        echo -e "${RED}✗ Empty: $FILE${NC}"
+        ALL_FILES_OK=false
+    else
+        FILE_SIZE=$(wc -c < "$FILE")
+        echo -e "${GREEN}✓ $FILE (${FILE_SIZE} bytes)${NC}"
+    fi
+done
+
+if [ "$ALL_FILES_OK" = false ]; then
+    echo -e "\n${RED}Some required files are missing or empty!${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ All required files verified${NC}"
+
+echo -e "\n${BLUE}Step 8/10: Compiling Java sources...${NC}"
+mvn compiler:compile || {
+    echo -e "${RED}✗ Compilation failed${NC}"
+    echo -e "${YELLOW}Last 50 lines of a generated file:${NC}"
+    tail -50 target/generated-sources/protobuf/java/com/recipe/Comment.java || true
+    exit 1
+}
+echo -e "${GREEN}✓ Compilation successful${NC}"
+
+echo -e "\n${BLUE}Step 9/10: Packaging application...${NC}"
+mvn package -DskipTests
+echo -e "${GREEN}✓ Package created${NC}"
+
+echo -e "\n${BLUE}Step 10/10: Building Docker image...${NC}"
+docker build -t sachittarway/nutrition-service:latest .
+echo -e "${GREEN}✓ Docker image built${NC}"
+
+cd ../..
+
+echo -e "\n${GREEN}╔════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║  ✅ Nutrition-service build SUCCESS!      ║${NC}"
+echo -e "${GREEN}╚════════════════════════════════════════════╝${NC}"
+
 echo "Building gateway-service..."
 cd backend/gateway-service
 mvn clean package -DskipTests
@@ -347,3 +418,4 @@ kubectl apply -f backend/gateway-service/K8s/gateway-deployment.yaml
 kubectl apply -f backend/recipe-service/K8s/recipe-deployment.yaml
 kubectl apply -f backend/challenge-service/K8s/challenge-deployment.yaml
 kubectl apply -f backend/notification-service/K8s/notification-deployment.yaml
+kubectl apply -f backend/nutrition-service/K8s/nutrition-deployment.yaml
