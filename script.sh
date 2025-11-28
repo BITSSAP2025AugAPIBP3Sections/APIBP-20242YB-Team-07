@@ -109,13 +109,59 @@ mvn clean package -DskipTests
 docker build -t sachittarway/notification-service:latest .
 cd ../..
 
+# SPECIAL HANDLING FOR RECIPE-SERVICE WITH GRPC
+echo "Building recipe-service with gRPC generation..."
+cd backend/recipe-service
+
+# Clean everything including generated sources
+echo -e "${YELLOW}Cleaning recipe-service (including gRPC generated files)...${NC}"
+rm -rf target/generated-sources 2>/dev/null || true
+rm -rf target/classes 2>/dev/null || true
+mvn clean
+
+# Generate protobuf/gRPC code first
+echo -e "${YELLOW}Generating protobuf/gRPC files...${NC}"
+mvn protobuf:compile protobuf:compile-custom || {
+    echo -e "${RED}Failed to generate gRPC files. Retrying with full clean...${NC}"
+    rm -rf target
+    mvn clean
+    mvn protobuf:compile protobuf:compile-custom
+}
+
+# Verify generated files exist
+if [ ! -f "target/generated-sources/protobuf/grpc-java/com/recipe/RecipeServiceGrpc.java" ]; then
+    echo -e "${RED}ERROR: gRPC files were not generated!${NC}"
+    echo -e "${YELLOW}Checking proto file location...${NC}"
+    find src/main -name "*.proto"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ gRPC files generated successfully${NC}"
+
+# Now compile and package
+echo -e "${YELLOW}Compiling recipe-service...${NC}"
+mvn compile
+mvn package -DskipTests
+
+echo -e "${GREEN}✅ Recipe-service built successfully${NC}"
+
+docker build -t sachittarway/recipe-service:latest .
+cd ../..
+
 echo "Building gateway-service..."
 cd backend/gateway-service
 mvn clean package -DskipTests
 docker build -t sachittarway/gateway-service:latest .
 cd ../..
 
+echo -e "${GREEN}✅ All services built${NC}"
+
+# 10. Deploy microservices
+echo -e "\n${BLUE}🔟 Deploying microservices...${NC}"
+kubectl delete deployment user-service notification-service gateway-service recipe-service 2>/dev/null || true
+sleep 5
 
 kubectl apply -f backend/user-service/K8s/user-deployment.yaml
 kubectl apply -f backend/gateway-service/K8s/gateway-deployment.yaml
+kubectl apply -f backend/recipe-service/K8s/recipe-deployment.yaml
 kubectl apply -f backend/notification-service/K8s/notification-deployment.yaml
