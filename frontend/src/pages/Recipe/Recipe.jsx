@@ -13,6 +13,8 @@ import {
   Input,
   List,
   Tag,
+  Dropdown,
+  Select,
 } from "antd";
 import {
   Heart,
@@ -94,6 +96,7 @@ const Recipe = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const [deleteButtonLoading, setDeleteButtonLoading] = useState(false);
+  const [language, setLanguage] = useState("English");
   const { user } = useAuth();
 
   useEffect(() => {
@@ -220,7 +223,7 @@ const Recipe = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:8089/api/v1/recipes/${recipeId}/speak`,
+        `http://localhost:8089/api/v1/recipes/${recipeId}/translate/${language}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -433,6 +436,21 @@ const Recipe = () => {
                   >
                     {isPlaying ? "Playing..." : "Listen to Recipe"}
                   </Button>
+                  <Select
+                    placeholder="Translate Description"
+                    style={{ width: 220 }}
+                    onChange={(value) => {
+                      setLanguage(value);
+                    }}
+                  >
+                    <Select.Option value="Hindi">Hindi</Select.Option>
+                    <Select.Option value="English">English</Select.Option>
+                    <Select.Option value="Gujarati">Gujarati</Select.Option>
+                    <Select.Option value="Bengali">Bengali</Select.Option>
+                    <Select.Option value="Marathi">Marathi</Select.Option>
+                    <Select.Option value="Kannada">Kannada</Select.Option>
+                    <Select.Option value="Telugu">Telugu</Select.Option>
+                  </Select>
                 </Space>
                 <div style={styles.descriptionContainer}>
                   <Paragraph

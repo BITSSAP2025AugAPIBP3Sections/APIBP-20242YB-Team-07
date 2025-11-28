@@ -15,11 +15,17 @@ import {
   Avatar,
   Tag,
   Select,
-  Upload,
   Pagination,
+  Upload,
   AutoComplete,
+  Switch,
 } from "antd";
-import { HeartOutlined, MessageFilled, HeartFilled } from "@ant-design/icons";
+import {
+  HeartOutlined,
+  MessageFilled,
+  HeartFilled,
+  UploadOutlined,
+} from "@ant-design/icons";
 import {
   Plus,
   MinusCircle,
@@ -113,14 +119,17 @@ const Home = () => {
     }
   };
 
-  const fetchAllRecipes = async (userId, pageNumber) => {
+  const fetchAllRecipes = async (userId, pageNumber, title) => {
     if (pageNumber === undefined || pageNumber === null) {
       pageNumber = 1;
+    }
+    if (title === undefined || title === null) {
+      title = "";
     }
     try {
       const url = userId
         ? `http://localhost:8089/api/v1/recipes?userId=${userId}&page=${pageNumber}&size=10&sortBy=id&direction=asc`
-        : `http://localhost:8089/api/v1/recipes?page=${pageNumber}&size=10&sortBy=id&direction=asc`;
+        : `http://localhost:8089/api/v1/recipes?page=${pageNumber}&size=10&sortBy=id&direction=asc&title=${title}`;
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -296,75 +305,66 @@ const Home = () => {
     }
   };
 
-  // const handleSearch = async (searchValue) => {
-  //   setSearchTitle(searchValue);
+  const [searchTitle, setSearchTitle] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
-  //   // Don't search if input is empty or less than 2 characters
-  //   if (!searchValue || searchValue.trim().length < 2) {
-  //     setSearchResults([]);
-  //     return;
-  //   }
+  // using debounce to limit API calls
+  let debounceTimeout;
+  const handleSearch = (value) => {
+    setSearchTitle(value);
+    if (debounceTimeout) {
+      clearTimeout(debounceTimeout);
+    }
+    debounceTimeout = setTimeout(() => {
+      performSearch(value);
+    }, 500);
+  };
 
-  //   try {
-  //     setSearchLoading(true);
-  //     const response = await fetch(
-  //       `http://localhost:8089/api/v1/recipes/search?q=${encodeURIComponent(
-  //         searchValue
-  //       )}`,
-  //       {
-  //         method: "GET",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //         },
-  //       }
-  //     );
+  const performSearch = async (value) => {
+    if (!value) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const response = await fetch(
+        `http://localhost:8089/api/v1/recipes/search?q=${value}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        window.location.reload();
+      }
+      if (!response.ok) {
+        throw new Error("Failed to search recipes");
+      }
+      const data = await response.json();
+      const options = data.map((recipe) => ({
+        value: recipe.title,
+        label: recipe.title,
+      }));
+      setSearchResults(options);
+    } catch (error) {
+      console.error("Error searching recipes:", error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
-  //     if (response.status === 401 || response.status === 403) {
-  //       localStorage.removeItem("token");
-  //       localStorage.removeItem("role");
-  //       window.location.reload();
-  //       return;
-  //     }
+  const handleSelect = async (value) => {
+    console.log("Selected:", value);
+    fetchAllRecipes(null, 1, value);
+  };
 
-  //     if (!response.ok) {
-  //       throw new Error("Failed to search recipes");
-  //     }
-
-  //     const data = await response.json();
-
-  //     // Map the results to show only titles in dropdown
-  //     const titles = data.map((recipe) => ({
-  //       value: recipe.title,
-  //       label: recipe.title,
-  //       id: recipe.id, // Store ID for navigation
-  //     }));
-
-  //     setSearchResults(titles);
-  //   } catch (error) {
-  //     console.error("Error searching recipes:", error);
-  //     setSearchResults([]);
-  //   } finally {
-  //     setSearchLoading(false);
-  //   }
-  // };
-
-  // // Handle when user selects a recipe from dropdown
-  // const handleSelect = (value, option) => {
-  //   // Navigate to the selected recipe
-  //   navigate(`/recipe/${option.id}`);
-  // };
-
-  // // Debounce search to avoid too many API calls
-  // useEffect(() => {
-  //   const timer = setTimeout(() => {
-  //     if (searchTitle) {
-  //       handleSearch(searchTitle);
-  //     }
-  //   }, 500); // Wait 500ms after user stops typing
-
-  //   return () => clearTimeout(timer);
-  // }, [searchTitle]);
+  const [toggle, setToggle] = useState(false);
 
   return (
     <>
@@ -430,33 +430,32 @@ const Home = () => {
           </div>
           <div className="feed-column">
             <div className="feed-controls">
-              <div className="search-container">
-                {/* <AutoComplete
-                  style={{
-                    minWidth: 625,
-                    borderRadius: "8px",
-                    minHeight: "40px",
-                  }}
-                  placeholder="Search recipes by title..."
-                  value={searchTitle}
-                  onChange={handleSearch}
-                  onSelect={handleSelect}
-                  options={searchResults}
-                  notFoundContent={
-                    searchLoading ? "Searching..." : "No recipes found"
-                  }
-                  allowClear
-                  onClear={() => {
-                    setSearchTitle("");
-                    setSearchResults([]);
-                  }}
-                /> */}
-              </div>
+              <AutoComplete
+                style={{
+                  minWidth: 625,
+                  borderRadius: "8px",
+                  minHeight: "40px",
+                }}
+                placeholder="Search recipes by title..."
+                value={searchTitle}
+                onChange={handleSearch}
+                onSelect={handleSelect}
+                options={searchResults}
+                notFoundContent={
+                  searchLoading ? "Searching..." : "No recipes found"
+                }
+                allowClear
+                onClear={() => {
+                  setSearchTitle("");
+                  setSearchResults([]);
+                  fetchAllRecipes();
+                }}
+              />
               <button
                 className="feed-post-btn"
                 onClick={() => setIsModalVisible(true)}
               >
-                <Upload /> Share Recipe
+                <UploadOutlined /> Share Recipe
               </button>
             </div>
 
@@ -876,7 +875,6 @@ const Home = () => {
                 </Text>
               </div>
             </Card>
-
             <Card
               title={
                 <Text strong>
@@ -921,6 +919,61 @@ const Home = () => {
                 <Input placeholder="e.g., Chef Alex" />
               </Form.Item> */}
             </Card>
+            <Switch
+              checked={toggle}
+              onChange={(checked) => setToggle(checked)}
+            />
+            <span
+              style={{
+                marginLeft: "10px",
+              }}
+            >
+              Tribute to Original Recipe Creator - By enabling this, you agree
+              to give credit to the original creator of the recipe.
+            </span>
+
+            <Card
+              title={
+                <Text strong>
+                  <BookOpen size={16} style={{ marginBottom: "-3px" }} /> Author
+                  Profile
+                </Text>
+              }
+              style={formItemStyle}
+              bodyStyle={{ padding: "16px" }}
+              style={{ display: toggle ? "block" : "none", marginTop: 20 }}
+            >
+              <Form.Item
+                name="avatar"
+                label="Profile Picture"
+                valuePropName="fileList"
+                getValueFromEvent={normFile}
+              >
+                <Upload
+                  name="avatar"
+                  listType="picture-card"
+                  maxCount={1}
+                  beforeUpload={() => false} // Prevent automatic upload
+                >
+                  <div>
+                    <UploadIcon />
+                    <div style={{ marginTop: 8 }}>Upload</div>
+                  </div>
+                </Upload>
+              </Form.Item>
+
+              <Form.Item name="authorName" label="Chef Name">
+                <Input placeholder="e.g., Chef Alex" />
+              </Form.Item>
+
+              <Form.Item name="authorBio" label="Chef Bio">
+                <TextArea
+                  rows={3}
+                  placeholder="A brief bio about you as a chef"
+                />
+              </Form.Item>
+            </Card>
+
             <Form.Item style={{ marginTop: "30px" }}>
               <Button
                 type="primary"
