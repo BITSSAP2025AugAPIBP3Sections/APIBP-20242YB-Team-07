@@ -14,13 +14,73 @@ spec:
     spec:
       containers:
         - name: challenge-service
-          image: peytonpeaceful/challenge-service:latest # Change to your DockerHub image if needed
+          image: sachittarway/challenge-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8083
+            - containerPort: 9091  # gRPC port
           env:
+            - name: SERVER_PORT
+              value: "8083"
+            - name: GRPC_SERVER_PORT
+              value: "9091"
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://dpg-d4e76p8gjchc73fbd6dg-a.oregon-postgres.render.com:5432/user_service_baoy"
+              value: "jdbc:postgresql://postgres-challenge-service:5432/challenge_service_db"
             - name: SPRING_DATASOURCE_USERNAME
-              value: "user_service_baoy_user"
+              value: "postgres"
             - name: SPRING_DATASOURCE_PASSWORD
-              value: "swOLtPmLusWZVCt5laf6mesnherBcNuZ"
+              value: "admin"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: SPRING_JPA_SHOW_SQL
+              value: "true"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: SPRING_KAFKA_CONSUMER_GROUP_ID
+              value: "notification-group"
+            - name: SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET
+              value: "earliest"
+            - name: SPRING_KAFKA_PRODUCER_ACKS
+              value: "all"
+            - name: SPRING_KAFKA_PROPERTIES_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: SPRING_KAFKA_ADMIN_PROPERTIES_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: GRPC_CLIENT_RECIPE_SERVICE_ADDRESS
+              value: "static://recipe-service:9090"
+            - name: RECIPE_SERVICE_URL
+              value: "http://recipe-service:8082/api/v1/"
+            - name: USER_SERVICE_URL
+              value: "http://user-service:8081/api/v1/users/"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: challenge-service
+spec:
+  selector:
+    app: challenge-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8083
+      targetPort: 8083
+    - name: grpc
+      protocol: TCP
+      port: 9091
+      targetPort: 9091
+  type: ClusterIP
