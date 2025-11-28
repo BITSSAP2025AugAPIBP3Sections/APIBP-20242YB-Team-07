@@ -218,6 +218,114 @@ const Recipe = () => {
     }
   };
 
+  // const playRecipeAudio = async (recipeId) => {
+  //   setAudioLoading(true);
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     const response = await fetch(
+  //       `http://localhost:8089/api/v1/recipes/${recipeId}/translate/${language}`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       }
+  //     );
+
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch audio");
+  //     }
+
+  //     // Get audio as blob
+  //     const audioBlob = await response.blob();
+
+  //     // Create object URL from blob
+  //     const audioUrl = URL.createObjectURL(audioBlob);
+
+  //     // Create and play audio
+  //     const audio = new Audio(audioUrl);
+
+  //     audio.onplay = () => setIsPlaying(true);
+  //     audio.onended = () => {
+  //       setIsPlaying(false);
+  //       URL.revokeObjectURL(audioUrl); // Clean up
+  //     };
+  //     audio.onerror = () => {
+  //       setIsPlaying(false);
+  //       console.error("Error playing audio");
+  //     };
+
+  //     await audio.play();
+  //   } catch (error) {
+  //     console.error("Error fetching audio:", error);
+  //   } finally {
+  //     setAudioLoading(false);
+  //   }
+  // };
+
+  // ...existing code...
+
+  // const playRecipeAudio = async (recipeId) => {
+  //   setAudioLoading(true);
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     const response = await fetch(
+  //       `http://localhost:8089/api/v1/recipes/${recipeId}/translate/${language}`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       }
+  //     );
+
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch audio");
+  //     }
+
+  //     // Check content type to ensure it's audio
+  //     const contentType = response.headers.get("content-type");
+  //     console.log("Response content type:", contentType);
+
+  //     // Get audio as blob with proper MIME type
+  //     const audioBlob = await response.blob();
+  //     console.log("Audio blob size:", audioBlob.size, "bytes");
+  //     console.log("Audio blob type:", audioBlob.type);
+
+  //     // Create a blob with explicit audio/mpeg MIME type if needed
+  //     const audioFile = new Blob([audioBlob], { type: "audio/mpeg" });
+
+  //     // Create object URL from blob
+  //     const audioUrl = URL.createObjectURL(audioFile);
+
+  //     // Create and play audio
+  //     const audio = new Audio(audioUrl);
+
+  //     audio.onplay = () => setIsPlaying(true);
+  //     audio.onended = () => {
+  //       setIsPlaying(false);
+  //       URL.revokeObjectURL(audioUrl); // Clean up
+  //     };
+  //     audio.onerror = (e) => {
+  //       setIsPlaying(false);
+  //       console.error("Error playing audio:", e);
+  //       console.error("Audio source:", audioUrl);
+  //       alert(
+  //         "Failed to play audio. The file may be corrupted or in an unsupported format."
+  //       );
+  //     };
+
+  //     await audio.play();
+  //   } catch (error) {
+  //     console.error("Error fetching audio:", error);
+  //     alert("Failed to load audio. Please try again.");
+  //   } finally {
+  //     setAudioLoading(false);
+  //   }
+  // };
+
+  // ...existing code...
+
+  const [currentAudio, setCurrentAudio] = useState(null); // Store audio instance
+
   const playRecipeAudio = async (recipeId) => {
     setAudioLoading(true);
     try {
@@ -235,30 +343,48 @@ const Recipe = () => {
         throw new Error("Failed to fetch audio");
       }
 
-      // Get audio as blob
+      const contentType = response.headers.get("content-type");
+      console.log("Response content type:", contentType);
+
       const audioBlob = await response.blob();
+      console.log("Audio blob size:", audioBlob.size, "bytes");
+      console.log("Audio blob type:", audioBlob.type);
 
-      // Create object URL from blob
-      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioFile = new Blob([audioBlob], { type: "audio/mpeg" });
+      const audioUrl = URL.createObjectURL(audioFile);
 
-      // Create and play audio
       const audio = new Audio(audioUrl);
+      setCurrentAudio(audio); // Store audio instance
 
       audio.onplay = () => setIsPlaying(true);
       audio.onended = () => {
         setIsPlaying(false);
-        URL.revokeObjectURL(audioUrl); // Clean up
+        setCurrentAudio(null);
+        URL.revokeObjectURL(audioUrl);
       };
-      audio.onerror = () => {
+      audio.onerror = (e) => {
         setIsPlaying(false);
-        console.error("Error playing audio");
+        setCurrentAudio(null);
+        console.error("Error playing audio:", e);
+        console.error("Audio source:", audioUrl);
+        alert(
+          "Failed to play audio. The file may be corrupted or in an unsupported format."
+        );
       };
 
       await audio.play();
     } catch (error) {
       console.error("Error fetching audio:", error);
+      alert("Failed to load audio. Please try again.");
     } finally {
       setAudioLoading(false);
+    }
+  };
+
+  const pauseRecipeAudio = () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      setIsPlaying(false);
     }
   };
 
@@ -427,15 +553,25 @@ const Recipe = () => {
                 </Title>
 
                 <Space style={{ marginBottom: "20px" }} wrap>
-                  <Button
-                    type="primary"
-                    icon={<SoundOutlined />}
-                    loading={audioLoading}
-                    onClick={() => playRecipeAudio(recipeData?.id)}
-                    disabled={isPlaying}
-                  >
-                    {isPlaying ? "Playing..." : "Listen to Recipe"}
-                  </Button>
+                  {!isPlaying ? (
+                    <Button
+                      type="primary"
+                      icon={<SoundOutlined />}
+                      loading={audioLoading}
+                      onClick={() => playRecipeAudio(recipeData?.id)}
+                    >
+                      Listen to Recipe
+                    </Button>
+                  ) : (
+                    <Button
+                      type="default"
+                      danger
+                      icon={<SoundOutlined />}
+                      onClick={pauseRecipeAudio}
+                    >
+                      Pause Audio
+                    </Button>
+                  )}
                   <Select
                     placeholder="Translate Description"
                     style={{ width: 220 }}
