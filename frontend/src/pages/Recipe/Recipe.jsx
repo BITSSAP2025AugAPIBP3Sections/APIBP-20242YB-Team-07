@@ -104,8 +104,6 @@ const Recipe = () => {
   }, [recipeId]);
 
   const fetchRecipeData = async () => {
-    console.log("Fetching recipe data for ID:", recipeId);
-    console.log("Calling from comment");
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -183,7 +181,6 @@ const Recipe = () => {
       }
 
       setCommentText("");
-      console.log("Comment posted successfully");
 
       // Now fetch recipe data after comment is posted
       await fetchRecipeData();
@@ -206,7 +203,6 @@ const Recipe = () => {
         }
       );
       if (response.status === 204) {
-        console.log("Recipe deleted successfully");
         window.location.reload();
       } else {
         throw new Error("Failed to delete recipe");
@@ -217,112 +213,6 @@ const Recipe = () => {
       setDeleteButtonLoading(false);
     }
   };
-
-  // const playRecipeAudio = async (recipeId) => {
-  //   setAudioLoading(true);
-  //   try {
-  //     const token = localStorage.getItem("token");
-  //     const response = await fetch(
-  //       `http://localhost:8089/api/v1/recipes/${recipeId}/translate/${language}`,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       }
-  //     );
-
-  //     if (!response.ok) {
-  //       throw new Error("Failed to fetch audio");
-  //     }
-
-  //     // Get audio as blob
-  //     const audioBlob = await response.blob();
-
-  //     // Create object URL from blob
-  //     const audioUrl = URL.createObjectURL(audioBlob);
-
-  //     // Create and play audio
-  //     const audio = new Audio(audioUrl);
-
-  //     audio.onplay = () => setIsPlaying(true);
-  //     audio.onended = () => {
-  //       setIsPlaying(false);
-  //       URL.revokeObjectURL(audioUrl); // Clean up
-  //     };
-  //     audio.onerror = () => {
-  //       setIsPlaying(false);
-  //       console.error("Error playing audio");
-  //     };
-
-  //     await audio.play();
-  //   } catch (error) {
-  //     console.error("Error fetching audio:", error);
-  //   } finally {
-  //     setAudioLoading(false);
-  //   }
-  // };
-
-  // ...existing code...
-
-  // const playRecipeAudio = async (recipeId) => {
-  //   setAudioLoading(true);
-  //   try {
-  //     const token = localStorage.getItem("token");
-  //     const response = await fetch(
-  //       `http://localhost:8089/api/v1/recipes/${recipeId}/translate/${language}`,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       }
-  //     );
-
-  //     if (!response.ok) {
-  //       throw new Error("Failed to fetch audio");
-  //     }
-
-  //     // Check content type to ensure it's audio
-  //     const contentType = response.headers.get("content-type");
-  //     console.log("Response content type:", contentType);
-
-  //     // Get audio as blob with proper MIME type
-  //     const audioBlob = await response.blob();
-  //     console.log("Audio blob size:", audioBlob.size, "bytes");
-  //     console.log("Audio blob type:", audioBlob.type);
-
-  //     // Create a blob with explicit audio/mpeg MIME type if needed
-  //     const audioFile = new Blob([audioBlob], { type: "audio/mpeg" });
-
-  //     // Create object URL from blob
-  //     const audioUrl = URL.createObjectURL(audioFile);
-
-  //     // Create and play audio
-  //     const audio = new Audio(audioUrl);
-
-  //     audio.onplay = () => setIsPlaying(true);
-  //     audio.onended = () => {
-  //       setIsPlaying(false);
-  //       URL.revokeObjectURL(audioUrl); // Clean up
-  //     };
-  //     audio.onerror = (e) => {
-  //       setIsPlaying(false);
-  //       console.error("Error playing audio:", e);
-  //       console.error("Audio source:", audioUrl);
-  //       alert(
-  //         "Failed to play audio. The file may be corrupted or in an unsupported format."
-  //       );
-  //     };
-
-  //     await audio.play();
-  //   } catch (error) {
-  //     console.error("Error fetching audio:", error);
-  //     alert("Failed to load audio. Please try again.");
-  //   } finally {
-  //     setAudioLoading(false);
-  //   }
-  // };
-
-  // ...existing code...
 
   const [currentAudio, setCurrentAudio] = useState(null); // Store audio instance
 
@@ -344,12 +234,7 @@ const Recipe = () => {
       }
 
       const contentType = response.headers.get("content-type");
-      console.log("Response content type:", contentType);
-
       const audioBlob = await response.blob();
-      console.log("Audio blob size:", audioBlob.size, "bytes");
-      console.log("Audio blob type:", audioBlob.type);
-
       const audioFile = new Blob([audioBlob], { type: "audio/mpeg" });
       const audioUrl = URL.createObjectURL(audioFile);
 
@@ -365,8 +250,6 @@ const Recipe = () => {
       audio.onerror = (e) => {
         setIsPlaying(false);
         setCurrentAudio(null);
-        console.error("Error playing audio:", e);
-        console.error("Audio source:", audioUrl);
         alert(
           "Failed to play audio. The file may be corrupted or in an unsupported format."
         );
@@ -414,8 +297,6 @@ const Recipe = () => {
       console.error("Error saving/unsaving recipe:", error);
     }
   };
-
-  console.log("Fetched Recipe Data:", recipeData);
 
   return (
     <Layout
@@ -509,7 +390,7 @@ const Recipe = () => {
                       ? "Bookmarked"
                       : "Save Recipe"}
                   </Button>
-                  {user.userData.id === recipeData?.userId && (
+                  {user?.userData?.id === recipeData?.userId && (
                     <Button
                       size="large"
                       type="primary"
