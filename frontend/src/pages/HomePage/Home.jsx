@@ -49,6 +49,7 @@ const Home = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [myCookbook, setMyCookbook] = useState(false);
+  const [toggle, setToggle] = useState(false);
   const [createRecipeForm, setCreateRecipeForm] = useState({
     title: "",
     description: "",
@@ -56,6 +57,8 @@ const Home = () => {
     preparation: [],
     cuisine: "",
     recipeImageUrl: "",
+    authorName: "",
+    tributeDescription: "",
   });
   // const [searchTitle, setSearchTitle] = useState("");
   // const [searchResults, setSearchResults] = useState([]);
@@ -237,6 +240,13 @@ const Home = () => {
     return e?.fileList;
   };
 
+  const normAuthorFile = (e) => {
+    if (Array.isArray(e)) {
+      return e;
+    }
+    return e?.fileList;
+  };
+
   const uploadPhoto = async (file) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -257,28 +267,68 @@ const Home = () => {
     return data.data.url;
   };
 
-  const onFinish = async () => {
-    const avatarFile = form.getFieldValue("avatar")?.[0]?.originFileObj;
-    const uploadPromise = avatarFile
-      ? uploadPhoto(avatarFile)
-      : Promise.resolve();
+  const uploadAuthorPhoto = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
 
+    const response = await fetch(
+      `https://api.imgbb.com/1/upload?key=80994bfe4a9255cfc684dadf5402c438`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error.message || "Image upload failed");
+    }
+    console.log(data);
+    return data.data.url;
+  };
+
+  const onFinish = async () => {
     try {
       setLoading(true);
-      await uploadPromise;
 
+      // Get recipe image file
+      const avatarFile = form.getFieldValue("avatar")?.[0]?.originFileObj;
+
+      // Format preparation steps
       const formattedPreparation = (createRecipeForm.preparation || []).map(
         (step) => ({
           step: step,
         })
       );
-      const payload = {
+
+      // Base payload
+      let payload = {
         ...createRecipeForm,
         preparation: formattedPreparation,
-        recipeImageUrl: avatarFile ? await uploadPromise : "",
+        recipeImageUrl: "",
+        tributeImageUrl: "",
+        isTribute: toggle,
       };
+
+      // Upload recipe image if exists
+      if (avatarFile) {
+        payload.recipeImageUrl = await uploadPhoto(avatarFile);
+      }
+
+      // Handle tribute section if enabled
+      if (toggle) {
+        const authorAvatarFile =
+          form.getFieldValue("authorAvatar")?.[0]?.originFileObj;
+
+        // Upload author image if exists
+        if (authorAvatarFile) {
+          payload.tributeImageUrl = await uploadAuthorPhoto(authorAvatarFile);
+        }
+      }
+
       console.log("Payload to be sent:", payload);
 
+      // Submit recipe to backend
       const response = await fetch("http://localhost:8089/api/v1/recipes", {
         method: "POST",
         headers: {
@@ -287,24 +337,34 @@ const Home = () => {
         },
         body: JSON.stringify(payload),
       });
+
+      // Handle authentication errors
       if (response.status === 401 || response.status === 403) {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
         window.location.reload();
+        return;
       }
+
       if (!response.ok) {
-        throw new Error("Failed to create recipe");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create recipe");
       }
+
       console.log("Recipe created successfully");
       handleCancel();
       fetchAllRecipes();
     } catch (error) {
       console.error("Error creating recipe:", error);
+      // Show error message to user
+      alert(`Failed to create recipe: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  console.log("toggle value:", toggle);
+  console.log("createRecipeForm:", createRecipeForm.isTribute);
   const [searchTitle, setSearchTitle] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -363,8 +423,6 @@ const Home = () => {
     console.log("Selected:", value);
     fetchAllRecipes(null, 1, value);
   };
-
-  const [toggle, setToggle] = useState(false);
 
   return (
     <>
@@ -898,7 +956,7 @@ const Home = () => {
 
               <Form.Item
                 name="avatar"
-                label="Profile Picture"
+                label="Recipe Image"
                 valuePropName="fileList"
                 getValueFromEvent={normFile}
               >
@@ -944,13 +1002,13 @@ const Home = () => {
               style={{ display: toggle ? "block" : "none", marginTop: 20 }}
             >
               <Form.Item
-                name="avatar"
+                name="authorAvatar"
                 label="Profile Picture"
                 valuePropName="fileList"
-                getValueFromEvent={normFile}
+                getValueFromEvent={normAuthorFile}
               >
                 <Upload
-                  name="avatar"
+                  name="authorAvatar"
                   listType="picture-card"
                   maxCount={1}
                   beforeUpload={() => false} // Prevent automatic upload
@@ -966,7 +1024,7 @@ const Home = () => {
                 <Input placeholder="e.g., Chef Alex" />
               </Form.Item>
 
-              <Form.Item name="authorBio" label="Chef Bio">
+              <Form.Item name="tributeDescription" label="Chef Bio">
                 <TextArea
                   rows={3}
                   placeholder="A brief bio about you as a chef"

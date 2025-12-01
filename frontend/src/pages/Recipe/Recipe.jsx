@@ -552,6 +552,41 @@ const Recipe = () => {
                   )}
                 />
               </div>
+
+              {/* Credits to the Chef */}
+              {recipeData?.isTribute && (
+                <div style={styles.sectionCard}>
+                  <Title
+                    level={2}
+                    style={{
+                      color: token.colorPrimary,
+                      marginBottom: "16px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    About the Chef
+                  </Title>
+                  <Space align="center" size="large">
+                    <Avatar
+                      size={64}
+                      style={{ fontSize: "24px" }}
+                      imgProps={{ crossOrigin: "anonymous" }}
+                      src={recipeData?.tributeImageUrl}
+                    />
+                    <div>
+                      <Text strong style={{ fontSize: "1.2em" }}>
+                        {recipeData?.authorName}
+                      </Text>
+                      <Paragraph
+                        style={{ marginTop: "8px", maxWidth: "300px" }}
+                      >
+                        {recipeData?.tributeDescription ||
+                          "This chef prefers to keep an air of mystery about them."}
+                      </Paragraph>
+                    </div>
+                  </Space>
+                </div>
+              )}
             </Col>
 
             {/* --- RIGHT COLUMN: Comments Section --- */}
