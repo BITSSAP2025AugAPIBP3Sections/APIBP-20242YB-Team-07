@@ -13,6 +13,8 @@ import {
   Input,
   List,
   Tag,
+  Dropdown,
+  Select,
 } from "antd";
 import {
   Heart,
@@ -94,6 +96,7 @@ const Recipe = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
   const [deleteButtonLoading, setDeleteButtonLoading] = useState(false);
+  const [language, setLanguage] = useState("English");
   const { user } = useAuth();
 
   useEffect(() => {
@@ -101,8 +104,6 @@ const Recipe = () => {
   }, [recipeId]);
 
   const fetchRecipeData = async () => {
-    console.log("Fetching recipe data for ID:", recipeId);
-    console.log("Calling from comment");
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -180,7 +181,6 @@ const Recipe = () => {
       }
 
       setCommentText("");
-      console.log("Comment posted successfully");
 
       // Now fetch recipe data after comment is posted
       await fetchRecipeData();
@@ -203,7 +203,6 @@ const Recipe = () => {
         }
       );
       if (response.status === 204) {
-        console.log("Recipe deleted successfully");
         window.location.reload();
       } else {
         throw new Error("Failed to delete recipe");
@@ -215,12 +214,14 @@ const Recipe = () => {
     }
   };
 
+  const [currentAudio, setCurrentAudio] = useState(null); // Store audio instance
+
   const playRecipeAudio = async (recipeId) => {
     setAudioLoading(true);
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:8089/api/v1/recipes/${recipeId}/speak`,
+        `http://localhost:8089/api/v1/recipes/${recipeId}/translate/${language}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -232,30 +233,41 @@ const Recipe = () => {
         throw new Error("Failed to fetch audio");
       }
 
-      // Get audio as blob
+      const contentType = response.headers.get("content-type");
       const audioBlob = await response.blob();
+      const audioFile = new Blob([audioBlob], { type: "audio/mpeg" });
+      const audioUrl = URL.createObjectURL(audioFile);
 
-      // Create object URL from blob
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      // Create and play audio
       const audio = new Audio(audioUrl);
+      setCurrentAudio(audio); // Store audio instance
 
       audio.onplay = () => setIsPlaying(true);
       audio.onended = () => {
         setIsPlaying(false);
-        URL.revokeObjectURL(audioUrl); // Clean up
+        setCurrentAudio(null);
+        URL.revokeObjectURL(audioUrl);
       };
-      audio.onerror = () => {
+      audio.onerror = (e) => {
         setIsPlaying(false);
-        console.error("Error playing audio");
+        setCurrentAudio(null);
+        alert(
+          "Failed to play audio. The file may be corrupted or in an unsupported format."
+        );
       };
 
       await audio.play();
     } catch (error) {
       console.error("Error fetching audio:", error);
+      alert("Failed to load audio. Please try again.");
     } finally {
       setAudioLoading(false);
+    }
+  };
+
+  const pauseRecipeAudio = () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      setIsPlaying(false);
     }
   };
 
@@ -285,8 +297,6 @@ const Recipe = () => {
       console.error("Error saving/unsaving recipe:", error);
     }
   };
-
-  console.log("Fetched Recipe Data:", recipeData);
 
   return (
     <Layout
@@ -380,7 +390,7 @@ const Recipe = () => {
                       ? "Bookmarked"
                       : "Save Recipe"}
                   </Button>
-                  {user.userData.id === recipeData?.userId && (
+                  {user?.userData?.id === recipeData?.userId && (
                     <Button
                       size="large"
                       type="primary"
@@ -424,15 +434,40 @@ const Recipe = () => {
                 </Title>
 
                 <Space style={{ marginBottom: "20px" }} wrap>
-                  <Button
-                    type="primary"
-                    icon={<SoundOutlined />}
-                    loading={audioLoading}
-                    onClick={() => playRecipeAudio(recipeData?.id)}
-                    disabled={isPlaying}
+                  {!isPlaying ? (
+                    <Button
+                      type="primary"
+                      icon={<SoundOutlined />}
+                      loading={audioLoading}
+                      onClick={() => playRecipeAudio(recipeData?.id)}
+                    >
+                      Listen to Recipe
+                    </Button>
+                  ) : (
+                    <Button
+                      type="default"
+                      danger
+                      icon={<SoundOutlined />}
+                      onClick={pauseRecipeAudio}
+                    >
+                      Pause Audio
+                    </Button>
+                  )}
+                  <Select
+                    placeholder="Translate Description"
+                    style={{ width: 220 }}
+                    onChange={(value) => {
+                      setLanguage(value);
+                    }}
                   >
-                    {isPlaying ? "Playing..." : "Listen to Recipe"}
-                  </Button>
+                    <Select.Option value="Hindi">Hindi</Select.Option>
+                    <Select.Option value="English">English</Select.Option>
+                    <Select.Option value="Gujarati">Gujarati</Select.Option>
+                    <Select.Option value="Bengali">Bengali</Select.Option>
+                    <Select.Option value="Marathi">Marathi</Select.Option>
+                    <Select.Option value="Kannada">Kannada</Select.Option>
+                    <Select.Option value="Telugu">Telugu</Select.Option>
+                  </Select>
                 </Space>
                 <div style={styles.descriptionContainer}>
                   <Paragraph
@@ -517,6 +552,41 @@ const Recipe = () => {
                   )}
                 />
               </div>
+
+              {/* Credits to the Chef */}
+              {recipeData?.isTribute && (
+                <div style={styles.sectionCard}>
+                  <Title
+                    level={2}
+                    style={{
+                      color: token.colorPrimary,
+                      marginBottom: "16px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    About the Chef
+                  </Title>
+                  <Space align="center" size="large">
+                    <Avatar
+                      size={64}
+                      style={{ fontSize: "24px" }}
+                      imgProps={{ crossOrigin: "anonymous" }}
+                      src={recipeData?.tributeImageUrl}
+                    />
+                    <div>
+                      <Text strong style={{ fontSize: "1.2em" }}>
+                        {recipeData?.authorName}
+                      </Text>
+                      <Paragraph
+                        style={{ marginTop: "8px", maxWidth: "300px" }}
+                      >
+                        {recipeData?.tributeDescription ||
+                          "This chef prefers to keep an air of mystery about them."}
+                      </Paragraph>
+                    </div>
+                  </Space>
+                </div>
+              )}
             </Col>
 
             {/* --- RIGHT COLUMN: Comments Section --- */}

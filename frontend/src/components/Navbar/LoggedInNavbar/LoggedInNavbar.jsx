@@ -148,7 +148,7 @@ const LoggedInNavbar = ({ activeKey = "1" }) => {
   const handleMainMenuClick = ({ key }) => {
     switch (key) {
       case "1":
-        navigate("/recipes"); // Assuming 1 maps to recipes
+        navigate("/homepage"); // Assuming 1 maps to homepage
         break;
       case "2":
         navigate("/challenges");
