@@ -63,12 +63,30 @@ public class SpeechSynthService {
      */
     @Transactional
     public byte[] getOrCreateAudio(String text, String voiceName, Long recipeId, String language) {
+        // Standardize language to ISO code if possible
+        String langCode = (language == null) ? null : language.trim().toLowerCase();
+        if (langCode != null) {
+            switch (langCode) {
+                case "english": langCode = "en"; break;
+                case "hindi": langCode = "hi"; break;
+                case "gujarati": langCode = "gu"; break;
+                case "bengali": langCode = "bn"; break;
+                case "marathi": langCode = "mr"; break;
+                case "kannada": langCode = "kn"; break;
+                case "telugu": langCode = "te"; break;
+                case "french": langCode = "fr"; break;
+                case "german": langCode = "de"; break;
+                case "spanish": langCode = "es"; break;
+                // Add more as needed
+            }
+        }
+        log.info("getOrCreateAudio called with language='{}', normalized langCode='{}'", language, langCode);
         try {
-            if (recipeId != null && language != null) {
+            if (recipeId != null && langCode != null) {
                 // Check for existing audio with matching recipeId AND language
-                Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, language);
+                Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, langCode);
                 if (opt.isPresent()) {
-                    log.info("Returning cached audio for recipeId={} language={}", recipeId, language);
+                    log.info("Returning cached audio for recipeId={} language={}", recipeId, langCode);
                     return opt.get().getAudioData();
                 }
             }
@@ -77,17 +95,18 @@ public class SpeechSynthService {
             byte[] wav = synthesizeAudio(text, voiceName, recipeId);
 
             // Save only if recipeId provided and no existing row (avoid duplicates)
-            if (recipeId != null && language != null) {
+            if (recipeId != null && langCode != null) {
                 try {
-                    if (!recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, language).isPresent()) {
-                        RecipeAudio audioEntity = new RecipeAudio(recipeId, wav, "audio/wav", language);
+                    if (!recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, langCode).isPresent()) {
+                        RecipeAudio audioEntity = new RecipeAudio(recipeId, wav, "audio/wav", langCode);
+                        log.info("Saving new TTS WAV to database for recipeId={} language={}", recipeId, langCode);
                         RecipeAudio saved = recipeAudioRepository.save(audioEntity);
-                        log.info("Saved TTS WAV to database for recipeId={} language={} audioId={}", recipeId, language, saved.getId());
+                        log.info("Saved TTS WAV to database for recipeId={} language={} audioId={}", recipeId, langCode, saved.getId());
                     } else {
-                        log.info("Audio already saved concurrently for recipeId={} language={}", recipeId, language);
+                        log.info("Audio already saved concurrently for recipeId={} language={}", recipeId, langCode);
                     }
                 } catch (Exception dbEx) {
-                    log.warn("Failed to save TTS WAV to DB for recipeId={} language={}: {}", recipeId, language, dbEx.getMessage());
+                    log.warn("Failed to save TTS WAV to DB for recipeId={} language={}: {}", recipeId, langCode, dbEx.getMessage());
                 }
             }
 
@@ -201,7 +220,6 @@ public class SpeechSynthService {
             log.error("Failed to delete audio for recipeId={}: {}", recipeId, e.getMessage(), e);
         }
     }
-
 
     // ---------------------------------------------------------
     // Convert raw PCM LINEAR16 → WAV wrapper

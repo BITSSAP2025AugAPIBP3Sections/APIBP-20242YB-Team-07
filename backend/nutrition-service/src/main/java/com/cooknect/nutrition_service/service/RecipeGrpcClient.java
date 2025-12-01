@@ -39,13 +39,34 @@ public class RecipeGrpcClient {
     @Retry(name = "recipeService")
     public Optional<RecipeResponse> getRecipeById(Long recipeId) {
         try {
+            // Handle null input gracefully
+            if (recipeId == null) {
+                logger.warn("Null recipe ID provided, returning empty");
+                return Optional.empty();
+            }
+
+            // Check if stub is available
+            if (recipeServiceStub == null) {
+                logger.error("Recipe service stub is null - gRPC client not properly initialized");
+                return Optional.empty();
+            }
+
             logger.debug("Fetching recipe via gRPC for ID: {}", recipeId);
 
             GetRecipeByIdRequest request = GetRecipeByIdRequest.newBuilder()
                     .setRecipeId(recipeId)
                     .build();
 
-            RecipeResponse response = recipeServiceStub.getRecipeById(request);
+            // Set deadline per-call to avoid "deadline already exceeded" errors
+            RecipeServiceGrpc.RecipeServiceBlockingStub stubWithDeadline =
+                    recipeServiceStub.withDeadlineAfter(5, java.util.concurrent.TimeUnit.SECONDS);
+
+            if (stubWithDeadline == null) {
+                logger.error("Failed to create stub with deadline - returning empty");
+                return Optional.empty();
+            }
+
+            RecipeResponse response = stubWithDeadline.getRecipeById(request);
 
             if (response != null && response.getId() > 0) {
                 logger.debug("Successfully fetched recipe ID: {} - Title: {}",
@@ -96,7 +117,10 @@ public class RecipeGrpcClient {
             GetRecipeByIdRequest request = GetRecipeByIdRequest.newBuilder()
                     .setRecipeId(-1L)
                     .build();
-            recipeServiceStub.getRecipeById(request);
+            // Set deadline per-call
+            recipeServiceStub
+                    .withDeadlineAfter(2, java.util.concurrent.TimeUnit.SECONDS)
+                    .getRecipeById(request);
             return true;
         } catch (StatusRuntimeException e) {
             // If we get a response (even error), service is available
