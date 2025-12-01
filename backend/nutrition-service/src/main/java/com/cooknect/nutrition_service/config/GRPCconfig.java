@@ -74,15 +74,16 @@ public class GRPCconfig {
     }
 
     /**
-     * Creates a blocking stub for Recipe Service with timeout configuration
+     * Creates a blocking stub for Recipe Service
      * Used for synchronous gRPC calls to fetch recipe data
+     * NOTE: Deadline should be set per-call, not on the stub
      */
     @Bean
     public RecipeServiceGrpc.RecipeServiceBlockingStub recipeServiceStub(
             ManagedChannel recipeServiceChannel) {
         logger.info("Creating RecipeService gRPC stub");
-        return RecipeServiceGrpc.newBlockingStub(recipeServiceChannel)
-                .withDeadlineAfter(5, TimeUnit.SECONDS); // 5 second timeout for recipe queries
+        return RecipeServiceGrpc.newBlockingStub(recipeServiceChannel);
+        // Deadline is set per-call in RecipeGrpcClient to avoid "deadline already exceeded" errors
     }
 
     /**

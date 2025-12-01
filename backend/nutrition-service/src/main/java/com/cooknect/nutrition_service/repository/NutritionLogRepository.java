@@ -18,4 +18,7 @@ public interface NutritionLogRepository extends JpaRepository<NutritionLog, Long
     List<NutritionLog> findByUserIdAndAnalyzedAt(Long userId, LocalDate analyzedAt);
     List<NutritionLog> findByUserIdAndMealTypeAndAnalyzedAt(Long userId, MealType mealType, LocalDate analyzedAt);
     List<NutritionLog> findByUserIdAndAnalyzedAtBetween(Long userId, LocalDate startDate, LocalDate endDate);
+
+    // Find existing log by unique constraint fields (to prevent duplicates)
+    Optional<NutritionLog> findByUserIdAndRecipeIdAndAnalyzedAtAndMealType(Long userId, Long recipeId, LocalDate analyzedAt, MealType mealType);
 }
