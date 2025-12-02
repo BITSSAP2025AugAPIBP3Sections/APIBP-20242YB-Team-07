@@ -57,70 +57,78 @@ public class SpeechSynthService {
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=";
 
     private static final String translate_api = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
-    /**
+
+    @Autowired
+    private RecipeAudioRepository recipeAudioRepository;
+
+
+    /*
      * Returns existing audio for recipeId if present. Otherwise synthesizes,
      * persists the result (if recipeId provided) and returns the bytes.
      */
     @Transactional
-    public byte[] getOrCreateAudio(String text, String voiceName, Long recipeId, String language) {
-        // Standardize language to ISO code if possible
-        String langCode = (language == null) ? null : language.trim().toLowerCase();
-        if (langCode != null) {
-            switch (langCode) {
-                case "english": langCode = "en"; break;
-                case "hindi": langCode = "hi"; break;
-                case "gujarati": langCode = "gu"; break;
-                case "bengali": langCode = "bn"; break;
-                case "marathi": langCode = "mr"; break;
-                case "kannada": langCode = "kn"; break;
-                case "telugu": langCode = "te"; break;
-                case "french": langCode = "fr"; break;
-                case "german": langCode = "de"; break;
-                case "spanish": langCode = "es"; break;
-                // Add more as needed
-            }
-        }
-        log.info("getOrCreateAudio called with language='{}', normalized langCode='{}'", language, langCode);
+    public byte[] getOrCreateAudio(Long recipeId, String language, String voiceName) {
+        // Normalize language code
+        String langCode = normalizeLanguageCode(language);
+        log.info("getOrCreateAudio called for recipeId={}, language='{}'", recipeId, langCode);
+
         try {
-            if (recipeId != null && langCode != null) {
-                // Check for existing audio with matching recipeId AND language
-                Optional<RecipeAudio> opt = recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, langCode);
-                if (opt.isPresent()) {
+            // 1. CHECK CACHE FIRST (before translation)
+            if (recipeId != null) {
+                Optional<RecipeAudio> cached = recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, langCode);
+                if (cached.isPresent()) {
                     log.info("Returning cached audio for recipeId={} language={}", recipeId, langCode);
-                    return opt.get().getAudioData();
+                    return cached.get().getAudioData();
                 }
             }
 
-            // synthesizeAudio(...) is existing method that produces the audio bytes
-            byte[] wav = synthesizeAudio(text, voiceName, recipeId);
+            // 2. NO CACHE - TRANSLATE TEXT
+            log.info("No cached audio found - translating to {}", language);
+            String translatedText = translateText(recipeId, language);
+            System.out.println("Translated Text: " + translatedText);
 
-            // Save only if recipeId provided and no existing row (avoid duplicates)
-            if (recipeId != null && langCode != null) {
+            // 3. GENERATE AUDIO
+            byte[] wav = synthesizeAudio(translatedText, voiceName, recipeId);
+
+            // 4. SAVE TO DATABASE
+            if (recipeId != null) {
                 try {
-                    if (!recipeAudioRepository.findByRecipeIdAndLanguage(recipeId, langCode).isPresent()) {
-                        RecipeAudio audioEntity = new RecipeAudio(recipeId, wav, "audio/wav", langCode);
-                        log.info("Saving new TTS WAV to database for recipeId={} language={}", recipeId, langCode);
-                        RecipeAudio saved = recipeAudioRepository.save(audioEntity);
-                        log.info("Saved TTS WAV to database for recipeId={} language={} audioId={}", recipeId, langCode, saved.getId());
-                    } else {
-                        log.info("Audio already saved concurrently for recipeId={} language={}", recipeId, langCode);
-                    }
+                    RecipeAudio audioEntity = new RecipeAudio(recipeId, wav, "audio/wav", langCode);
+                    RecipeAudio saved = recipeAudioRepository.save(audioEntity);
+                    log.info("Saved TTS WAV to database for recipeId={} language={} audioId={}",
+                            recipeId, langCode, saved.getId());
                 } catch (Exception dbEx) {
-                    log.warn("Failed to save TTS WAV to DB for recipeId={} language={}: {}", recipeId, langCode, dbEx.getMessage());
+                    log.error("Failed to save TTS WAV to DB for recipeId={} language={}: {}",
+                            recipeId, langCode, dbEx.getMessage(), dbEx);
                 }
             }
 
             return wav;
-        } catch (RuntimeException re) {
-            throw re;
         } catch (Exception e) {
-            log.error("Unexpected error in getOrCreateAudio: {}", e.getMessage(), e);
-            throw new RuntimeException("TTS failed", e);
+            log.error("Error in getOrCreateAudio for recipeId={} language={}: {}",
+                    recipeId, langCode, e.getMessage(), e);
+            throw new RuntimeException("Failed to generate translated audio", e);
         }
     }
 
-    @Autowired
-    private RecipeAudioRepository recipeAudioRepository;
+    private String normalizeLanguageCode(String language) {
+        if (language == null) {
+            return "en";
+        }
+
+        String lang = language.trim().toLowerCase();
+        switch (lang) {
+            case "english": return "en";
+            case "hindi": return "hi";
+            case "bengali": return "bn";
+            case "marathi": return "mr";
+            case "telugu": return "te";
+            case "french": return "fr";
+            case "german": return "de";
+            case "spanish": return "es";
+            default: return lang; // Already a language code
+        }
+    }
 
     public byte[] synthesizeAudio(String text, String voiceName, Long recipeId) {
         try {
@@ -157,14 +165,11 @@ public class SpeechSynthService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<String> request =
-                    new HttpEntity<>(payload.toString(), headers);
-
+            HttpEntity<String> request = new HttpEntity<>(payload.toString(), headers);
             String url = GEMINI_URL + apiKey;
 
             // ---- Call Gemini ----
-            ResponseEntity<JsonNode> response =
-                    restTemplate.postForEntity(url, request, JsonNode.class);
+            ResponseEntity<JsonNode> response = restTemplate.postForEntity(url, request, JsonNode.class);
 
             if (!response.getStatusCode().is2xxSuccessful()) {
                 throw new RuntimeException("Gemini HTTP error: " + response.getStatusCode());
@@ -175,35 +180,69 @@ public class SpeechSynthService {
                 throw new RuntimeException("Empty response from Gemini");
             }
 
-            // ---- Extract Base64 Audio ----
-            String base64 = body
-                    .path("candidates").get(0)
-                    .path("content")
-                    .path("parts").get(0)
-                    .path("inlineData")
-                    .path("data")
-                    .asText();
+            log.info("Gemini TTS Response: {}", body.toString());
+
+            // ---- Check for errors or unsupported content ----
+            JsonNode candidates = body.path("candidates");
+            if (candidates == null || !candidates.isArray() || candidates.size() == 0) {
+                log.error("Gemini TTS error - no candidates in response: {}", body.toString());
+                throw new RuntimeException("Gemini TTS failed: " + body.path("error").path("message").asText("No candidates returned"));
+            }
+
+            JsonNode candidate = candidates.get(0);
+            if (candidate == null) {
+                throw new RuntimeException("Gemini TTS error: null candidate");
+            }
+
+            // CHECK FINISH REASON BEFORE TRYING TO EXTRACT AUDIO
+            String finishReason = candidate.path("finishReason").asText("");
+            if (!"STOP".equals(finishReason)) {
+                log.error("Gemini TTS did not complete successfully. finishReason: {}, response: {}", finishReason, body.toString());
+                throw new RuntimeException("Gemini TTS failed with finishReason: " + finishReason + ". This language or text may not be supported for TTS.");
+            }
+
+            // ---- Extract audio ----
+            JsonNode contentNode = candidate.path("content");
+            if (contentNode.isMissingNode()) {
+                throw new RuntimeException("Gemini TTS error: no content in response");
+            }
+
+            JsonNode partsArray = contentNode.path("parts");
+            if (partsArray.isMissingNode() || !partsArray.isArray() || partsArray.size() == 0) {
+                throw new RuntimeException("Gemini TTS error: no parts in response");
+            }
+
+            JsonNode firstPart = partsArray.get(0);
+            if (firstPart == null) {
+                throw new RuntimeException("Gemini TTS error: null first part");
+            }
+
+            String base64 = firstPart.path("inlineData").path("data").asText();
+            if (base64 == null || base64.isEmpty()) {
+                throw new RuntimeException("Gemini TTS error: no audio data in response");
+            }
 
             byte[] pcmBytes = Base64.getDecoder().decode(base64);
-            System.out.println("Gemini TTS synthesis complete.");
             byte[] wav = convertPcmToWav(pcmBytes);
 
-            // Save WAV to /tmp for inspection (server-side)
+            // Save WAV to /tmp for inspection
             try {
                 String fname = "gemini-tts-" + Instant.now().toEpochMilli() + ".wav";
                 Path out = Paths.get("/tmp").resolve(fname);
                 Files.write(out, wav);
-                System.out.println("Saved TTS WAV to: " + out.toString());
+                log.info("Saved TTS WAV to: {}", out.toString());
             } catch (IOException ioe) {
-                System.out.println("Failed to save TTS WAV to /tmp: " + ioe.getMessage());
+                log.warn("Failed to save TTS WAV to /tmp: {}", ioe.getMessage());
             }
 
-          return wav;
+            return wav;
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Gemini error: " + e.getMessage(), e);
+            log.error("Gemini TTS error for text: '{}', error: {}",
+                    text.substring(0, Math.min(100, text.length())), e.getMessage(), e);
+            throw new RuntimeException("Gemini TTS error: " + e.getMessage(), e);
         }
     }
+
 
     @Transactional
     public void deleteAudioForRecipe(Long recipeId) {

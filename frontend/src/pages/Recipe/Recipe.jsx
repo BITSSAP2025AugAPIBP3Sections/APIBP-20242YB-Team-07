@@ -462,7 +462,7 @@ const Recipe = () => {
                   >
                     <Select.Option value="Hindi">Hindi</Select.Option>
                     <Select.Option value="English">English</Select.Option>
-                    <Select.Option value="Gujarati">Gujarati</Select.Option>
+                    <Select.Option value="Spanish">Spanish</Select.Option>
                     <Select.Option value="Bengali">Bengali</Select.Option>
                     <Select.Option value="Marathi">Marathi</Select.Option>
                     <Select.Option value="Kannada">Kannada</Select.Option>

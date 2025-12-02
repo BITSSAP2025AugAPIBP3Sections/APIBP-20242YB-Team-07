@@ -279,57 +279,58 @@ public class RecipeController {
         return svc.findByIngredient(q);
     }
 
-    @GetMapping(value = "/{id}/speak", produces = "audio/wav")
-    public ResponseEntity<byte[]> speakRecipe(@PathVariable Long id,
-                                            @RequestParam(required = false) String voice, @PathVariable (required = false) String language) {
-        try {
-            Recipe recipe = svc.getRecipeById(id);
-
-            // Prepare text to be spoken
-            Map<String, Object> textMap = Map.of(
-                    "title", recipe.getTitle(),
-                    "description", recipe.getDescription(),
-                    "ingredients", recipe.getIngredients(),
-                    "preparation", recipe.getPreparation()
-            );
-
-            String text;
-            try {
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                text = mapper.writeValueAsString(textMap);
-            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                text = textMap.toString();
-            }
-
-            // use service that checks DB, generates, saves
-            byte[] wav = speechSynth.getOrCreateAudio(text, voice, id, language);
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("audio/wav"))
-                    .header("Content-Disposition", "inline; filename=\"recipe-" + id + ".wav\"")
-                    .body(wav);
-
-        } catch (com.cooknect.recipe_service.exception.NotFoundException nf) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("Failed to produce audio for recipe {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(503).body(null);
-        }
-    }
+//    @GetMapping(value = "/{id}/speak", produces = "audio/wav")
+//    public ResponseEntity<byte[]> speakRecipe(@PathVariable Long id,
+//                                            @RequestParam(required = false) String voice, @PathVariable (required = false) String language) {
+//        try {
+//            Recipe recipe = svc.getRecipeById(id);
+//
+//            // Prepare text to be spoken
+//            Map<String, Object> textMap = Map.of(
+//                    "title", recipe.getTitle(),
+//                    "description", recipe.getDescription(),
+//                    "ingredients", recipe.getIngredients(),
+//                    "preparation", recipe.getPreparation()
+//            );
+//
+//            String text;
+//            try {
+//                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+//                text = mapper.writeValueAsString(textMap);
+//            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+//                text = textMap.toString();
+//            }
+//
+//            // use service that checks DB, generates, saves
+//            byte[] wav = speechSynth.getOrCreateAudio(text, voice, id, language);
+//
+//            return ResponseEntity.ok()
+//                    .contentType(MediaType.parseMediaType("audio/wav"))
+//                    .header("Content-Disposition", "inline; filename=\"recipe-" + id + ".wav\"")
+//                    .body(wav);
+//
+//        } catch (com.cooknect.recipe_service.exception.NotFoundException nf) {
+//            return ResponseEntity.notFound().build();
+//        } catch (Exception e) {
+//            log.error("Failed to produce audio for recipe {}: {}", id, e.getMessage(), e);
+//            return ResponseEntity.status(503).body(null);
+//        }
+//    }
 
     //Translate Recipe into target language
     @GetMapping("/{id}/translate/{targetLanguage}")
-    @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"), hidden = true )
+    @Operation(summary = "Translate recipe text to target language", security = @SecurityRequirement(name = "bearerAuth"), hidden = true)
     public ResponseEntity<byte[]> translateRecipe(
             @PathVariable Long id,
             @PathVariable String targetLanguage) {
-        String translated_text = speechSynth.translateText(id, targetLanguage);
-        byte[] wav = speechSynth.getOrCreateAudio(translated_text, "Kore", id, targetLanguage);
+        // Just call getOrCreateAudio - it will handle everything
+        byte[] wav = speechSynth.getOrCreateAudio(id, targetLanguage, "Kore");
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("audio/wav"))
-                .header("Content-Disposition", "inline; filename=\"recipe-" + id + ".wav\"")
+                .header("Content-Disposition", "inline; filename=\"recipe-" + id + "-" + targetLanguage + ".wav\"")
                 .body(wav);
     }
+
 
     /*
         * Updates an existing recipe.
