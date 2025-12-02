@@ -10,6 +10,8 @@ import Profile from "./pages/Profile/Profile";
 import Recipe from "./pages/Recipe/Recipe";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
+import Challenge from "./pages/Challenge/Challenge";
+import Nutrition from "./pages/Nutrition/Nutrition";
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
                     <Route path="/profile/:id" element={<Profile />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/recipe/:id" element={<Recipe />} />
+                    <Route path="/challenges" element={<Challenge />} />
+                    <Route path="/nutrition" element={<Nutrition />} />
                   </Routes>
                 </ProtectedRoute>
               }

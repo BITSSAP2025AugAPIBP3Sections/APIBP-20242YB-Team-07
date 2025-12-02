@@ -102,6 +102,25 @@ mvn spring-boot:run
 ```
 
 ---
+## Deploy each service’s PostgreSQL configuration:
+
+### 1. kubectl apply -f nutrition-service-postgres.yaml
+
+### 2. kubectl apply -f challenge-service-postgres.yaml
+
+### 3. kubectl apply -f recipe-service-postgres.yaml
+
+### 4. kubectl apply -f notification-service-postgres.yaml
+
+### 5. kubectl apply -f gateway-service-postgres.yaml
+
+### 6. In the project root, make the script executable:
+chmod +x script.sh
+
+### 7 . Execute the script:
+./script.sh
+
+---
 
 ## API Endpoints Overview
 | Type | Endpoint | Description |

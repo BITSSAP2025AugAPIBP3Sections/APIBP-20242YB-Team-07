@@ -148,10 +148,13 @@ const LoggedInNavbar = ({ activeKey = "1" }) => {
   const handleMainMenuClick = ({ key }) => {
     switch (key) {
       case "1":
-        navigate("/recipes"); // Assuming 1 maps to recipes
+        navigate("/homepage"); // Assuming 1 maps to homepage
         break;
-      case "3":
+      case "2":
         navigate("/challenges");
+        break;
+        case "3":
+        navigate("/nutrition");
         break;
       case "4":
         navigate("/profile");
@@ -166,6 +169,12 @@ const LoggedInNavbar = ({ activeKey = "1" }) => {
     switch (key) {
       case "profile":
         navigate("/profile");
+        break;
+        case "challenges":
+        navigate("/challenges");
+        break;
+        case "nutrition":
+        navigate("/nutrition");
         break;
       case "logout":
         localStorage.removeItem("token");
@@ -344,7 +353,8 @@ const LoggedInNavbar = ({ activeKey = "1" }) => {
           style={styles.menu}
           items={[
             { key: "1", label: "Recipes" },
-            { key: "3", label: "Challenges" },
+            { key: "2", label: "Challenges" },
+            { key: "3", label: "Nutrition" },
             { key: "4", label: "Profile" },
           ]}
         />

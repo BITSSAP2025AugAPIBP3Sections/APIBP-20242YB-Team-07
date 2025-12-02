@@ -5,7 +5,8 @@ import com.cooknect.nutrition_service.model.MealType;
 import com.cooknect.nutrition_service.model.NutritionLog;
 import com.cooknect.nutrition_service.repository.FoodItemRepository;
 import com.cooknect.nutrition_service.repository.NutritionLogRepository;
-// import com.cooknect.nutrition_service.service.RecipeServiceClient;
+import com.cooknect.nutrition_service.service.RecipeGrpcClient;
+import com.recipe.RecipeResponse;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,42 +29,43 @@ public class NutritionService {
     private final FoodItemRepository foodRepo;
     private final NutritionLogRepository logRepo;
     private final ExternalNutritionApiService externalApiService;
-    private RecipeServiceClient recipeClient;
+    private final RecipeGrpcClient recipeGrpcClient;
 
-    private Logger logger = LoggerFactory.getLogger(NutritionService.class);
+    private final Logger logger = LoggerFactory.getLogger(NutritionService.class);
 
     private record NutritionTotals(double totalFat, double sodium, double potassium, double cholestrol, double carbohydrates, double fiber, double sugar) {}
 
     public NutritionService(FoodItemRepository foodRepo,
                             NutritionLogRepository logRepo,
                             ExternalNutritionApiService externalApiService,
-                            RecipeServiceClient recipeClient) {
+                            RecipeGrpcClient recipeGrpcClient) {
         this.foodRepo = foodRepo;
         this.logRepo = logRepo;
         this.externalApiService = externalApiService;
-        this.recipeClient = recipeClient;
+        this.recipeGrpcClient = recipeGrpcClient;
     }
 
     public NutritionResponse analyzeIngredients(NutritionRequest request, Long userId) {
-        logger.debug("Starting nutrition analysis for user ID: {}", userId);
-        List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : Collections.emptyList();
+        logger.debug("Analyzing ingredients for user ID: {}", userId);
+        List<Map<String, String>> ingredients = request.getIngredients() != null ? request.getIngredients() : new java.util.ArrayList<>();
         String recipeName = request.getRecipeName();
 
         if (request.getRecipeId() != null){
-            logger.debug("Fetching recipe details for recipe ID: {}", request.getRecipeId());
-            Optional<RecipeServiceClient.RecipeDto> maybe = recipeClient.getRecipeById(request.getRecipeId());
-            if (maybe.isPresent()){
-                RecipeServiceClient.RecipeDto r = maybe.get();
-                recipeName = r.getTitle() != null ? r.getTitle() : recipeName;
-                if (r.getIngredients() != null){
-                    ingredients = r.getIngredients().stream()
-                            .map(i -> Map.<String,String>of("name", i.getName(),
-                                    "quantity", i.getQuantity() == null ? "1" : i.getQuantity()))
+            logger.debug("Fetching recipe via gRPC for recipe ID: {}", request.getRecipeId());
+            Optional<RecipeResponse> recipeMaybe = recipeGrpcClient.getRecipeById(request.getRecipeId());
+            if (recipeMaybe.isPresent()){
+                RecipeResponse recipe = recipeMaybe.get();
+                recipeName = !recipe.getTitle().isEmpty() ? recipe.getTitle() : recipeName;
+                if (!recipe.getIngredientsList().isEmpty()){
+                    ingredients = recipe.getIngredientsList().stream()
+                            .map(i -> Map.of("name", i.getName(),
+                                    "quantity", !i.getQuantity().isEmpty() ? i.getQuantity() : "1"))
                             .collect(Collectors.toList());
+                    logger.info("✅ Fetched {} ingredients from gRPC for recipe: {}", ingredients.size(), recipeName);
                 }
             }
             else{
-                logger.warn("Recipe not found for ID: {}", request.getRecipeId());
+                logger.warn("❌ Recipe not found via gRPC for ID: {}", request.getRecipeId());
             }
         }
 
@@ -85,21 +87,46 @@ public class NutritionService {
                 request.getMealType()
         );
 
-        NutritionLog log = NutritionLog.builder()
-                .userId(userId)
-                .recipeId(request.getRecipeId())
-                .foodName(request.getRecipeName())
-                .ingredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()))
-                .totalFat(totals.totalFat())
-                .totalSodium(totals.sodium())
-                .totalPotassium(totals.potassium())
-                .totalCholestrol(totals.cholestrol())
-                .totalCarbohydrates(totals.carbohydrates())
-                .totalFiber(totals.fiber())
-                .totalSugar(totals.sugar())
-                .mealType(request.getMealType())
-                .analyzedAt(LocalDate.now())
-                .build();
+        // Check if a log already exists for this user, recipe, date, and meal type
+        LocalDate today = LocalDate.now();
+        Optional<NutritionLog> existingLog = logRepo.findByUserIdAndRecipeIdAndAnalyzedAtAndMealType(
+                userId, request.getRecipeId(), today, request.getMealType());
+
+        NutritionLog log;
+        if (existingLog.isPresent()) {
+            // Update existing log
+            log = existingLog.get();
+            logger.info("Updating existing nutrition log ID: {} for user: {}, recipe: {}, meal: {}",
+                    log.getId(), userId, request.getRecipeId(), request.getMealType());
+            log.setFoodName(request.getRecipeName());
+            log.setIngredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()));
+            log.setTotalFat(totals.totalFat());
+            log.setTotalSodium(totals.sodium());
+            log.setTotalPotassium(totals.potassium());
+            log.setTotalCholestrol(totals.cholestrol());
+            log.setTotalCarbohydrates(totals.carbohydrates());
+            log.setTotalFiber(totals.fiber());
+            log.setTotalSugar(totals.sugar());
+        } else {
+            // Create new log
+            log = NutritionLog.builder()
+                    .userId(userId)
+                    .recipeId(request.getRecipeId())
+                    .foodName(request.getRecipeName())
+                    .ingredients(String.join(", ", ingredients.stream().map(i -> i.get("name")).toList()))
+                    .totalFat(totals.totalFat())
+                    .totalSodium(totals.sodium())
+                    .totalPotassium(totals.potassium())
+                    .totalCholestrol(totals.cholestrol())
+                    .totalCarbohydrates(totals.carbohydrates())
+                    .totalFiber(totals.fiber())
+                    .totalSugar(totals.sugar())
+                    .mealType(request.getMealType())
+                    .analyzedAt(today)
+                    .build();
+            logger.info("Creating new nutrition log for user: {}, recipe: {}, meal: {}",
+                    userId, request.getRecipeId(), request.getMealType());
+        }
 
         logRepo.save(log);
         logger.info("SUCCESS");
@@ -109,6 +136,7 @@ public class NutritionService {
     private double extractNumericQuantity(String quantity) {
         if (quantity == null || quantity.isEmpty()) {
             logger.warn("Quantity is null or empty, defaulting to 1.0");
+            return 1.0;
         }
         try {
             String[] parts = quantity.split(" ");
@@ -117,6 +145,54 @@ public class NutritionService {
         } catch (Exception e) {
             return 1.0;
         }
+    }
+
+    /**
+     * Build a better query for external nutrition API
+     * Converts: "200" + "Paneer" → "200g paneer"
+     *          "3" + "Tomato" → "3 medium tomato"
+     *          "2" + "Butter" → "2 tbsp butter"
+     */
+    private String buildApiQuery(String name, String quantity) {
+        if (quantity == null || quantity.isEmpty()) {
+            return name;
+        }
+
+        // If quantity already has units (g, kg, ml, tbsp, cup, etc.), use as is
+        if (quantity.matches(".*[a-zA-Z]+.*")) {
+            return quantity + " " + name;
+        }
+
+        // Otherwise, add appropriate units based on ingredient name
+        String lowerName = name.toLowerCase();
+
+        // Solid ingredients - add grams
+        if (lowerName.contains("paneer") || lowerName.contains("cheese") ||
+            lowerName.contains("butter") || lowerName.contains("meat") ||
+            lowerName.contains("chicken") || lowerName.contains("fish")) {
+            return quantity + "g " + name;
+        }
+
+        // Liquids - add ml
+        if (lowerName.contains("cream") || lowerName.contains("milk") ||
+            lowerName.contains("water") || lowerName.contains("oil")) {
+            return quantity + "ml " + name;
+        }
+
+        // Spices and powders - add tsp
+        if (lowerName.contains("masala") || lowerName.contains("chili") ||
+            lowerName.contains("powder") || lowerName.contains("spice")) {
+            return quantity + " tsp " + name;
+        }
+
+        // Vegetables/fruits - add "medium" or "large"
+        if (lowerName.contains("tomato") || lowerName.contains("onion") ||
+            lowerName.contains("potato") || lowerName.contains("apple")) {
+            return quantity + " medium " + name;
+        }
+
+        // Default - just add quantity with name
+        return quantity + " " + name;
     }
 
     private NutritionTotals calculateNutrition(List<Map<String, String>> ingredients) {
@@ -140,9 +216,10 @@ public class NutritionService {
                 logger.debug("Found food item in local DB: {}", name);
             } else {
                 logger.debug("Fetching food item from external API: {}", name);
-                String apiQuery = (servingSize != null && !servingSize.isBlank())
-                        ? servingSize + " " + name
-                        : name;
+                // Build better query for external API
+                String apiQuery = buildApiQuery(name, quantityStr);
+                logger.debug("External API query: {}", apiQuery);
+
                 food = externalApiService.fetchNutritionInfo(apiQuery)
                         .map(foodRepo::save)
                         .orElse(null);
@@ -302,6 +379,6 @@ public class NutritionService {
     }
 
     private double safeNullableDouble(Double v) {
-        return v == null ? 0.0 : v.doubleValue();
+        return v == null ? 0.0 : v;
     }
 }

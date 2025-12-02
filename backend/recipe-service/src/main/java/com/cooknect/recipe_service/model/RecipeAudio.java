@@ -34,7 +34,7 @@ public class RecipeAudio {
         this.audioData = audioData;
         this.contentType = contentType;
         this.createdAt = Instant.now();
-        this.language = "en";
+        this.language = language;
     }
 
     // getters / setters

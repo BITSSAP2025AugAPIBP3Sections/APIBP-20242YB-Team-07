@@ -12,6 +12,7 @@ import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class ChallengeGraphQLController {
@@ -61,7 +62,7 @@ public class ChallengeGraphQLController {
     }
 
     @MutationMapping
-    public Boolean joinChallenge(@Argument Long challengeId, @Argument ChallengeParticipationRequest request) {
+    public Map<String, Object> joinChallenge(@Argument Long challengeId, @Argument ChallengeParticipationRequest request) {
         return challengeService.joinChallenge(challengeId, request);
     }
 

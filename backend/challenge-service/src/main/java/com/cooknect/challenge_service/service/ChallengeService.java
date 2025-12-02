@@ -16,9 +16,12 @@ import com.cooknect.challenge_service.model.ChallengeRecipeSubmission;
 import com.cooknect.challenge_service.repository.ChallengeRepository;
 import com.cooknect.common.events.ChallengeEvent;
 import com.cooknect.challenge_service.repository.ChallengeRecipeSubmissionRepository;
+import com.cooknect.challenge_service.service.PaymentService;
+
 import com.recipe.GetRecipeByIdRequest;
 import com.recipe.RecipeResponse;
 import com.recipe.RecipeServiceGrpc;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +49,8 @@ public class ChallengeService {
     private ChallengeEventProducer challengeEventProducer;
     @Autowired
     private RecipeServiceGrpc.RecipeServiceBlockingStub recipeServiceStub;
+    @Autowired
+    private PaymentService paymentService;
 
     @Autowired
     public ChallengeService(ChallengeRepository challengeRepository) {
@@ -60,6 +65,16 @@ public class ChallengeService {
         challenge.setEndDate(request.getEndDate());
         challenge.setType(request.getType());
         challenge.setStatus(ChallengeStatus.UPCOMING);
+        challenge.setIsPaid(request.getIsPaid() != null ? request.getIsPaid() : false);
+        if (Boolean.TRUE.equals(request.getIsPaid())){
+            if(request.getEntryFee() == null || request.getEntryFee() < 0){
+                throw new IllegalArgumentException("Entry fee must be provided and non-negative for paid challenges");
+            }
+            challenge.setEntryFee(request.getEntryFee());
+        }
+        else{
+            challenge.setEntryFee(null);
+        }
         Challenge saved = challengeRepository.save(challenge);
         return toResponse(saved);
     }
@@ -72,7 +87,9 @@ public class ChallengeService {
         response.setStartDate(challenge.getStartDate());
         response.setEndDate(challenge.getEndDate());
         response.setType(challenge.getType());
-        response.setStatus(challenge.getCurrentStatus()); // Use dynamic status
+        response.setStatus(challenge.getCurrentStatus());
+        response.setIsPaid(challenge.getIsPaid());
+        response.setEntryFee(challenge.getEntryFee());// Use dynamic status
         return response;
     }
     
@@ -179,7 +196,8 @@ public class ChallengeService {
         return true;
     }
 
-    public boolean joinChallenge(Long challengeId, ChallengeParticipationRequest request) {
+    public Map<String, Object> joinChallenge(Long challengeId, ChallengeParticipationRequest request) {
+        Map<String, Object> result = new HashMap<>();
         Challenge challenge = challengeRepository.findById(challengeId)
                 .orElseThrow(() -> new RuntimeException("Challenge not found"));
 
@@ -201,7 +219,9 @@ public class ChallengeService {
                 String.format("Hi %s! \nYou have alraedy joined the challenge on Cooknect.", user.get("fullName").toString())
             );
             challengeEventProducer.sendChallengeEvent(event);
-            return false; // Already joined
+            result.put("success", false);
+            result.put("error", "User already joined this challenge.");
+            return result;
         }
 
         // Fetch user details from user-service
@@ -217,6 +237,26 @@ public class ChallengeService {
             throw new RuntimeException("User not found");
         }
 
+        //check if challenge is paid and process payment
+        if (Boolean.TRUE.equals(challenge.getIsPaid())){
+            Map<String, String> paymentResponse = paymentService.createPaymentLink(
+                    challenge.getId(),
+                    ((Number) user.get("id")).longValue(),
+                    user.get("email").toString(),
+                    user.get("fullName").toString(),
+                    Double.valueOf(challenge.getEntryFee())
+            );
+            String paymentLink = paymentResponse.get("short_url");
+            String paymentId = paymentResponse.get("id");
+            result.put("success", true);
+            result.put("requiresPayment", true);
+            result.put("paymentLink", paymentLink);
+            result.put("paymentId", paymentId);
+            result.put("amount", challenge.getEntryFee());
+            result.put("message", "Complete payment to join challenge");
+            return result;
+        }
+
         ChallengeParticipant participant = new ChallengeParticipant();
         participant.setUserId(((Number) user.get("id")).longValue());
         participant.setUsername(user.get("username").toString());
@@ -230,7 +270,64 @@ public class ChallengeService {
             String.format("Hi %s! \nYou have joined challenge successfully on Cooknect.", user.get("fullName").toString())
         );
         challengeEventProducer.sendChallengeEvent(event);
-        return true;
+        result.put("success", true);
+        result.put("requiresPayment", false);
+        result.put("message", "User joined challenge successfully.");
+        return result;
+    }
+
+    public Map<String, Object> confirmPaymentAndEnroll(Long challengeId, Long userId, String paymentId) {
+        Map<String, Object> result = new HashMap<>();
+        Challenge challenge = challengeRepository.findById(challengeId)
+                .orElseThrow(() -> new RuntimeException("Challenge not found"));
+
+        // Check if user is already a participant
+        boolean alreadyJoined = challenge.getParticipants().stream()
+                .anyMatch(p -> Objects.equals(p.getUserId(), userId));
+        if (alreadyJoined) {
+            result.put("success", false);
+            result.put("error", "User already joined this challenge.");
+            return result;
+        }
+
+        // Verify payment
+        boolean paymentVerified = paymentService.verifyPayment(paymentId);
+        if (!paymentVerified) {
+            result.put("success", false);
+            result.put("error", "Payment not verified or not completed.");
+            return result;
+        }
+
+        // Fetch user details from user-service
+        String userServiceUrl = userBaseUrl + userId;
+        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                userServiceUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Object>>() {}
+        );
+        Map<String, Object> user = response.getBody();
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        // Enroll user
+        ChallengeParticipant participant = new ChallengeParticipant();
+        participant.setUserId(((Number) user.get("id")).longValue());
+        participant.setUsername(user.get("username").toString());
+        participant.setEmail(user.get("email").toString());
+        participant.setRole(user.get("role").toString());
+        challenge.getParticipants().add(participant);
+        challengeRepository.save(challenge);
+        ChallengeEvent event = new ChallengeEvent(
+                user.get("email").toString(),
+                "Joined Challenge Successfully",
+                String.format("Hi %s! \nYou have joined challenge successfully on Cooknect.", user.get("fullName").toString())
+        );
+        challengeEventProducer.sendChallengeEvent(event);
+        result.put("success", true);
+        result.put("message", "User joined challenge successfully after payment verification.");
+        return result;
     }
 
 
@@ -387,4 +484,6 @@ public class ChallengeService {
         }
         return leaderboardList;
     }
+
+
 }

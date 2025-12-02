@@ -76,15 +76,27 @@ public class ChallengeController {
 
     @PostMapping("/{challengeId}/join")
     @Operation(summary = "Join a challenge", security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<Map<String, String>> joinChallenge(@PathVariable Long challengeId, @RequestBody ChallengeParticipationRequest request) {
-        boolean joined = challengeService.joinChallenge(challengeId, request);
-        Map<String, String> response = new HashMap<>();
-        if (joined) {
-            response.put("message", "User joined challenge successfully.");
-            return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Object>> joinChallenge(@PathVariable Long challengeId, @RequestBody ChallengeParticipationRequest request) {
+        Map<String, Object> result = challengeService.joinChallenge(challengeId, request);
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return ResponseEntity.ok(result);
         } else {
-            response.put("error", "User already joined this challenge.");
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
+
+    @PostMapping("/{challengeId}/confirm-payment")
+    @Operation(summary = "Confirm payment and enroll user in challenge", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<Map<String, Object>> confirmPayment(@PathVariable Long challengeId, @RequestBody Map<String, Object> requestBody) {
+        Map<String, Object> result = challengeService.confirmPaymentAndEnroll(
+                challengeId,
+                requestBody.get("userId") instanceof Number ? ((Number) requestBody.get("userId")).longValue() : Long.valueOf(requestBody.get("userId").toString()),
+                requestBody.get("paymentId").toString()
+        );
+        if (Boolean.TRUE.equals(result.get("success"))) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
         }
     }
 
@@ -138,4 +150,5 @@ public class ChallengeController {
         List<LeaderboardEntry> leaderboard = challengeService.getChallengeLeaderboard(challengeId);
         return ResponseEntity.ok(leaderboard);
     }
+
 }

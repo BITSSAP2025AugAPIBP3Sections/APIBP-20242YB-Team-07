@@ -515,9 +515,7 @@ public class RecipeService {
                 .orElseThrow(() -> new NotFoundException("Recipe not found: " + recipeId));
 
         List<Long> userIds = List.of(recipe.getUserId());
-        // Build request body with all userIds
         HttpEntity<List<Long>> request = new HttpEntity<>(userIds);
-        // Call the usernames endpoint
         ResponseEntity<Map<Long, String>> response = restTemplate.exchange(
                 userBaseUrl + "/usernames",
                 HttpMethod.POST,
@@ -525,6 +523,23 @@ public class RecipeService {
                 new ParameterizedTypeReference<Map<Long, String>>() {}
         );
         Map<Long, String> userIdToUsername = response.getBody();
+
+        List<String> commentAuthorIds = recipe.getComments().stream()
+                .map(Comment::getAuthor)
+                .distinct()
+                .toList();
+
+        List<Long> commentAuthorIdsLong = commentAuthorIds.stream()
+                .map(Long::valueOf)
+                .toList();
+        HttpEntity<List<Long>> commentRequest = new HttpEntity<>(commentAuthorIdsLong);
+        ResponseEntity<Map<Long, String>> commentResponse = restTemplate.exchange(
+                userBaseUrl + "/usernames",
+                HttpMethod.POST,
+                commentRequest,
+                new ParameterizedTypeReference<Map<Long, String>>() {}
+        );
+        Map<Long, String> commentAuthorIdToUsername = commentResponse.getBody();
 
         GetRecipeDTO dto = new GetRecipeDTO();
         dto.setId(recipe.getId());
@@ -536,7 +551,13 @@ public class RecipeService {
         dto.setComments(
                 recipe.getComments().stream().map(comment -> {
                     GetCommentDto c = new GetCommentDto();
-                    c.setAuthor(comment.getAuthor());
+                    if (commentAuthorIdToUsername != null && !commentAuthorIdToUsername.isEmpty()) {
+                        Long authorId = Long.valueOf(comment.getAuthor());
+                        String username = commentAuthorIdToUsername.get(authorId);
+                        c.setAuthor(username != null ? username : "Unknown");
+                    } else {
+                        c.setAuthor("Cooknect User");
+                    }
                     c.setText(comment.getText());
                     return c;
                 }).toList()
