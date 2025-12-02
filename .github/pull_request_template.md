@@ -41,6 +41,13 @@ Add any notes, dependencies, or screenshots if relevant.
 
 ---
 
+## Contributor License Agreement (CLA)
+
+Before submitting a pull request, please read and agree to our [CLA](./CLA.md).
+Submitting a PR means you accept the CLA terms.
+
+---
+
 ### ❤️ Thank You! Thank you for contributing to this project! Please ensure your PR title follows the conventional commit style: 
 > Example: 
 > - feat(gateway): add JWT middleware 
