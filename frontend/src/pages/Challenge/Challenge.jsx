@@ -51,15 +51,22 @@ const BASE_DELAY_MS = 1000;
 const fetchWithBackoff = async (url, options = {}, retries = 0) => {
   try {
     const response = await fetch(url, options);
+    // Check for HTTP status codes that indicate an error, including 4xx and 5xx
     if (!response.ok) {
+      // Throw error with status to differentiate successful vs bad responses
+      const errorMessage = await response
+        .text()
+        .catch(() => response.statusText);
       throw new Error(
-        `HTTP error! Status: ${response.status} - ${response.statusText}`
+        `HTTP error! Status: ${response.status} - ${errorMessage}`,
+        { cause: response.status }
       );
     }
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.indexOf("application/json") !== -1) {
       return await response.json();
     }
+    // Return the full response object for non-JSON responses (like ok(result) with text)
     return response;
   } catch (err) {
     if (retries < MAX_RETRIES) {
@@ -115,16 +122,18 @@ const CustomCardTitle = ({ title, difficulty }) => {
   const { color } = getDifficultyColor(difficulty);
   return (
     <Space direction="vertical" size={4} style={{ width: "100%" }}>
-      <Text
-        style={{
-          fontSize: "12px",
-          color: color,
-          fontWeight: "600",
-          textTransform: "uppercase",
-        }}
-      >
-        {difficulty || "N/A"}
-      </Text>
+      {difficulty && (
+        <Text
+          style={{
+            fontSize: "12px",
+            color: color,
+            fontWeight: "600",
+            textTransform: "uppercase",
+          }}
+        >
+          {difficulty}
+        </Text>
+      )}
       <Title
         level={4}
         style={{ margin: 0, fontWeight: "700", color: "#264653" }}
@@ -154,8 +163,12 @@ const ChallengeListPage = ({
   totalChallenges,
   currentPage,
   fetchChallenges,
-  joinChallenge,
+  handleJoinOrLeaveChallenge,
   joiningChallengeId,
+  userChallengeStatus,
+  paymentPending,
+  onAddRecipe,
+  participantsCount,
 }) => {
   if (challenges.length === 0 && totalChallenges === 0) {
     return (
@@ -227,33 +240,29 @@ const ChallengeListPage = ({
         {challenges.map((challenge) => {
           const dp = computeDateProgress(challenge);
           const joining = joiningChallengeId === challenge.id;
+          // Determine if the user has joined based on the new state
+          const isJoined = userChallengeStatus[challenge.id] === "JOINED";
           const buttonDisabled = dp.percent === 100 || joining;
-          const buttonText =
-            dp.percent === 100
-              ? "Challenge Completed!"
-              : joining
-              ? "Joining..."
-              : challenge.isPaid
-              ? `Enroll for ₹${challenge.entryFee?.toFixed(2)}`
-              : "Join Challenge";
 
-          <Button
-            type={dp.percent === 100 ? "default" : "primary"}
-            loading={joining}
-            disabled={dp.percent === 100 || joining}
-            onClick={(e) => {
-              e.stopPropagation();
-              joinChallenge(challenge.id);
-            }}
-          >
-            {dp.percent === 100
-              ? "Challenge Completed!"
-              : joining
-              ? "Joining..."
-              : challenge.isPaid
-              ? `Enroll ₹${challenge.entryFee?.toFixed(2)}`
-              : "Join Challenge"}
-          </Button>;
+          // Determine button text based on status and progress
+          let buttonText;
+          if (dp.percent === 100) {
+            buttonText = "Challenge Completed!";
+          } else if (joining) {
+            buttonText = isJoined ? "Leaving..." : "Joining...";
+          } else if (isJoined) {
+            buttonText = "Leave Challenge";
+          } else {
+            // If payment is pending for this challenge, show verify button
+            if (paymentPending[challenge.id]) {
+              buttonText = "Verify Payment";
+            } else {
+              buttonText = challenge.isPaid
+                ? `Enroll for ₹${challenge.entryFee?.toFixed(2) || "0.00"}`
+                : "Join Challenge";
+            }
+          }
+
           return (
             <Col xs={24} md={12} lg={8} key={challenge.id}>
               <Card
@@ -265,7 +274,9 @@ const ChallengeListPage = ({
                       alt={challenge.title}
                       src={
                         challenge.image ||
-                        "https://placehold.co/600x400/F4A261/000000?text=Recipe+Challenge+Image"
+                        `https://placehold.co/600x400/A8E6CF/000000?text=${encodeURIComponent(
+                          challenge.name || challenge.title || "Challenge"
+                        )}`
                       }
                       style={{
                         width: "100%",
@@ -274,8 +285,9 @@ const ChallengeListPage = ({
                       }}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src =
-                          "https://placehold.co/600x400/F4A261/000000?text=Recipe+Challenge+Image";
+                        e.target.src = `https://placehold.co/600x400/A8E6CF/000000?text=${encodeURIComponent(
+                          challenge.name || challenge.title || "Challenge"
+                        )}`;
                       }}
                     />
                   </div>
@@ -300,7 +312,7 @@ const ChallengeListPage = ({
                           {challenge.category || "General"}
                         </Tag>
                         <Tag icon={<Clock size={14} />} color="default">
-                          {challenge.duration || "N/A"}
+                          {(dp.totalDays ?? 0) + " Days"}
                         </Tag>
                       </Space>
                       <Paragraph
@@ -327,7 +339,10 @@ const ChallengeListPage = ({
                         >
                           <Text type="secondary" style={{ fontSize: "12px" }}>
                             <Users size={14} style={{ marginBottom: "-3px" }} />{" "}
-                            {challenge.participants || 0} chefs joined
+                            {participantsCount[challenge.id] ??
+                              challenge.participants ??
+                              0}{" "}
+                            chefs joined
                           </Text>
                           {getCostTag(challenge?.isPaid, challenge?.entryFee)}
                         </Space>
@@ -336,15 +351,42 @@ const ChallengeListPage = ({
                           percent={dp.percent}
                           size="small"
                           status={dp.percent === 100 ? "success" : "active"}
-                          strokeColor={
-                            getDifficultyColor(challenge.difficulty).color
-                          }
+                          strokeColor={token.colorSuccess}
                         />
                         <Text type="secondary" style={{ fontSize: 11 }}>
                           {dp.percent === 100
                             ? "Completed"
                             : `${dp.elapsedDays}d done • ${dp.remainingDays}d left (${dp.percent}%)`}
                         </Text>
+
+                        {/* Button for Join/Leave */}
+                        <div style={{ marginTop: 12 }}>
+                          <Button
+                            type={isJoined ? "default" : "primary"}
+                            danger={isJoined} // Use danger style for leaving
+                            loading={joining}
+                            disabled={buttonDisabled}
+                            icon={
+                              isJoined ? null : dp.percent === 100 ? (
+                                <CheckCircle size={18} />
+                              ) : paymentPending[challenge.id] ? null : (
+                                <Rocket size={18} />
+                              )
+                            }
+                            block
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleJoinOrLeaveChallenge(
+                                challenge.id,
+                                challenge.isPaid,
+                                isJoined
+                              );
+                            }}
+                          >
+                            {buttonText}
+                          </Button>
+                        </div>
+                        {/* End Button */}
                       </Space>
                     </>
                   }
@@ -370,10 +412,48 @@ const ChallengeDetailPage = ({
   challenge,
   onBackToList,
   token,
-  joinChallenge,
-  joining,
-  user,
+  handleJoinOrLeaveChallenge,
+  joiningChallengeId,
+  userChallengeStatus,
+  onAddRecipe,
+  participantsCount,
 }) => {
+  // Leaderboard state fetched when detail page opens
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [leaderboardError, setLeaderboardError] = useState(null);
+
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      setLeaderboardLoading(true);
+      setLeaderboardError(null);
+      try {
+        const resp = await fetchWithBackoff(
+          `${API_BASE_URL}/${challenge.id}/leaderboard`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        const entries = Array.isArray(resp) ? resp : resp?.leaderboard || [];
+        setLeaderboardData(entries);
+      } catch (err) {
+        console.error("Failed to load leaderboard:", err);
+        setLeaderboardError(err.message || "Failed to load leaderboard");
+      } finally {
+        setLeaderboardLoading(false);
+      }
+    };
+
+    if (challenge?.id) {
+      loadLeaderboard();
+    }
+  }, [challenge?.id]);
+
+  // If challenge is missing, render not-found after hooks are declared
   if (!challenge)
     return (
       <div style={{ textAlign: "center", padding: "100px 0" }}>
@@ -387,19 +467,59 @@ const ChallengeDetailPage = ({
     );
 
   const { color: diffColor } = getDifficultyColor(challenge.difficulty);
+  // Compute date-based progress like list page
+  const computeDateProgressDetail = () => {
+    if (!challenge?.startDate || !challenge?.endDate) {
+      return {
+        percent: 0,
+        remainingDays: null,
+        totalDays: null,
+        elapsedDays: 0,
+      };
+    }
+    const start = dayjs(challenge.startDate);
+    const end = dayjs(challenge.endDate);
+    const now = dayjs();
 
-  const buttonText =
-    challenge.progress === 100
-      ? "Challenge Completed!"
-      : challenge.isPaid
-      ? `Enroll for ₹${challenge.entryFee.toFixed(2)}`
+    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+      return {
+        percent: 0,
+        remainingDays: null,
+        totalDays: null,
+        elapsedDays: 0,
+      };
+    }
+
+    const totalDays = end.diff(start, "day");
+    if (totalDays <= 0)
+      return { percent: 100, remainingDays: 0, totalDays: 0, elapsedDays: 0 };
+    const elapsedDays = Math.min(
+      Math.max(now.diff(start, "day"), 0),
+      totalDays
+    );
+    const remainingDays = Math.max(totalDays - elapsedDays, 0);
+    const percent = Math.min(100, Math.round((elapsedDays / totalDays) * 100));
+
+    return { percent, remainingDays, totalDays, elapsedDays };
+  };
+  const dpDetail = computeDateProgressDetail();
+
+  const joining = joiningChallengeId === challenge.id;
+  const isJoined = userChallengeStatus[challenge.id] === "JOINED";
+  const buttonDisabled = dpDetail.percent === 100 || joining;
+
+  let buttonText;
+  if (dpDetail.percent === 100) {
+    buttonText = "Challenge Completed!";
+  } else if (joining) {
+    buttonText = isJoined ? "Leaving..." : "Joining...";
+  } else if (isJoined) {
+    buttonText = "Leave Challenge";
+  } else {
+    buttonText = challenge.isPaid
+      ? `Enroll for ₹${challenge.entryFee?.toFixed(2) || "0.00"}`
       : "Join Challenge";
-
-  const totalDays = parseTotalDays(challenge.duration);
-  const remainingDays = Math.max(
-    0,
-    totalDays * (1 - (challenge.progress || 0) / 100)
-  );
+  }
 
   return (
     <div style={{ maxWidth: "900px", margin: "0 auto", padding: "40px 0" }}>
@@ -430,13 +550,16 @@ const ChallengeDetailPage = ({
             alt={challenge.title}
             src={
               challenge.image ||
-              "https://placehold.co/900x350/F4A261/000000?text=Recipe+Challenge+View"
+              `https://placehold.co/900x350/A8E6CF/000000?text=${encodeURIComponent(
+                challenge.name || challenge.title || "Challenge"
+              )}`
             }
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src =
-                "https://placehold.co/900x350/F4A261/000000?text=Recipe+Challenge+View";
+              e.target.src = `https://placehold.co/900x350/A8E6CF/000000?text=${encodeURIComponent(
+                challenge.name || challenge.title || "Challenge"
+              )}`;
             }}
           />
         </div>
@@ -450,12 +573,6 @@ const ChallengeDetailPage = ({
               >
                 {challenge.title}
               </Title>
-              <Paragraph
-                type="secondary"
-                style={{ fontSize: "1.1em", marginTop: "4px" }}
-              >
-                {challenge.category || "General"} Challenge
-              </Paragraph>
             </Col>
             <Col>{getCostTag(challenge?.isPaid, challenge?.entryFee)}</Col>
           </Row>
@@ -465,29 +582,55 @@ const ChallengeDetailPage = ({
             style={{ marginTop: "16px", marginBottom: "24px" }}
             wrap
           >
-            <Tag
-              color={getDifficultyColor(challenge.difficulty).tag}
-              style={{ padding: "6px 12px", fontSize: "14px" }}
-            >
-              <Star
-                size={14}
-                style={{ marginBottom: "-2px", marginRight: "4px" }}
-              />{" "}
-              Skill Level: {challenge.difficulty || "N/A"}
-            </Tag>
+            {challenge.difficulty && (
+              <Tag
+                color={getDifficultyColor(challenge.difficulty).tag}
+                style={{ padding: "6px 12px", fontSize: "14px" }}
+              >
+                <Star
+                  size={14}
+                  style={{ marginBottom: "-2px", marginRight: "4px" }}
+                />{" "}
+                Skill Level: {challenge.difficulty}
+              </Tag>
+            )}
             <Text strong>
               <Clock size={16} style={{ marginBottom: "-3px" }} /> Duration:{" "}
-              {challenge.duration || "N/A"}
+              {(dpDetail.totalDays ?? 0) + " Days"}
             </Text>
             <Text strong>
               <Users size={16} style={{ marginBottom: "-3px" }} />{" "}
-              {(challenge.participants || 0).toLocaleString()} Chefs
+              {(
+                participantsCount[challenge.id] ??
+                challenge.participants ??
+                0
+              ).toLocaleString()}{" "}
+              Chefs
+            </Text>
+            <Text strong>
+              Opening date:{" "}
+              {challenge.startDate
+                ? dayjs(challenge.startDate).format("YYYY-MM-DD")
+                : "N/A"}
+            </Text>
+            <Text strong>
+              Closing date:{" "}
+              {challenge.endDate
+                ? dayjs(challenge.endDate).format("YYYY-MM-DD")
+                : "N/A"}
             </Text>
           </Space>
 
           <Divider />
 
-          <Title level={3} style={{ color: diffColor, marginTop: "24px" }}>
+          <Title
+            level={3}
+            style={{
+              color: token.colorText,
+              marginTop: "24px",
+              fontWeight: 800,
+            }}
+          >
             Challenge Goal
           </Title>
           <Paragraph style={{ fontSize: "1.05em", lineHeight: "1.7" }}>
@@ -504,33 +647,67 @@ const ChallengeDetailPage = ({
               backgroundColor: token.colorFillAlter,
             }}
           >
-            <Text strong style={{ display: "block", marginBottom: "8px" }}>
-              Days Completed: <Text type="secondary">{totalDays} Days</Text>
+            <Text
+              strong
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                color: token.colorPrimary,
+              }}
+            >
+              Days Left:{" "}
+              <Text style={{ color: diffColor }}>
+                {dpDetail.totalDays ?? 0} Days
+              </Text>
             </Text>
             <Row align="middle" gutter={24}>
               <Col xs={24} sm={18}>
                 <Progress
-                  percent={challenge.progress || 0}
-                  format={() => `${Math.ceil(remainingDays)} Days Remaining`}
-                  status={challenge.progress === 100 ? "success" : "active"}
-                  strokeColor={diffColor}
-                  showInfo
+                  percent={dpDetail.percent}
+                  status={dpDetail.percent === 100 ? "success" : "active"}
+                  strokeColor={token.colorSuccess}
+                  showInfo={false}
                 />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: 6,
+                  }}
+                >
+                  <Text style={{ color: token.colorTextSecondary }}>
+                    {dpDetail.percent === 100
+                      ? "Completed"
+                      : `${dpDetail.elapsedDays}d done • ${dpDetail.remainingDays}d left`}
+                  </Text>
+                  <Text strong style={{ color: token.colorSuccess }}>
+                    ({dpDetail.percent || 0}%)
+                  </Text>
+                </div>
               </Col>
               <Col xs={24} sm={6}>
                 <Button
-                  type={challenge.progress === 100 ? "default" : "primary"}
+                  type={isJoined ? "default" : "primary"}
+                  danger={isJoined} // Use danger style for leaving
                   size="large"
+                  loading={joining}
                   icon={
-                    challenge.progress === 100 ? (
+                    isJoined ? null : dpDetail.percent === 100 ? (
                       <CheckCircle size={18} />
                     ) : (
                       <Rocket size={18} />
                     )
                   }
                   block
-                  disabled={challenge.progress === 100}
-                  onClick={() => joinChallenge(challenge.id)}
+                  disabled={buttonDisabled}
+                  onClick={() =>
+                    handleJoinOrLeaveChallenge(
+                      challenge.id,
+                      challenge.isPaid,
+                      isJoined
+                    )
+                  }
                 >
                   {buttonText}
                 </Button>
@@ -538,29 +715,18 @@ const ChallengeDetailPage = ({
             </Row>
           </div>
 
-          {/* Rewards */}
-          <Title level={3} style={{ color: "#E76F51", marginTop: "30px" }}>
-            <Trophy
-              size={24}
-              style={{ marginBottom: "-5px", marginRight: "8px" }}
-            />{" "}
-            Rewards & Recognition
-          </Title>
-          <Space size={[12, 12]} wrap>
-            {(challenge.rewards || []).map((reward, index) => (
-              <Tag
-                key={index}
-                color="volcano"
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                }}
+          {/* Add Recipe (moved to replace Rewards & Recognition) */}
+          {isJoined && dpDetail.percent !== 100 && (
+            <div style={{ marginTop: "30px" }}>
+              <Button
+                type="primary"
+                block
+                onClick={() => onAddRecipe && onAddRecipe(challenge.id)}
               >
-                {reward}
-              </Tag>
-            ))}
-          </Space>
+                Add Recipe
+              </Button>
+            </div>
+          )}
 
           <Divider style={{ margin: "40px 0 20px 0" }} />
 
@@ -575,77 +741,79 @@ const ChallengeDetailPage = ({
             />{" "}
             Challenge Leaderboard
           </Title>
-          <List
-            itemLayout="horizontal"
-            dataSource={challenge.leaderboard || []}
-            style={{
-              marginTop: "16px",
-              backgroundColor: token.colorBgContainer,
-              padding: "16px",
-              borderRadius: "8px",
-            }}
-            renderItem={(item) => (
-              <List.Item>
-                <List.Item.Meta
-                  avatar={
-                    <Statistic
-                      title="Rank"
-                      value={item.rank}
-                      valueStyle={{
-                        color:
-                          item.rank === 1
-                            ? token.colorSuccess
-                            : token.colorPrimary,
-                        fontWeight: "bold",
-                      }}
-                      prefix={<Text style={{ fontSize: 14 }}>#</Text>}
-                    />
-                  }
-                  title={
-                    <Text
-                      strong
-                      style={{ fontSize: "1.1em", color: token.colorText }}
-                    >
-                      {item.rank <= 3 && (
-                        <Trophy
-                          size={16}
-                          style={{
-                            marginBottom: "-3px",
-                            marginRight: "4px",
-                            color:
-                              item.rank === 1
-                                ? "#FFD700"
-                                : item.rank === 2
-                                ? "#C0C0C0"
-                                : "#CD7F32",
-                          }}
-                        />
-                      )}
-                      {item.name}
+          {leaderboardLoading ? (
+            <div style={{ padding: "16px" }}>
+              <Spin />
+            </div>
+          ) : leaderboardError ? (
+            <Text type="danger">{leaderboardError}</Text>
+          ) : (
+            <List
+              itemLayout="horizontal"
+              dataSource={leaderboardData}
+              style={{
+                marginTop: "16px",
+                backgroundColor: token.colorBgContainer,
+                padding: "16px",
+                borderRadius: "8px",
+              }}
+              renderItem={(item, index) => (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={
+                      <Statistic
+                        title="Rank"
+                        value={index + 1}
+                        valueStyle={{
+                          color:
+                            index + 1 === 1
+                              ? token.colorSuccess
+                              : token.colorPrimary,
+                          fontWeight: "bold",
+                        }}
+                        prefix={<Text style={{ fontSize: 14 }}>#</Text>}
+                      />
+                    }
+                    title={
+                      <Text
+                        strong
+                        style={{ fontSize: "1.1em", color: token.colorText }}
+                      >
+                        {index + 1 <= 3 && (
+                          <Trophy
+                            size={16}
+                            style={{
+                              marginBottom: "-3px",
+                              marginRight: "4px",
+                              color:
+                                index + 1 === 1
+                                  ? "#FFD700"
+                                  : index + 1 === 2
+                                  ? "#C0C0C0"
+                                  : "#CD7F32",
+                            }}
+                          />
+                        )}
+                        {item.username || item.name || item.userId}
+                      </Text>
+                    }
+                    description={`Submitted ${
+                      item.recipeCount || 0
+                    } recipes • ${item.totalLikes || 0} likes`}
+                  />
+                  <div>
+                    <Text strong style={{ color: diffColor }}>
+                      {item.totalLikes || 0} Likes
                     </Text>
-                  }
-                  description={`Completed ${item.recipes || 0} recipes`}
-                />
-                <div>
-                  <Text strong style={{ color: diffColor }}>
-                    {item.score || 0} Points
-                  </Text>
-                </div>
-              </List.Item>
-            )}
-          />
+                  </div>
+                </List.Item>
+              )}
+            />
+          )}
 
           <Divider style={{ margin: "40px 0 20px 0" }} />
 
-          {/* Tags */}
-          <Text strong>Focus Areas:</Text>
-          <Space size={[8, 8]} wrap style={{ marginTop: "8px" }}>
-            {(challenge.tags || []).map((tag, index) => (
-              <Tag key={index} color="blue" style={{ borderRadius: "4px" }}>
-                {tag}
-              </Tag>
-            ))}
-          </Space>
+          {/* Focus Areas removed as requested */}
         </div>
       </Card>
     </div>
@@ -657,10 +825,24 @@ const Challenge = () => {
   const [form] = Form.useForm();
   const isPaid = Form.useWatch("isPaid", form);
   const { user } = useAuth();
+  const userId = user?.userData?.id;
   const [joiningChallengeId, setJoiningChallengeId] = useState(null);
+  // State to track the user's join status for each challenge
+  const [userChallengeStatus, setUserChallengeStatus] = useState({});
+  // Track pending payment for paid challenges: { [challengeId]: paymentId }
+  const [paymentPending, setPaymentPending] = useState({});
+  // Track participants count per challenge: { [challengeId]: number }
+  const [participantsCount, setParticipantsCount] = useState({});
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
+
+  // Set a mock token for testing the API calls in a mock environment
+  // useEffect(() => {
+  //   if (!localStorage.getItem('token')) {
+  //       localStorage.setItem('token', 'mock-auth-token-for-api');
+  //   }
+  // }, []);
 
   const initialValues = {
     isPaid: false,
@@ -677,6 +859,15 @@ const Challenge = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [challenges, setChallenges] = useState([]);
+  // Submit recipe modal state
+  const [isRecipeModalVisible, setIsRecipeModalVisible] = useState(false);
+  const [submitRecipeChallengeId, setSubmitRecipeChallengeId] = useState(null);
+  const [recipeForm] = Form.useForm();
+  // Local UI-driven payment error modal (ensures visibility)
+  const [paymentErrorModal, setPaymentErrorModal] = useState({
+    open: false,
+    message: "",
+  });
 
   const activeChallenge = challenges.find((c) => c.id === activeChallengeId);
 
@@ -700,10 +891,6 @@ const Challenge = () => {
     }
   };
 
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedChallenges = challenges.slice(startIndex, endIndex);
-
   const [isLoading, setIsLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -722,10 +909,55 @@ const Challenge = () => {
         }
       );
 
+      // Assuming API returns content, totalPages, totalElements
       setChallenges(data.content || EmptyChallengeData);
       setTotalPages(data.totalPages ?? 1);
       setTotalElements(data.totalElements ?? data.content?.length ?? 0);
       setCurrentPage((data.number ?? page - 1) + 1);
+
+      // After loading challenges, fetch participants list for counts and user membership
+      if (Array.isArray(data.content)) {
+        const tokenStr = localStorage.getItem("token");
+        const statusEntries = await Promise.all(
+          data.content.map(async (c) => {
+            try {
+              const participantsUrl = `${API_BASE_URL}/${c.id}/participants`;
+              const resp = await fetchWithBackoff(participantsUrl, {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${tokenStr}`,
+                },
+              });
+              // Expecting an array of participant objects or ids
+              const participants = Array.isArray(resp)
+                ? resp
+                : resp?.participants || [];
+              // Update participants count
+              setParticipantsCount((prev) => ({
+                ...prev,
+                [c.id]: participants.length,
+              }));
+              const isUserIn = participants.some((p) => {
+                if (p == null) return false;
+                if (typeof p === "number") return p === userId;
+                if (typeof p === "string") return String(p) === String(userId);
+                return String(p.id ?? p.userId ?? p) === String(userId);
+              });
+              return [c.id, isUserIn ? "JOINED" : "NOT_JOINED"];
+            } catch (_) {
+              // On error, default to NOT_JOINED to avoid blocking UI
+              return [c.id, "NOT_JOINED"];
+            }
+          })
+        );
+        if (userId) {
+          setUserChallengeStatus(Object.fromEntries(statusEntries));
+        }
+      }
+
+      // In a real application, you would also fetch the user's current join status here
+      // For this isolated example, we just trust the state set during join/leave actions.
 
       notification.success({
         message: "Challenges Loaded",
@@ -761,6 +993,7 @@ const Challenge = () => {
       entryFee: values.isPaid ? values.entryFee : 0,
       category: "Community",
       difficulty: "Medium",
+      // Calculate duration in days
       duration: dayjs(values.endDate).diff(values.startDate, "day") + " Days",
       rewards: ["Bragging Rights", "New Apron"],
       leaderboard: [],
@@ -779,20 +1012,16 @@ const Challenge = () => {
         body: JSON.stringify(payload),
       });
 
-      if (response.ok) {
-        notification.success({
-          message: "Challenge Created!",
-          description: `Successfully created the challenge: "${payload.name}". Refreshing list...`,
-          placement: "topRight",
-        });
-        await fetchChallenges();
-
-        form.resetFields();
-      } else {
-        throw new Error(`Server responded with status: ${response.status}`);
-      }
+      // Response.ok check is handled in fetchWithBackoff, it only returns a value if ok
+      response.success({
+        message: "Challenge Created!",
+        description: `Successfully created the challenge: "${payload.name}". Refreshing list...`,
+        placement: "topRight",
+      });
+      await fetchChallenges();
+      form.resetFields();
     } catch (error) {
-      console.warn("API Error (Simulating POST failure):", error);
+      console.error("API Error (POST challenge):", error);
       notification.error({
         message: "Creation Failed",
         description:
@@ -818,31 +1047,247 @@ const Challenge = () => {
       });
   };
 
-  const joinChallenge = async (challengeId) => {
+  // Open the Submit Recipe modal from child components
+  const openSubmitRecipeModal = (challengeId) => {
+    setSubmitRecipeChallengeId(challengeId);
+    setIsRecipeModalVisible(true);
+    if (recipeForm) {
+      recipeForm.resetFields();
+    }
+  };
+
+  // Utility to show payment failure modal
+  const showPaymentFailureModal = (details) => {
+    Modal.error({
+      title: "Payment Failure",
+      content: (
+        <>
+          <p>
+            We were unable to confirm your payment. You cannot join this
+            challenge because of payment failure.
+          </p>
+          <p
+            style={{
+              marginTop: "10px",
+              fontSize: "0.8em",
+              color: token.colorError,
+            }}
+          >
+            Details: {details || "No specific error details provided."}
+          </p>
+        </>
+      ),
+      maskClosable: true,
+      okText: "OK",
+    });
+  };
+
+  // Refactored function to handle Join or Leave logic for Free/Paid challenges
+  const handleJoinOrLeaveChallenge = async (
+    challengeId,
+    isPaid,
+    isUserJoined
+  ) => {
     if (!user?.isAuthenticated) {
-      message.error("Please log in to join challenges.");
+      message.error("Please log in to join or leave challenges.");
       return;
     }
+
     setJoiningChallengeId(challengeId);
+    const token = localStorage.getItem("token"); // Get the current auth token
+
+    const userPayload = { userId: userId };
+
     try {
-      const resp = await fetch(`${API_BASE_URL}/${challengeId}/join`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "X-User-Id": user?.userData?.id,
-        },
-        body: JSON.stringify({ userId: user?.userData?.id }),
-      });
-      if (!resp.ok) throw new Error((await resp.text()) || "Join failed");
-      notification.success({
-        message: "Joined Challenge",
-        placement: "topRight",
-      });
-      await fetchChallenges(currentPage, pageSize);
+      if (isUserJoined) {
+        // --- LEAVE CHALLENGE logic: http://localhost:8089/api/v1/challenges/{challengeId}/leave
+        const leaveUrl = `${API_BASE_URL}/${challengeId}/leave`;
+        const resp = await fetchWithBackoff(leaveUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(userPayload),
+        });
+
+        // Show success and flip local state immediately
+        notification.success({
+          message: "Challenge Left",
+          placement: "topRight",
+        });
+        // Update local state to NOT_JOINED
+        setUserChallengeStatus((prev) => ({
+          ...prev,
+          [challengeId]: "NOT_JOINED",
+        }));
+        // Refresh challenge data to update participant count
+        fetchChallenges(currentPage, pageSize);
+      } else {
+        // --- JOIN / VERIFY PAYMENT logic ---
+
+        // If payment already pending for this challenge, verify payment instead of starting a new one
+        if (paymentPending[challengeId]) {
+          const confirmPaymentUrl = `${API_BASE_URL}/${challengeId}/confirm-payment`;
+          const verifyPayload = {
+            userId: userId,
+            paymentId: paymentPending[challengeId],
+          };
+          try {
+            const confirmResp = await fetchWithBackoff(confirmPaymentUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(verifyPayload),
+            });
+            if (confirmResp && confirmResp.success) {
+              notification.success({
+                message: "Payment Verified",
+                description: "You have joined the challenge.",
+                placement: "topRight",
+              });
+              setUserChallengeStatus((prev) => ({
+                ...prev,
+                [challengeId]: "JOINED",
+              }));
+              // Clear pending payment
+              setPaymentPending((prev) => {
+                const next = { ...prev };
+                delete next[challengeId];
+                return next;
+              });
+              // Refresh data
+              fetchChallenges(currentPage, pageSize);
+            } else {
+              // Show pop-up modal with error and revert button to Enroll
+              const errMsg = "Payment not completed. PLease try again.";
+              // Toast notification to ensure visibility
+              notification.error({
+                message: "Payment not verified or not completed.",
+                description: errMsg,
+                placement: "topRight",
+              });
+              // Open local modal to guarantee UI rendering
+              setPaymentErrorModal({ open: true, message: errMsg });
+              // Clear pending payment to switch button back to Enroll
+              setPaymentPending((prev) => {
+                const next = { ...prev };
+                delete next[challengeId];
+                return next;
+              });
+            }
+            return;
+          } catch (paymentError) {
+            console.error("Payment Verification Error:", paymentError);
+            notification.error({
+              message: "Payment not verified or not completed.",
+              description: paymentError.message || "Please try again.",
+              placement: "topRight",
+            });
+            setPaymentErrorModal({
+              open: true,
+              message: "Payment not completed. Please try again.",
+            });
+            // Clear pending payment to switch button back to Enroll on error
+            setPaymentPending((prev) => {
+              const next = { ...prev };
+              delete next[challengeId];
+              return next;
+            });
+            return;
+          }
+        }
+
+        // Always hit JOIN API (free or paid) to initiate join/payment session
+        const joinUrl = `${API_BASE_URL}/${challengeId}/join`;
+        const joinResp = await fetchWithBackoff(joinUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(userPayload),
+        });
+        // Handle structured API response
+        if (joinResp && typeof joinResp === "object") {
+          // Paid initiation flow: requiresPayment true -> store paymentId and redirect
+          if (joinResp.requiresPayment && isPaid && joinResp.success) {
+            const { paymentId, paymentLink } = joinResp;
+            if (paymentId && paymentLink) {
+              setPaymentPending((prev) => ({
+                ...prev,
+                [challengeId]: paymentId,
+              }));
+              notification.info({
+                message: "Payment Required",
+                description: "Redirecting to payment to complete enrollment.",
+                placement: "topRight",
+              });
+              // Open payment in a new tab for better UX
+              window.open(paymentLink, "_blank", "noopener,noreferrer");
+              // Do not set JOINED yet, wait for verification
+            } else {
+              notification.error({
+                message: "Payment Initiation Failed",
+                description: "Missing payment details from server.",
+                placement: "topRight",
+              });
+            }
+          } else if (
+            joinResp.success === false &&
+            /already joined/i.test(joinResp.error || "")
+          ) {
+            // Treat as joined
+            notification.info({
+              message: "Already Joined",
+              description: "You are already participating in this challenge.",
+              placement: "topRight",
+            });
+            setUserChallengeStatus((prev) => ({
+              ...prev,
+              [challengeId]: "JOINED",
+            }));
+          } else {
+            // Free challenge (or paid with immediate success without requiresPayment)
+            notification.success({
+              message: "Challenge Joined",
+              description: "You have joined the challenge.",
+              placement: "topRight",
+            });
+            setUserChallengeStatus((prev) => ({
+              ...prev,
+              [challengeId]: "JOINED",
+            }));
+            // Refresh data
+            fetchChallenges(currentPage, pageSize);
+          }
+        } else {
+          // Non-JSON success fallback
+          notification.success({
+            message: "Challenge Joined",
+            description: "You have joined the challenge.",
+            placement: "topRight",
+          });
+          setUserChallengeStatus((prev) => ({
+            ...prev,
+            [challengeId]: "JOINED",
+          }));
+        }
+
+        // For paid flow with payment required, do not mark joined or refresh until verification
+        if (!(joinResp && joinResp.requiresPayment && isPaid)) {
+          // Refresh challenge data to update participant count and progress display
+          fetchChallenges(currentPage, pageSize);
+        }
+      }
     } catch (e) {
+      console.error("Challenge Action Failed:", e.message);
+
+      // Generic failure notification
       notification.error({
-        message: "Join Failed",
+        message: isUserJoined ? "Leave Failed" : "Join Failed",
         description: e.message,
         placement: "topRight",
       });
@@ -905,8 +1350,11 @@ const Challenge = () => {
               challenge={activeChallenge}
               onBackToList={handleBackToList}
               token={token}
-              joinChallenge={joinChallenge}
+              handleJoinOrLeaveChallenge={handleJoinOrLeaveChallenge}
               joiningChallengeId={joiningChallengeId}
+              userChallengeStatus={userChallengeStatus}
+              onAddRecipe={openSubmitRecipeModal}
+              participantsCount={participantsCount}
             />
           ) : (
             <ChallengeListPage
@@ -916,8 +1364,12 @@ const Challenge = () => {
               fetchChallenges={fetchChallenges}
               onViewDetails={handleViewDetails}
               token={token}
-              joinChallenge={joinChallenge}
+              handleJoinOrLeaveChallenge={handleJoinOrLeaveChallenge}
               joiningChallengeId={joiningChallengeId}
+              userChallengeStatus={userChallengeStatus}
+              paymentPending={paymentPending}
+              onAddRecipe={openSubmitRecipeModal}
+              participantsCount={participantsCount}
             />
           )}
         </div>
@@ -935,7 +1387,6 @@ const Challenge = () => {
           <Button key="back" onClick={() => setIsModalVisible(false)}>
             Cancel
           </Button>,
-          // ⭐️ FIX: Use handleSubmitChallenge for validation before calling API
           <Button
             key="submit"
             type="primary"
@@ -1052,7 +1503,7 @@ const Challenge = () => {
                   isPaid && (
                     <Form.Item
                       name="entryFee"
-                      label="Entry Fee ($)"
+                      label="Entry Fee (₹)"
                       rules={[
                         {
                           required: isPaid,
@@ -1069,9 +1520,9 @@ const Challenge = () => {
                         min={0}
                         step={0.01}
                         formatter={(value) =>
-                          `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                          `₹ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                         }
-                        parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                        parser={(value) => value.replace(/₹\s?|(,*)/g, "")}
                         style={{ width: "100%" }}
                       />
                     </Form.Item>
@@ -1081,6 +1532,102 @@ const Challenge = () => {
             </Col>
           </Row>
         </Form>
+      </Modal>
+
+      {/* Submit Recipe Modal */}
+      <Modal
+        title={
+          <Title level={3} style={{ margin: 0 }}>
+            Submit Recipe to Challenge
+          </Title>
+        }
+        open={isRecipeModalVisible}
+        onCancel={() => setIsRecipeModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsRecipeModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={async () => {
+              try {
+                const { recipeId } = await recipeForm.validateFields();
+                if (!submitRecipeChallengeId) {
+                  message.error("No challenge selected.");
+                  return;
+                }
+                const submitUrl = `${API_BASE_URL}/${submitRecipeChallengeId}/submit-recipe`;
+                const body = {
+                  recipeId: Number(recipeId),
+                  userId: userId,
+                  userName: "Kanak_Phulwani01",
+                };
+                await fetchWithBackoff(submitUrl, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                  },
+                  body: JSON.stringify(body),
+                });
+                notification.success({
+                  message: "Recipe Submitted",
+                  description:
+                    "Your recipe has been submitted to the challenge.",
+                  placement: "topRight",
+                });
+                setIsRecipeModalVisible(false);
+                recipeForm.resetFields();
+                // Optionally refresh data
+                fetchChallenges(currentPage, pageSize);
+              } catch (err) {
+                notification.error({
+                  message: "Submit Failed",
+                  description: err.message,
+                  placement: "topRight",
+                });
+              }
+            }}
+          >
+            Submit Recipe
+          </Button>,
+        ]}
+        destroyOnClose
+      >
+        <Form form={recipeForm} layout="vertical" name="submit_recipe_form">
+          <Form.Item
+            name="recipeId"
+            label="Recipe ID"
+            rules={[{ required: true, message: "Please enter a recipe ID" }]}
+          >
+            <Input placeholder="Enter recipe ID" />
+          </Form.Item>
+        </Form>
+      </Modal>
+      {/* Payment Error Modal (UI-driven) */}
+      <Modal
+        title={
+          <Title level={4} style={{ margin: 0 }}>
+            Payment not verified or not completed.
+          </Title>
+        }
+        open={paymentErrorModal.open}
+        onCancel={() => setPaymentErrorModal({ open: false, message: "" })}
+        footer={[
+          <Button
+            key="ok"
+            type="primary"
+            onClick={() => setPaymentErrorModal({ open: false, message: "" })}
+          >
+            OK
+          </Button>,
+        ]}
+        destroyOnClose
+      >
+        <Paragraph style={{ marginBottom: 0 }}>
+          {paymentErrorModal.message || "Please try again."}
+        </Paragraph>
       </Modal>
     </Layout>
   );
