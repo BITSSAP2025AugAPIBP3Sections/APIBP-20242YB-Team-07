@@ -1098,6 +1098,8 @@ const Challenge = () => {
 
     const userPayload = { userId: userId };
 
+    console.log("payload", userPayload);
+
     try {
       if (isUserJoined) {
         // --- LEAVE CHALLENGE logic: http://localhost:8089/api/v1/challenges/{challengeId}/leave
@@ -1293,6 +1295,62 @@ const Challenge = () => {
       });
     } finally {
       setJoiningChallengeId(null);
+    }
+  };
+
+  const [allRecipes, setAllRecipes] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPagesRecipes, setTotalPagesRecipes] = useState(1);
+
+  const fetchAllRecipes = async (pageNumber = 1) => {
+    try {
+      const url = `http://localhost:8089/api/v1/recipes?userId=${userId}&page=${pageNumber}&size=10&sortBy=id&direction=asc`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        window.location.reload();
+      }
+      if (!response.ok) {
+        throw new Error("Failed to fetch recipes");
+      }
+      const data = await response.json();
+      console.log("Fetched Recipes:", data.content);
+
+      // Append new recipes, avoiding duplicates
+      setAllRecipes((prev) => {
+        if (pageNumber === 1) return data.content;
+
+        // Filter out duplicates based on recipe.id
+        const existingIds = new Set(prev.map((r) => r.id));
+        const newRecipes = data.content.filter((r) => !existingIds.has(r.id));
+        return [...prev, ...newRecipes];
+      });
+
+      setPage(data.page);
+      console.log("Current Page after fetch:", data.totalPages);
+      setTotalPagesRecipes(data.totalPages);
+    } catch (error) {
+      console.error("Error fetching recipes:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (isRecipeModalVisible) {
+      fetchAllRecipes(1);
+    }
+  }, [isRecipeModalVisible]);
+
+  // Add handleLoadMore function
+  const handleLoadMore = () => {
+    if (page < totalPagesRecipes) {
+      fetchAllRecipes(page + 1);
     }
   };
 
@@ -1542,9 +1600,22 @@ const Challenge = () => {
           </Title>
         }
         open={isRecipeModalVisible}
-        onCancel={() => setIsRecipeModalVisible(false)}
+        onCancel={() => {
+          setIsRecipeModalVisible(false);
+          recipeForm.resetFields();
+          setAllRecipes([]); // Clear recipes on close
+          setPage(1);
+        }}
         footer={[
-          <Button key="cancel" onClick={() => setIsRecipeModalVisible(false)}>
+          <Button
+            key="cancel"
+            onClick={() => {
+              setIsRecipeModalVisible(false);
+              recipeForm.resetFields();
+              setAllRecipes([]);
+              setPage(1);
+            }}
+          >
             Cancel
           </Button>,
           <Button
@@ -1552,17 +1623,20 @@ const Challenge = () => {
             type="primary"
             onClick={async () => {
               try {
-                const { recipeId } = await recipeForm.validateFields();
+                const values = await recipeForm.validateFields();
                 if (!submitRecipeChallengeId) {
                   message.error("No challenge selected.");
                   return;
                 }
                 const submitUrl = `${API_BASE_URL}/${submitRecipeChallengeId}/submit-recipe`;
                 const body = {
-                  recipeId: Number(recipeId),
+                  recipeId: Number(values.recipeId),
                   userId: userId,
-                  userName: "Kanak_Phulwani01",
+                  userName: user?.userData?.username || "Unknown User", // Use actual username
                 };
+
+                console.log("Submitting payload:", body);
+
                 await fetchWithBackoff(submitUrl, {
                   method: "POST",
                   headers: {
@@ -1579,9 +1653,11 @@ const Challenge = () => {
                 });
                 setIsRecipeModalVisible(false);
                 recipeForm.resetFields();
-                // Optionally refresh data
+                setAllRecipes([]);
+                setPage(1);
                 fetchChallenges(currentPage, pageSize);
               } catch (err) {
+                console.error("Submit error:", err);
                 notification.error({
                   message: "Submit Failed",
                   description: err.message,
@@ -1598,10 +1674,46 @@ const Challenge = () => {
         <Form form={recipeForm} layout="vertical" name="submit_recipe_form">
           <Form.Item
             name="recipeId"
-            label="Recipe ID"
-            rules={[{ required: true, message: "Please enter a recipe ID" }]}
+            label="Select Recipe"
+            rules={[{ required: true, message: "Please select a recipe!" }]}
           >
-            <Input placeholder="Enter recipe ID" />
+            <Select
+              showSearch
+              placeholder="Select a recipe"
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+              style={{ width: "100%" }}
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  {page < totalPagesRecipes && (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "8px",
+                        borderTop: "1px solid #f0f0f0",
+                      }}
+                    >
+                      <Button
+                        type="link"
+                        onClick={handleLoadMore}
+                        style={{ width: "100%" }}
+                      >
+                        Load More Recipes
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            >
+              {allRecipes.map((recipe) => (
+                <Select.Option key={recipe.id} value={recipe.id}>
+                  {recipe?.title} (By: {recipe?.username})
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>
