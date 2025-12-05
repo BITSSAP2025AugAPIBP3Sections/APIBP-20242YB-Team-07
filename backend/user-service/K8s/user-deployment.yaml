@@ -14,13 +14,59 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: peytonpeaceful/user-service:latest # Change to your DockerHub image if needed
+          image: sachittarway/user-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8081
           env:
+            - name: SERVER_PORT
+              value: "8081"
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://dpg-d4e76p8gjchc73fbd6dg-a.oregon-postgres.render.com:5432/user_service_baoy"
+              value: "jdbc:postgresql://postgres-user-service:5432/user_service_db"
             - name: SPRING_DATASOURCE_USERNAME
-              value: "user_service_baoy_user"
+              value: "postgres"
             - name: SPRING_DATASOURCE_PASSWORD
-              value: "swOLtPmLusWZVCt5laf6mesnherBcNuZ"
+              value: "admin"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: SPRING_JPA_SHOW_SQL
+              value: "true"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: SPRING_KAFKA_CONSUMER_GROUP_ID
+              value: "notification-group"
+            - name: SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET
+              value: "earliest"
+            - name: SPRING_KAFKA_PRODUCER_ACKS
+              value: "all"
+            - name: SPRING_KAFKA_PROPERTIES_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: SPRING_KAFKA_ADMIN_PROPERTIES_BOOTSTRAP_SERVERS
+              value: "kafka-bootstrap.kafka.svc.cluster.local:9092"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+  type: ClusterIP

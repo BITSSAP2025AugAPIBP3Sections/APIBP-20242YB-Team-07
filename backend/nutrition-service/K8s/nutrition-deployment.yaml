@@ -14,13 +14,63 @@ spec:
     spec:
       containers:
         - name: nutrition-service
-          image: peytonpeaceful/nutrition-service:latest # Change to your DockerHub image if needed
+          image: sachittarway/nutrition-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8085
           env:
+            - name: SERVER_PORT
+              value: "8085"
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://dpg-d4e76p8gjchc73fbd6dg-a.oregon-postgres.render.com:5432/user_service_baoy"
+              value: "jdbc:postgresql://postgres-nutrition-service:5432/nutrition_service_db"
             - name: SPRING_DATASOURCE_USERNAME
-              value: "user_service_baoy_user"
+              value: "postgres"
             - name: SPRING_DATASOURCE_PASSWORD
-              value: "swOLtPmLusWZVCt5laf6mesnherBcNuZ"
+              value: "admin"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: SPRING_JPA_SHOW_SQL
+              value: "true"
+            - name: NUTRITION_ANALYSIS_MODE
+              value: "local"
+            - name: NUTRITION_API_NINJAS_BASE_URL
+              value: "https://api.api-ninjas.com/v1/nutrition"
+            - name: NUTRITION_API_NINJAS_APP_KEY
+              value: "VReknc/NK8IbMvg5rg7iKg==e45BmS810vLqjmmP"
+            - name: GRPC_CLIENT_RECIPE_SERVICE_ADDRESS
+              value: "recipe-service:9090"
+            - name: GRPC_CLIENT_RECIPE_SERVICE_NEGOTIATION_TYPE
+              value: "PLAINTEXT"
+            - name: GRPC_CLIENT_RECIPE_SERVICE_MAX_INBOUND_MESSAGE_SIZE
+              value: "4194304"
+            - name: GRPC_CLIENT_RECIPE_SERVICE_KEEPALIVE_TIME
+              value: "30"
+            - name: GRPC_CLIENT_RECIPE_SERVICE_KEEPALIVE_TIMEOUT
+              value: "10"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8085
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8085
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nutrition-service
+spec:
+  selector:
+    app: nutrition-service
+  ports:
+    - protocol: TCP
+      port: 8085
+      targetPort: 8085
+  type: ClusterIP
